@@ -48,6 +48,7 @@ _Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 
 | Hallazgo 12 (avatar remoto: pedido de spawn y teleport) | 🟡 `findings/12-avatar-remoto.md`: flujo del spawn de autoridad (`0x797490`), layout del pedido de 0x130 bytes y teleport (`0x7C6330`). Falta runtime |
 | Mod fase 4 (avatar del otro jugador) | ✅ **v1 por red OK** (corrida 9, Windows nativo ↔ Proton): en cada máquina un NPC humano del nivel sigue al jugador de la otra (`AIMP_GHOST=3`; `mod/src/ghost.c`). Clonar personajes hace caer el juego (hallazgo 12, parte 2) |
 | Mod fase 5 v1 ("usar" compartido) | ✅ **botones en los dos sentidos** (corrida 12): el transit viene en las dos máquinas y el uso remoto lo hace el avatar (`AIMP_SYNC_USE_ACTOR=1`), sin mover al otro jugador. Los lockers y la terminal de guardado no se replican (`AIMP_SYNC_USE_SKIP`). `findings/13-usar-compartido.md` |
+| Hallazgo 14 (armas, arrojables e ítems) | 🟡 `findings/14-armas-e-items.md`: disparar no genera un RPC, pero sus efectos sí (daño 0x18, agresión 0x0C). Bengala, nada. **Levantar un ítem es un "usar" (0x26) y ya se replica** (falta probarlo con dos máquinas) |
 | Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
 | Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–7 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; cola A en loopback; **cola B = salida a la red, descartada en retail**; registro de handlers de la cola A) |
@@ -85,9 +86,9 @@ _Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 
 
    ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
 2. **Siguiente** (a elegir con el usuario):
-   - **Apagar la IA del avatar:** el civil quiere huir del fuego y caminar solo. Hay que encontrar en el NPC el flag o el componente que lo saca de la IA (hallazgo 08).
-   - **Armas:** el lanzallamas y los disparos no se replican. Trazar con `AIMP_TRACE_QUEUES=1` qué RPCs genera disparar; NETZ tiene `shoot_character`, `shoot` y `shoot_rigid` (hallazgo 10).
-   - **Ítems:** ¿los levantan los dos? Probar con el filtro actual.
+   - **Ítems con dos máquinas:** levantar un ítem en una (por ejemplo, las balas del revólver) y ver si desaparece en la otra y quién se lo queda. Con `AIMP_SYNC_USE=1` ya se manda; en la otra lo hace el avatar.
+   - **IA del avatar:** probar `AIMP_GHOST_NOAUTH=1` con el offset corregido (`CM+0x230`). Bajan los teleports por segundo si la IA se apaga.
+   - **Armas:** hookear el disparo y el lanzamiento (no son RPCs, hallazgo 14) y mandarlos como eventos. Replicar el daño (0x18) y la agresión (0x0C) recién cuando haya sincronización de IA.
    - Fase 4b, pendiente: probar `8bc1f7e`, que vuelve a poner al NPC si su IA lo corre; apagar su IA y su animación.
 3. Investigar qué escribe en los canales NETZ durante el juego: posible camino para el movimiento de personajes.
 4. Estático pendiente: semántica de los RPCs 0x1E/0x20/0x22/0x23/0x28 y del B 0x07; dispatcher de los comandos de UI (hallazgo 09); inventario (07).
