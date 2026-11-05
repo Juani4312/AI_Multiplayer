@@ -1,0 +1,2 @@
+AlienDir=/mnt/1,8TB/SteamLibrary/steamapps/common/Alien\ Isolation
+READir=/home/juano/Documents/clones/rea
