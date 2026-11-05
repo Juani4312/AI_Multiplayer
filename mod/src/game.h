@@ -27,7 +27,25 @@ static const uint8_t AIMP_MODEMGR_RUN_PROLOGUE[10] __attribute__((unused)) = {
     0x51, 0x53, 0x55, 0x56, 0x8B, 0xF1, 0x83, 0x7E, 0x4C, 0xFF
 };
 
+#define AIMP_TEXT_RVA             0x00001000u  /* sección .text */
+#define AIMP_TEXT_SIZE            0x00D9D13Bu
+
 /* Fase 4 (hallazgo 12): spawn de autoridad y teletransporte de personajes. */
+#define AIMP_RVA_SPAWN_CHAR       0x003D3B50u  /* SpawnCharacter: thiscall(interfaz, pedido*), ret 4 (hallazgo 05) */
+#define AIMP_SPAWN_CHAR_STEAL     5            /* push ecx/ebx/ebp/esi/edi */
+static const uint8_t AIMP_SPAWN_CHAR_PROLOGUE[9] __attribute__((unused)) = {
+    0x51, 0x53, 0x55, 0x56, 0x57, 0x8B, 0x7C, 0x24, 0x18
+};
+/* Listas de observadores que recorren el spawn de autoridad y el handler del RPC 0x29.
+ * Nadie las escribe en el binario (ni con dirección absoluta ni con base cercana): se
+ * loguean en runtime para confirmar que están vacías. */
+#define AIMP_RVA_OBS_AUTH_PRE     0x012F322Cu
+#define AIMP_RVA_OBS_AUTH_POST    0x012F3230u
+#define AIMP_RVA_OBS_RPC_PRE      0x012A6728u
+#define AIMP_RVA_OBS_RPC_POST     0x012A672Cu
+#define SREQ_KEY2                 0xF0  /* repite la clave (arg 1 de FUN_00787450) */
+#define SREQ_POS                  0x50  /* float[3]: posición del spawn */
+#define SREQ_YAW                  0x60  /* float */
 #define AIMP_RVA_SPAWN_AUTH       0x00397490u  /* FUN_00797490: thiscall(this, pedido*, flag), ret 8 */
 #define AIMP_SPAWN_AUTH_STEAL     6            /* push ebp; mov ebp,esp; push ebx; push esi; push edi */
 static const uint8_t AIMP_SPAWN_AUTH_PROLOGUE[8] __attribute__((unused)) = {
