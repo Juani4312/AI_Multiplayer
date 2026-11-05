@@ -10,5 +10,7 @@
 int ghost_install(void);
 /* Después de cada Run, en el thread principal. level = índice del nivel actual. */
 void ghost_frame(int64_t now, const AimpNet *net, uint32_t level);
+/* Personaje que hoy hace de avatar del otro jugador (NPC o clon), o 0. Válido hasta el próximo ghost_frame. */
+uint32_t ghost_avatar(void);
 
 #endif

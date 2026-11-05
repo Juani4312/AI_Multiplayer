@@ -99,3 +99,5 @@
 - 18:22 Corrida 10 terminada (salida limpia; 6065 enviados, 5524 recibidos, 0 perdidos; 0 excepciones). Mod en modo pasivo (DLL aed44d3).
 - 18:23 Laptop subió el reporte del paso 7 (e1d2502): el uso remoto mueve a su jugador al anclaje del locker (misma posición que el de papito, 3 decimales), cámara fija adentro, 0 excepciones. Agregado al hallazgo 13.
 - 18:24 Fase 5: filtro AIMP_SYNC_USE_SKIP (no se mandan lockers ni terminal de guardado). Tests OK.
+- 18:25 Corrida 11 (fase 5, filtro de usos): host con AIMP_NET=host;AIMP_GHOST=3;AIMP_SYNC_USE=1 (DLL 1c1d558), juego lanzado.
+- 18:31 Corrida 11: filtro OK (locker y terminal no se mandan); botón del transit se replica pero teletransporta al jugador local. Cambio: el uso remoto lo hace el avatar NPC (AIMP_SYNC_USE_ACTOR=1).

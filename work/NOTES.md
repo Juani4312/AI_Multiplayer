@@ -469,3 +469,13 @@ Ambas con `AIMP_GHOST=3` (DLL `c2f86d1`), en Tech_Hub, por Tailscale (directo po
   - **los handlers de sesión se ejecutan en local en el mismo frame**;
   - la ejecución real es `ctx->vf[1]` = `FUN_00793FB0` (vtable `0xEF4EE4`).
 - Siguiente: filtrar por tipo de objeto. Los lockers y terminales son acciones del jugador; las cajas, botones e ítems, estado del mundo.
+
+## 2026-11-05 — Corrida 11: filtro de usos OK; un botón remoto teletransporta al jugador local
+Evidencia: `work/evidence/runtime/run11-filtro-host.log` (gitignored), DLL `1c1d558`.
+- **Locker** (`3e3ec35d…`), 3 usos, y **terminal de guardado** (`1e38b898 8722c94d`, otra instancia que la de la corrida 3, mismo prefijo), 2 usos: `SYNC   no se manda`. El otro jugador no se movió.
+- Lo que se cambia adentro de una terminal no le llega al otro: las opciones de la terminal no generan RPCs (hallazgo 11).
+- **Botón del transit** (`044106b1 eb7fc7c0`; en la corrida 3, `044106b1 6f529959`) → mandado (evento 1). Usuario: "me teletransportó y lo presionó en ambos juegos".
+  - El transit se llama en los dos juegos: **el estado del mundo queda sincronizado**.
+  - Pero el jugador que recibe va al anclaje del botón para la animación.
+- **Los prefijos del id son tipos de objeto** (confirmado con terminal y botón).
+- Cambio (`AIMP_SYNC_USE_ACTOR=1`, el valor por defecto): el uso remoto lo hace **el avatar** (el NPC de `AIMP_GHOST=3`, que ya está donde está el otro jugador). Si no hay avatar, lo hace el jugador local. Falta probar si el engine acepta que un NPC "use" un botón.

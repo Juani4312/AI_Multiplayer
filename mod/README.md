@@ -117,6 +117,7 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_GHOST_NPC_MS` | 20000 (modo 2) / sin límite (modo 3) | cuánto tiempo el NPC hace de avatar; ≤ 0 = sin límite |
 | `AIMP_SYNC_USE` | 0 | 1 = **fase 5, experimental**: los "usar" del jugador local se mandan al otro, que los aplica con su jugador (hallazgo 13) |
 | `AIMP_SYNC_USE_SKIP` | `3e3ec35d,1e38b898` | prefijos de objetivo (4 bytes en hex, como en el log) que no se mandan: lockers y terminal de guardado. `0` = mandar todo |
+| `AIMP_SYNC_USE_ACTOR` | 1 | quién hace el uso remoto: 1 = el avatar (el NPC de `AIMP_GHOST=3`), si hay; 0 = el jugador local (se teletransporta a botones y lockers) |
 | `AIMP_TRACE_USE` | 0 | 1 = loguea cada uso y sus dos handlers (solo mira) |
 | `AIMP_CRASHLOG` | 1 | registro de excepciones (VEH): código, módulo+RVA, registros y stack si el juego se cae |
 
