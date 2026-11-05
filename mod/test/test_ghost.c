@@ -216,13 +216,14 @@ int main(void)
     SetEnvironmentVariableW(L"AIMP_GHOST", L"2");
     SetEnvironmentVariableW(L"AIMP_GHOST_DELAY_MS", L"100");
     SetEnvironmentVariableW(L"AIMP_GHOST_NPC_MS", L"300");
+    SetEnvironmentVariableW(L"AIMP_GHOST_NOAUTH", L"1");
     log_open();
 
     uint8_t *img = VirtualAlloc(NULL, AIMP_EXPECT_SIZEOFIMAGE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     g_aimp_exe = (uintptr_t)img;
     build_stubs(img);
     void *root = obj(0x100), *obs_vt = obj(16), *obs = obj(16);
-    g_cm = obj(0x200);
+    g_cm = obj(0x5000);
     g_parr = obj(64 * 4);
     g_narr = obj(64 * 4);
     g_this = obj(0x40);
@@ -255,6 +256,10 @@ int main(void)
           g_spawns, g_bad_this);
     CHECK(get32(g_cm, CM_NPLAYERS) == 1 && get32(g_cm, CM_NNPCS) == 2, "1 jugador y 2 NPCs");
     uint8_t *local = (uint8_t *)(uintptr_t)get32(g_parr, 0), *innocent = (uint8_t *)(uintptr_t)get32(g_narr, 0);
+    /* bloque 3 del CharacterManager = el del INNOCENT, autoritativo */
+    uint8_t *blk3 = (uint8_t *)g_cm + CM_BLOCKS + 3 * CM_BLOCK_SIZE;
+    putp(blk3, BLOCK_CHARACTER, innocent);
+    blk3[BLOCK_AUTHORITY] = 1;
     float lp[3] = { 1.0f, 2.0f, 3.0f }, lyaw = 0.25f;
     memcpy(local + CHR_POS, lp, 12);
     memcpy(local + CHR_YAW, &lyaw, 4);
@@ -270,6 +275,7 @@ int main(void)
     CHECK(getf(innocent, CHR_POS) == 2.5f && getf(innocent, CHR_YAW) == 0.25f, "el INNOCENT a 1,5 m en x del jugador (x=%.2f)",
           (double)getf(innocent, CHR_POS));
     CHECK(g_spawns == 3, "todavía no se clonó (SpawnCharacter %u)", g_spawns);
+    CHECK(blk3[BLOCK_AUTHORITY] == 0, "AIMP_GHOST_NOAUTH: el bloque del avatar quedó no autoritativo (%u)", blk3[BLOCK_AUTHORITY]);
 
     printf("[fin del modo NPC (300 ms): clon por SpawnCharacter]\n");
     for (int i = 0; i < 24; i++, now += step) /* 400 ms */
@@ -345,6 +351,7 @@ int main(void)
     expect(log, "igual al último del spawn de autoridad", 1);
     expect(log, "SC   devolvió 0x", 1);
     expect(log, "GHOST: NPC elegido para mover: NPCs[0]", 1);
+    expect(log, "GHOST: bloque del avatar = CM+0x79c (índice 3), autoridad 1; se pone en 0", 1);
     expect(log, "\"INNOCENT\"", 1);
     expect(log, "GHOST: primer teletransporte de 0x", 1);
     expect(log, "GHOST: fin del modo NPC; se intenta el clon", 1);
