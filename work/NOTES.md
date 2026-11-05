@@ -282,3 +282,18 @@ Autorizado por el usuario ("corré y modificá lo que necesites, siempre que lo 
   - colas A y B vacías en el menú.
 - **Catálogo RPC (experimento 3.5):** la cola A tiene **44 endpoints** y la sesión **47**. El estático había visto 8 en la sesión: Ghidra no desensambla todos los inicializadores. El endpoint del spawn (`0x16361D8`) es el **tipo 0x29** de la cola A (handler RVA `0x14D10`). Lista completa en el log (líneas `RPC`).
 - **Contador de frames `0x16410DC` = 0 en el menú.** No es un offset mal: `FUN_007ddae0` usa `FUN_00773050` (sube el contador, acumula el tiempo de juego `0x16410A8`, `dt` escalado) solo si `([DAT_016f194c+4] & DAT_012f3014) == 0`. Si no, usa `FUN_00773280`, que solo actualiza el `dt` real y los acumuladores de tiempo real (`0x16410B0`/`B8`). Entonces `0x16410DC` cuenta **frames de simulación**, no frames dibujados. Además `FUN_007d9810` (salida del nivel) pone en 0 el tiempo de juego.
+
+## 2026-11-05 (tarde) — Fase 3: UDP mínimo (código, tests y prueba local en el juego)
+- Código: `mod/src/net.c`/`net.h`.
+  - Protocolo propio v1: paquete `AimpPkt` de 76 bytes con magia `AIMP`, versión, tipo (STATE/BYE), flags (bit 0 = hay jugador), seq, hora del emisor, nivel, contador de simulación, posición, yaw, cuaternión y posición de la cámara, e id de 8 bytes del personaje.
+  - Host/join por `aimp.cfg`, 20 paquetes/s, sockets no bloqueantes en el hook del frame, Winsock resuelto en tiempo de ejecución.
+  - El host aprende la dirección del cliente del primer paquete; al salir se manda BYE.
+- Tests:
+  - `test_net` (host + join por 127.0.0.1 en el mismo proceso): 60/60 paquetes en cada sentido, sin pérdidas, BYE procesado. El primer intento falló por un bug del test, no de la red: la macro evaluaba `net_init` dos veces y el segundo `bind` daba `WSAEADDRINUSE`.
+  - Peer de prueba `work/scripts/aimp_peer.py` (Python, hace de otro jugador con una posición que da vueltas).
+- **Prueba en el juego (Proton), juego = host, peer = cliente en la misma máquina (13:52–13:56):**
+  - en el menú, el peer recibió 462 paquetes del juego ("nivel 0, sin jugador"), ~19/s, sin pérdidas; el juego recibió el estado del peer a 20/s, con 27–40 ms de antigüedad;
+  - después el usuario cargó la partida (`Tech_Hub`), caminó (marcas F8 en t = 158,8 y 191,6) y guardó en una terminal de guardado (marca 3, t = 203,3); esa corrida fue sin trazado, así que el mensaje de la interacción no quedó registrado;
+  - totales del juego: 2571 paquetes enviados, 2979 recibidos, **0 perdidos**.
+- Aprendido: un proceso lanzado en segundo plano desde un shell no interactivo ignora SIGINT, y Python con la salida redirigida guarda todo en buffer. `aimp_peer.py` ahora imprime con flush y maneja SIGTERM.
+- **Pendiente para cerrar la fase 3:** prueba por Tailscale con el amigo. Tailscale no está instalado en la máquina del usuario: instalarlo requiere su confirmación.

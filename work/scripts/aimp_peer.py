@@ -10,10 +10,15 @@ círculo) y muestra, una vez por segundo, lo que recibe del juego.
 Opciones: --hz 20, --center x,y,z (centro del círculo), --level N, --seconds S (0 = sin fin).
 """
 import argparse
+import functools
 import math
+import signal
 import socket
 import struct
 import time
+
+# Salida sin buffer: el log sirve aunque el proceso se corte (p. ej. corriendo en segundo plano).
+print = functools.partial(print, flush=True)
 
 FMT = "<IBBHIIII3ff4f3f8s"  # tiene que coincidir con AimpPkt (mod/src/net.h), 76 bytes
 SIZE = struct.calcsize(FMT)
@@ -36,6 +41,11 @@ def main():
     ap.add_argument("--level", type=int, default=10)
     ap.add_argument("--seconds", type=float, default=0)
     a = ap.parse_args()
+    # SIGTERM (y SIGINT, que en segundo plano viene ignorado) terminan ordenado: BYE + resumen.
+    def stop(*_):
+        raise KeyboardInterrupt
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
     cx, cy, cz = (float(v) for v in a.center.split(","))
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.setblocking(False)
