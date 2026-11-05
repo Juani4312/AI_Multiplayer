@@ -1,41 +1,55 @@
 # PROGRESS — estado para retomar
 
-> Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones) y `work/NOTES.md` (bitácora con evidencia).
+> Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-05_
+_Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir hasta agotar los tokens diarios)_
 
 ## Decisiones vigentes
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
-- Mod: DLL proxy cross-compilada con `i686-w64-mingw32` (CMake). No usar `dinput8` (no está importada). `dxgi`/`d3d11`/`xinput1_3` están ocupadas por ReShade/MovieFix. Candidata principal: `winmm.dll` (a decidir en la fase 1).
+- Mod: DLL proxy cross-compilada con `i686-w64-mingw32` (CMake). **Proxy elegido (provisorio): `winmm.dll`** (hallazgo 01). Tiene que reexportar todas las exports de la winmm del sistema. Falta verificar KnownDLLs en el Windows del amigo.
+- `AI.exe` tiene ASLR: el mod trabaja siempre con **RVAs**. Para validar la build en runtime: RVA de `ovr_Initialize` = `0xBA83B0`.
 - Compatibilidad con ReShade: deseable, no obligatoria.
-- La IA del usuario es vanilla (verificado). Los restos de Insane AI se movieron a `/mnt/1,8TB/SteamLibrary/AlienIsolation_backup_AI_Multiplayer/` (ver LEEME.txt). Quedan 2 COMMANDS.PAK modificados (skip de misión): antes de la fase 5 hay que restaurarlos o que el amigo use los mismos.
+- La IA del usuario es vanilla (verificado). Quedan 2 COMMANDS.PAK modificados (skip de misión): antes de la fase 5 hay que restaurarlos o que el amigo use los mismos.
+
+## Herramientas
+- Ghidra 12.1.2 en `/opt/ghidra`, mingw-w64-gcc 16.2.0, Node 24.22.1 portable en `~/tools/node-v24.22.1-linux-x64` (para REA), REA 6.8.0 compilado en `/home/juano/Documents/clones/rea`.
+- **Proyecto de Ghidra persistente ya analizado:** `game/ghidra/AI_Multiplayer.gpr` (no se commitea). Con REA en modo proyecto cada consulta tarda ~10 s.
+- Cómo correr REA por CLI con el proyecto:
+  ```
+  export PATH="$HOME/tools/node-v24.22.1-linux-x64/bin:$PATH" GHIDRA_INSTALL_DIR=/opt/ghidra GHIDRA_HEADLESS_MAXMEM=8G \
+    REA_GHIDRA_PROJECT_PATH=/home/juano/Documents/Claude/AI_Multiplayer/game/ghidra/AI_Multiplayer.gpr REA_GHIDRA_PROGRAM_NAME=AI.exe
+  node /home/juano/Documents/clones/rea/scripts/rea.mjs <decompile|xrefs|search|trace|function|instructions> /home/juano/Documents/Claude/AI_Multiplayer/game/AI.exe ... --provider ghidra --format json
+  ```
+- Scripts de Ghidra propios en `work/scripts/ghidra/` (correr con `analyzeHeadless game/ghidra AI_Multiplayer -process AI.exe -noanalysis -readOnly -scriptPath work/scripts/ghidra -postScript <Script>.java <args>`).
+
+## Propuesta pendiente de confirmación del usuario
+- **Usar el proyecto también desde MCP** (hoy el MCP de REA haría un import fresco de ~10 min en cada sesión). Requiere cambiar la registración (config del agente) y reiniciar Claude Code:
+  ```
+  claude mcp remove rea -s local
+  claude mcp add --scope local rea --env GHIDRA_INSTALL_DIR=/opt/ghidra --env GHIDRA_HEADLESS_MAXMEM=8G \
+    --env REA_GHIDRA_STARTUP_TIMEOUT_MS=900000 \
+    --env REA_GHIDRA_PROJECT_PATH=/home/juano/Documents/Claude/AI_Multiplayer/game/ghidra/AI_Multiplayer.gpr \
+    --env REA_GHIDRA_PROGRAM_NAME=AI.exe \
+    -- /home/juano/tools/node-v24.22.1-linux-x64/bin/node /home/juano/Documents/clones/rea/scripts/rea.mjs mcp
+  ```
+  Contra: en modo proyecto REA es de solo lectura (sin renames). No se aplicó.
 
 ## Estado por etapa
 | Paso | Estado |
 |------|--------|
 | §3 Identificar build | ✅ hecho |
-| Repo GitHub privado | ✅ `github.com/Juani4312/AI_Multiplayer` (gh logueado como Juani4312) |
-| Ghidra 12.1.2 (`/opt/ghidra`, pacman) + JDK 21 | ✅ instalados |
-| mingw-w64-gcc 16.2.0 (`i686-w64-mingw32-g++`) | ✅ instalado |
-| REA `npm ci` | ✅ (deps en `/home/juano/Documents/clones/rea/node_modules`; esbuild postinstall bloqueado por npm 12 allowScripts) |
-| Node 24.22.1 portable | ✅ `~/tools/node-v24.22.1-linux-x64` (SHA-256 verificado contra SHASUMS256.txt). El Node del sistema (26) queda intacto |
-| REA build (`npm ci && npm run build:cached` con Node 24) | ✅ REA 6.8.0 compilado |
-| `rea doctor --provider ghidra` | ✅ healthy (todos los checks) |
-| REA registrado como MCP (scope local) | ✅ `claude mcp get rea` → Connected. Backup previo en `~/.claude.json.bak-before-rea-*` |
-| Skill de REA | ⚠️ no instalada (el scope local no la instala). Es opcional |
-| Checklist 4.4 | falta: abrir `game/AI.exe` en Ghidra vía REA |
-| Hallazgo 01 (inventario del binario) | ⏳ no empezado |
-| Hash del AI.exe del amigo | ⏳ el amigo desinstaló el juego; pedir el hash cuando reinstale (no bloquea hasta la fase 3) |
+| §4 Setup REA + checklist 4.4 | ✅ completo (Ghidra abre el binario; proyecto persistente) |
+| Hallazgo 01 (inventario) | ✅ `findings/01-inventario.md` |
+| Hallazgo 02 (game loop) | ⏳ siguiente |
+| Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
+| KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
 ## Siguiente paso
-1. (Sesión nueva, después de reiniciar Claude Code) Verificar que están las tools MCP de REA: llamar `binary_session` con `{}` y leer `result.tool_availability`.
-2. Leer las docs de REA que faltan para el análisis: `docs/cli.md`, `docs/native-investigation.md`, `docs/binary-diagnostics.md`, `docs/pe-imports.md`, `docs/mcp-contracts.md` (en `/home/juano/Documents/clones/rea`).
-3. Abrir `/home/juano/Documents/Claude/AI_Multiplayer/game/AI.exe` con el provider `ghidra` (el binario es grande; el timeout de arranque es de 15 min). Marcar el checklist 4.4 en NOTES.md.
-4. Hallazgo 01 → `work/findings/01-inventario.md`: imports (incluida la carga dinámica de DLLs con LoadLibrary, para confirmar la elección del proxy), strings relevantes, símbolos/RTTI, protecciones.
-
-### Cómo correr REA por CLI (sin MCP)
-```
-export PATH="$HOME/tools/node-v24.22.1-linux-x64/bin:$PATH" GHIDRA_INSTALL_DIR=/opt/ghidra
-node /home/juano/Documents/clones/rea/scripts/rea.mjs <comando> --json
-```
+1. Hallazgo 02 (game loop / tick principal). Pistas del 01:
+   - `SteamAPI_RunCallbacks` en `FUN_00a58eb0`, que se referencia desde una vtable en `0x13E9B5C`.
+   - `timeBeginPeriod(1)` en `FUN_00d1a7d0`, llamado desde `0xD06F0D`.
+   - El message pump (`PeekMessageA/W` + `DispatchMessageA/W`, 2 funciones cada uno).
+   - `D3D11CreateDeviceAndSwapChain` (thunk `0x01008a76`): la swapchain → `Present`.
+   - La ruta `main/main.cpp` y el entry `0xA71E61` → `WinMain`.
+2. Después: 03 (entidad del jugador), 04 (cámara), 05 (creación de entidades), 06 (scripts; incluye los nodos de multiplayer de Cathode).
