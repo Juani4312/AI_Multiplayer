@@ -8,6 +8,7 @@
 #include "probe.h"
 #include "game.h"
 #include "log.h"
+#include "trace.h"
 #include <tlhelp32.h>
 
 typedef struct {
@@ -29,6 +30,8 @@ typedef struct {
     uint32_t sess_g, sess_r, sess_prov;
     uint8_t sess_2c, sess_2d;
     uint32_t qa, qa_sink, qa_size, qa_data;
+    uint32_t qa_g;    /* *DAT_01be1bc8: tiene que ser == qa */
+    uint32_t qb_size, qb_data; /* cola B = buffer de la sesión */
 } Snap;
 
 static Snap g_prev, g_cur;
@@ -39,6 +42,10 @@ static int64_t g_run_acc, g_run_max;
 static uint32_t g_frames_period;
 static uint32_t g_qa_max, g_qa_frames_nz, g_mask_changes;
 static uint64_t g_qa_sum;
+static uint32_t g_qb_max, g_qb_frames_nz;
+static uint64_t g_qb_sum;
+static int64_t g_trace_ticks, g_last_trace;
+static int g_warned_qa;
 static uint32_t g_status_frame_game;
 static float g_status_pos[3];
 static int g_status_pos_ok;
@@ -105,6 +112,7 @@ static void snap_take(Snap *s)
     s->gtime = *(volatile double *)(b + AIMP_RVA_GAME_TIME);
     s->root = *(volatile uint32_t *)(b + AIMP_RVA_G_ROOT);
     s->sess_g = *(volatile uint32_t *)(b + AIMP_RVA_NET_SESSION);
+    s->qa_g = *(volatile uint32_t *)(b + AIMP_RVA_QUEUE_A);
     uint32_t llpp = *(volatile uint32_t *)(b + AIMP_RVA_LEVEL_LIST_PP);
 
     /* Heap: siempre con lecturas seguras. */
@@ -118,6 +126,8 @@ static void snap_take(Snap *s)
         mem_u32(s->sess_g + SESSION_PROVIDER, &s->sess_prov);
         mem_u8(s->sess_g + SESSION_FLAG_2C, &s->sess_2c);
         mem_u8(s->sess_g + SESSION_FLAG_2D, &s->sess_2d);
+        mem_u32(s->sess_g + SESSION_QSIZE, &s->qb_size);
+        mem_u32(s->sess_g + SESSION_QDATA, &s->qb_data);
     }
     if (!s->root)
         return;
@@ -228,6 +238,10 @@ static void snap_events(const Snap *a, const Snap *b, uintptr_t mm_this)
     if (CHG(qa) || CHG(qa_sink))
         log_printf("EV cola A 0x%08x (sumidero 0x%08x) -> 0x%08x (sumidero 0x%08x)%s", a->qa, a->qa_sink, b->qa,
                    b->qa_sink, b->qa_sink ? "  <-- INESPERADO: hay sumidero" : "");
+    if (!g_warned_qa && b->qa && b->qa_g && b->qa != b->qa_g) {
+        g_warned_qa = 1;
+        log_printf("EV OJO: g_root+0x50 (0x%08x) != *DAT_01be1bc8 (0x%08x): los productores usan otra cola", b->qa, b->qa_g);
+    }
     if (!g_warned_sess && b->root && b->sess_r && b->sess_r != b->sess_g) {
         g_warned_sess = 1;
         log_printf("EV OJO: g_root+0x54 (0x%08x) != *DAT_01be1bd4 (0x%08x)", b->sess_r, b->sess_g);
@@ -277,14 +291,18 @@ static void status(const Snap *s, int64_t period_ticks)
     log_printf("   red: NETZ 0x%08x transporte 0x%08x máscara %08x:%08x (%u cambios) | sesión 0x%08x proveedor 0x%08x +2C=%u +2D=%u",
                s->netz, s->netz_tr, s->netz_m1, s->netz_m0, g_mask_changes, s->sess_g, s->sess_prov, s->sess_2c,
                s->sess_2d);
-    log_printf("   cola A 0x%08x sumidero 0x%08x: tamaño tras Run máx %u, frames con datos %u/%u, suma %llu bytes",
-               s->qa, s->qa_sink, g_qa_max, g_qa_frames_nz, g_frames_period, (unsigned long long)g_qa_sum);
+    log_printf("   cola A 0x%08x (global 0x%08x) sumidero 0x%08x: tamaño tras Run máx %u, frames con datos %u/%u, suma %llu bytes",
+               s->qa, s->qa_g, s->qa_sink, g_qa_max, g_qa_frames_nz, g_frames_period, (unsigned long long)g_qa_sum);
+    log_printf("   cola B (sesión, se descarta sin proveedor): tamaño tras Run máx %u, frames con datos %u/%u, suma %llu bytes",
+               g_qb_max, g_qb_frames_nz, g_frames_period, (unsigned long long)g_qb_sum);
     g_frames_at_status = g_frames;
     g_status_frame_game = s->frame;
     g_run_acc = g_run_max = 0;
     g_frames_period = 0;
     g_qa_max = g_qa_frames_nz = g_mask_changes = 0;
     g_qa_sum = 0;
+    g_qb_max = g_qb_frames_nz = 0;
+    g_qb_sum = 0;
     g_status_pos_ok = s->pl_ok;
     if (s->pl_ok)
         aimp_memcpy(g_status_pos, s->pos, sizeof g_status_pos);
@@ -360,8 +378,12 @@ static void dump_detail(const Snap *s)
         if (s->qa_data && s->qa_size)
             log_hexdump("cola A: buffer", s->qa_data, s->qa_size < 0x80 ? s->qa_size : 0x80);
     }
-    if (s->sess_g)
+    if (s->sess_g) {
         log_dump32("sesión de red", s->sess_g, 0x40);
+        if (s->qb_data && s->qb_size)
+            log_hexdump("cola B: buffer", s->qb_data, s->qb_size < 0x80 ? s->qb_size : 0x80);
+    }
+    trace_report_totals("volcado");
     log_printf("==== fin del volcado ====");
 }
 
@@ -398,6 +420,8 @@ void probe_init(void)
     g_dump_key = aimp_env_int(L"AIMP_DUMP_KEY", VK_F9);
     g_first_frames = (uint32_t)aimp_env_int(L"AIMP_FIRST_FRAMES", 3);
     g_dump_at_frame = (uint32_t)aimp_env_int(L"AIMP_DUMP_AT_FRAME", 0);
+    int trace_ms = aimp_env_int(L"AIMP_TRACE_MS", 5000);
+    g_trace_ticks = g_freq * (trace_ms < 250 ? 250 : trace_ms) / 1000;
     log_printf("sonda: muestra cada %d ms, resumen cada %d ms, tecla de volcado 0x%02x, primeros %u frames al detalle",
                sample_ms, status_ms, g_dump_key, g_first_frames);
 }
@@ -435,6 +459,16 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
             if (sz)
                 g_qa_frames_nz++;
             g_qa_sum += sz;
+        }
+    }
+    if (g_cur.sess_g) {
+        uint32_t sz = 0;
+        if (mem_u32(g_cur.sess_g + SESSION_QSIZE, &sz)) {
+            if (sz > g_qb_max)
+                g_qb_max = sz;
+            if (sz)
+                g_qb_frames_nz++;
+            g_qb_sum += sz;
         }
     }
 
@@ -496,6 +530,12 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
         status(&g_cur, now - g_last_status);
         g_last_status = now;
     }
-    if ((ret & 0xFF) == 0)
+    if (trace_enabled() && now - g_last_trace >= g_trace_ticks) {
+        trace_report_period();
+        g_last_trace = now;
+    }
+    if ((ret & 0xFF) == 0) {
         log_printf("ModeManager::Run devolvió 0: el juego sale del loop principal (frames vistos %u)", g_frames);
+        trace_report_totals("salida");
+    }
 }

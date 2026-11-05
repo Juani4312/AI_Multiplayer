@@ -248,3 +248,8 @@ Código en `mod/` (README con build, instalación, variables y checklist de la p
   Sin el disco no hay juego ni Steam library.
 - Debajo del punto de montaje (en el disco raíz) hay un `COMMANDS.PAK` suelto: 3.572.520 bytes, mtime 2026-01-11 17:48, SHA-256 `dda19f70ab8abe5194fa7a372a680ed8c5aae6a30842101547da8f724f48a47f`. La fecha coincide con el `COMMANDS.PAK` modificado de `BSP_LV426_PT01`. Hay que compararlo con las copias del backup cuando el disco esté montado.
 - Colocar `winmm.dll` en la carpeta del juego y la opción de lanzamiento (`WINEDLLOVERRIDES="winmm=n,b" %command%`): confirmación del usuario.
+
+### Trazado de las colas (experimento 3.6) y hallazgo 10 parte 6
+- Los dos wrappers de encolado (`FUN_00a2a290` → cola A `[0x1BE1BC8]`; `FUN_00a2a810` → sesión `[0x1BE1BD4]`) tienen el prólogo `55 8B EC 8B 45 10 8B 4D 0C 8B 55 08 50 51`, sin relocations (verificado en el archivo). El mod los hookea solo con `AIMP_TRACE_QUEUES=1`.
+- `FUN_00a2a5c0` (update de la sesión): sin proveedor, el buffer B se vacía sin despacharse. Detalle en `findings/10-netz-red-del-engine.md`, parte 6.
+- Tests: `test_probe` hookea dos wrappers falsos con el mismo prólogo; el original se ejecuta 462/462 veces a través del trampolín; el tipo se enmascara a u16; los informes por período y los totales salen bien.
