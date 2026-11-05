@@ -188,7 +188,9 @@ int ghost_install(void)
     g_npc_ticks = npc_ms > 0 ? g_freq * npc_ms / 1000 : 0;
     g_from_key = aimp_env_int(L"AIMP_GHOST_FROM", -1);
     g_npc_type = aimp_env_int(L"AIMP_GHOST_NPC_TYPE", 6);
-    g_noauth = aimp_env_int(L"AIMP_GHOST_NOAUTH", 0);
+    /* Corrida 14: con el avatar no autoritativo su IA no reacciona (no huye del fuego) y no se mueve
+     * solo. Por defecto en el modo 3; AIMP_GHOST_NOAUTH=0 lo apaga. */
+    g_noauth = aimp_env_int(L"AIMP_GHOST_NOAUTH", g_mode == 3);
     static const char *const names[] = { "", "clon del jugador", "NPC existente y después clon", "solo NPC existente" };
     if (g_mode) {
         g_state = G_WAIT_PLAYER;

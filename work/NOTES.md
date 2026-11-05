@@ -510,3 +510,14 @@ Evidencia: `work/evidence/runtime/run11-filtro-host.log` (gitignored), DLL `1c1d
 - Lanzallamas: A 0x18 (56 bytes, daño o impacto con posición) y A 0x0C (16 bytes: jugador → NPC avatar, agresión). Alien: A 0x22. Bengala: nada. Balas del revólver: A 0x26, un "usar" con prefijo de ítem `f7fb2113`. Detalle en el hallazgo 14.
 - `AIMP_GHOST_NOAUTH`: "no se encontró el bloque del avatar". Error de offset: los bloques están a `+0x22C` del `this` de `SpawnCharacter`, que es la interfaz en `CM+0x04`. O sea, en `CM+0x230`. Corregido (`CM_BLOCKS` = 0x230) y el test ajustado. Se prueba en la próxima corrida.
 - El avatar se mantuvo en el objetivo todo el tiempo: entre ~70 y 110 teleports por segundo mientras el jugador camina, y 2 por segundo cuando los dos están quietos.
+
+## 2026-11-05 — Corrida 14: el avatar no autoritativo no tiene IA; los ítems no se sincronizan; los scripts se repiten
+Evidencia: `work/evidence/runtime/run14-items-noauth-host.log` (gitignored). papito host con `AIMP_GHOST=3`, `AIMP_GHOST_NOAUTH=1` (`CM_BLOCKS` corregido, DLL `dad2b69`) y `AIMP_SYNC_USE=1`. La laptop, con `cba2b2e` (sin NOAUTH).
+- **NOAUTH:**
+  - `GHOST: bloque del avatar = CM+0x400 (índice 1), autoridad 1; se pone en 0`. Sin excepciones.
+  - Con el objetivo quieto, **2 teleports por segundo** (1 en 500 ms). En la corrida 12 eran ~50, porque la IA lo empujaba.
+  - El usuario: con el lanzallamas en la PC, "el npc de la laptop no corrió": es el avatar de papito, no autoritativo. "Al revés sí": el avatar de la laptop, sin NOAUTH.
+  - **Con autoridad 0, la IA del NPC deja de actuar.** Queda activado por defecto en el modo 3.
+- **Ítems:** las balas (`f7fb2113 162bda8d`, el mismo id que en la corrida 13: estable entre sesiones) y una placa coleccionable (`cd567644 4cafe144`) se mandan y se aplican con el avatar. **No desaparecen en la otra máquina:** el NPC no puede levantar ítems.
+  - Cada jugador se queda con su copia (botín por jugador). Si se quiere que desaparezcan para los dos, hay que sacarlos del mundo sin dárselos al otro. No investigado.
+- **Scripts:** un evento (NPCs que hablan y se van) se disparó en cada máquina cuando entró su jugador. En la laptop se repitió; en la PC, no. Cada máquina corre sus propios scripts. Es el problema de la fase 6: disparadores decididos por el host.

@@ -114,7 +114,7 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_GHOST_DELAY_MS` | 8000 | cuánto esperar, desde que aparece el jugador, para pedir el clon |
 | `AIMP_GHOST_FROM` | −1 | clave (`+0x00`) del pedido a clonar; −1 = el último del jugador (tipo 0) |
 | `AIMP_GHOST_NPC_MS` | 20000 (modo 2) / sin límite (modo 3) | cuánto tiempo el NPC hace de avatar; ≤ 0 = sin límite |
-| `AIMP_GHOST_NOAUTH` | 0 | 1 = experimento: el avatar pasa a no autoritativo (`bloque+0x4F = 0`), para ver si su IA se apaga |
+| `AIMP_GHOST_NOAUTH` | 1 en el modo 3 | el avatar pasa a no autoritativo (`bloque+0x4F = 0`): su IA deja de actuar (no huye del fuego ni se mueve solo; corrida 14). 0 = dejarle la IA |
 | `AIMP_SYNC_USE` | 0 | 1 = **fase 5, experimental**: los "usar" del jugador local se mandan al otro, que los aplica con su jugador (hallazgo 13) |
 | `AIMP_SYNC_USE_SKIP` | `3e3ec35d,1e38b898` | prefijos de objetivo (4 bytes en hex, como en el log) que no se mandan: lockers y terminal de guardado. `0` = mandar todo |
 | `AIMP_SYNC_USE_ACTOR` | 1 | quién hace el uso remoto: 1 = el avatar (el NPC de `AIMP_GHOST=3`), si hay; 0 = el jugador local (se teletransporta a botones y lockers) |

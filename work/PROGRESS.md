@@ -86,9 +86,10 @@ _Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 
 
    ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
 2. **Siguiente** (a elegir con el usuario):
-   - **Ítems con dos máquinas:** levantar un ítem en una (por ejemplo, las balas del revólver) y ver si desaparece en la otra y quién se lo queda. Con `AIMP_SYNC_USE=1` ya se manda; en la otra lo hace el avatar.
-   - **IA del avatar:** probar `AIMP_GHOST_NOAUTH=1` con el offset corregido (`CM+0x230`). Bajan los teleports por segundo si la IA se apaga.
-   - **Armas:** hookear el disparo y el lanzamiento (no son RPCs, hallazgo 14) y mandarlos como eventos. Replicar el daño (0x18) y la agresión (0x0C) recién cuando haya sincronización de IA.
-   - Fase 4b, pendiente: probar `8bc1f7e`, que vuelve a poner al NPC si su IA lo corre; apagar su IA y su animación.
+   - **Fase 6, scripts:** cada máquina corre sus propios disparadores (corrida 14: un diálogo se repitió). Es el núcleo del coop. Opciones: hookear los disparadores de CATHODE y que el host los decida (hallazgos 06 y 10; nodos `HostOnlyTrigger`, `SyncOnAllPlayers`).
+   - **Armas:** hookear el disparo y el lanzamiento (hallazgo 14).
+   - **Ítems compartidos:** hoy el botín es por jugador. Si se quiere compartido, sacar el ítem del mundo en la otra máquina.
+   - Hecho en la corrida 14: el avatar no autoritativo no tiene IA (`AIMP_GHOST_NOAUTH`, activado por defecto en el modo 3).
+   - Fase 4b, pendiente: la animación de caminar del avatar (hoy se teletransporta quieto).
 3. Investigar qué escribe en los canales NETZ durante el juego: posible camino para el movimiento de personajes.
 4. Estático pendiente: semántica de los RPCs 0x1E/0x20/0x22/0x23/0x28 y del B 0x07; dispatcher de los comandos de UI (hallazgo 09); inventario (07).
