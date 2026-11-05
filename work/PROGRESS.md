@@ -43,7 +43,7 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 | Hallazgo 01 (inventario) | ✅ `findings/01-inventario.md` |
 | Hallazgo 02 (game loop) | ✅ `findings/02-game-loop.md` (hook: `ModeManager::Run` RVA 0x3A8460) |
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
-| Mod fase 1+2 (proxy winmm + hook + log de posición) | ✅ **verificado en runtime** (2026-11-05, Proton): fase 1 (código por frame) y fase 2 (posición, yaw, cámara) |
+| Mod fase 1+2 (proxy winmm + hook + log de posición) | ✅ **verificado en runtime** (2026-11-05, Proton): fase 1 (código por frame) y fase 2 (posición, yaw, cámara). ✅ **También en Windows 10 nativo** (laptop de pruebas: 195 exports resueltos y 10 ausentes que el juego no usa, ASLR reubica `AI.exe` y anda igual; `work/windows/report.md`) |
 | Mod fase 3 (UDP mínimo con la posición) | 🟡 **verificada en local** (juego host + peer de prueba, los dos sentidos, 0 perdidos). Falta la prueba por Tailscale con el amigo |
 | Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
@@ -55,7 +55,7 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 | Hallazgo 07 (items/inventario) | 🟡 parte 1 en `findings/07-items-e-inventario.md` |
 | Hallazgo 08 parte 2 (árboles del Alien) | ✅ `TargetIsPlayer` mira el controlador `+0x31C`, no `GetPlayer()` |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
-| KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
+| KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"`. En la laptop (Windows 10 19045) winmm **no** está: es esperable lo mismo en el amigo |
 
 ## Resumen para el usuario (2026-11-05, después de las corridas en el juego)
 - **Fases 1 y 2 del mod verificadas en runtime** (Proton 9.0-203): hook por frame, posición/yaw del jugador, cámara (1,57 m sobre los pies; 0,85 m agachado), nivel, personajes y NETZ. Offsets de los hallazgos 01–05, 09 y 10 confirmados (ver "Verificado en runtime" en cada uno).
