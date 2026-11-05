@@ -47,6 +47,15 @@ public class Dump extends GhidraScript {
           if (c.startsWith("fn:")) fn(addr(c.substring(3)), true);
           else if (c.startsWith("hdr:")) fn(addr(c.substring(4)), false);
           else if (c.startsWith("xref:")) xref(addr(c.substring(5)));
+          else if (c.startsWith("xrefw:")) {
+            int n = 0;
+            for (Reference r : getReferencesTo(addr(c.substring(6)))) {
+              if (!r.getReferenceType().isWrite()) continue;
+              if (++n > 60) break;
+              out.printf("  %s %s en %s%n", r.getReferenceType(), r.getFromAddress(), fname(r.getFromAddress()));
+            }
+            if (n == 0) out.println("  sin escrituras");
+          }
           else if (c.startsWith("vt:")) {
             String[] p = c.substring(3).split(":");
             vt(addr(p[0]), Integer.parseInt(p[1]));
@@ -56,6 +65,87 @@ public class Dump extends GhidraScript {
             String[] p = c.substring(4).split(":");
             asm(addr(p[0]), Integer.parseInt(p[1]));
           } else if (c.startsWith("rtti:")) rtti(c.substring(5));
+          else if (c.startsWith("fieldw:")) {
+            // fieldw:GLOBAL:OFF -> MOV reg,[GLOBAL] seguido (≤8 instr.) de MOV [reg+OFF],x
+            String[] p = c.substring(7).split(":");
+            Address g = addr(p[0]);
+            long off = Long.decode(p[1]);
+            int n = 0;
+            for (Reference r : getReferencesTo(g)) {
+              ghidra.program.model.listing.Instruction ins = getInstructionAt(r.getFromAddress());
+              if (ins == null || !ins.getMnemonicString().equals("MOV") || ins.getNumOperands() < 2) continue;
+              Object[] o0 = ins.getOpObjects(0);
+              if (o0.length != 1 || !(o0[0] instanceof ghidra.program.model.lang.Register)) continue;
+              String reg = o0[0].toString();
+              ghidra.program.model.listing.Instruction x = ins.getNext();
+              for (int j = 0; j < 8 && x != null; j++, x = x.getNext()) {
+                String s = x.toString();
+                String pat = "[" + reg + " + 0x" + Long.toHexString(off) + "]";
+                if (off == 0) pat = "[" + reg + "]";
+                if (s.startsWith("MOV ") && s.contains(pat) && s.indexOf(pat) < s.indexOf(',')) {
+                  if (++n > 40) break;
+                  out.printf("  %s %-40s en %s%n", x.getAddress(), s, fname(x.getAddress()));
+                }
+                if (x.getMnemonicString().startsWith("CALL") || x.getMnemonicString().startsWith("RET")) break;
+              }
+            }
+            if (n == 0) out.println("  sin escrituras encontradas");
+          } else if (c.startsWith("post:")) {
+            // post:FUNC:N -> N instrucciones posteriores a cada CALL a FUNC
+            String[] p = c.substring(5).split(":");
+            int nn = Integer.parseInt(p[1]), k = 0;
+            for (Reference r : getReferencesTo(addr(p[0]))) {
+              if (!r.getReferenceType().isCall()) continue;
+              if (++k > 200) break;
+              out.println("  -- " + r.getFromAddress() + " en " + fname(r.getFromAddress()));
+              ghidra.program.model.listing.Instruction x = getInstructionAt(r.getFromAddress());
+              for (int j = 0; j < nn && x != null; j++) {
+                x = x.getNext();
+                if (x != null) out.printf("     %s  %s%n", x.getAddress(), x.toString());
+              }
+            }
+          } else if (c.startsWith("both:")) {
+            // both:A:B -> funciones que llaman (directo) a A y a B
+            String[] p = c.substring(5).split(":");
+            Set<Address> ca = new TreeSet<>(), cb = new TreeSet<>();
+            for (Reference r : getReferencesTo(addr(p[0]))) {
+              Function f = getFunctionContaining(r.getFromAddress());
+              if (f != null) ca.add(f.getEntryPoint());
+            }
+            for (Reference r : getReferencesTo(addr(p[1]))) {
+              Function f = getFunctionContaining(r.getFromAddress());
+              if (f != null) cb.add(f.getEntryPoint());
+            }
+            ca.retainAll(cb);
+            for (Address fa : ca) out.println("  " + fname(fa));
+            if (ca.isEmpty()) out.println("  ninguna");
+          } else if (c.startsWith("insn:")) {
+            // insn:REGEX:START:END -> instrucciones cuyo texto matchea (Java regex), máx. 80
+            int last = c.lastIndexOf(':'), prev = c.lastIndexOf(':', last - 1);
+            java.util.regex.Pattern pt = java.util.regex.Pattern.compile(c.substring(5, prev));
+            Address s0 = addr(c.substring(prev + 1, last)), s1 = addr(c.substring(last + 1));
+            int n = 0;
+            for (ghidra.program.model.listing.Instruction x : currentProgram.getListing().getInstructions(
+                new ghidra.program.model.address.AddressSet(s0, s1), true)) {
+              if (!pt.matcher(x.toString()).find()) continue;
+              if (++n > 80) {
+                out.println("  ... (más)");
+                break;
+              }
+              out.printf("  %s %-44s en %s%n", x.getAddress(), x.toString(), fname(x.getAddress()));
+            }
+            if (n == 0) out.println("  sin coincidencias");
+          } else if (c.startsWith("funcs:")) {
+            String[] p = c.substring(6).split(":");
+            for (Function f : currentProgram.getFunctionManager().getFunctions(
+                new ghidra.program.model.address.AddressSet(addr(p[0]), addr(p[1])), true)) {
+              out.printf("  %s %-28s size=%d refs=%d%n", f.getEntryPoint(), f.getName(), f.getBody().getNumAddresses(),
+                  getReferencesTo(f.getEntryPoint()).length);
+            }
+          } else if (c.startsWith("pre:")) {
+            String[] p = c.substring(4).split(":");
+            pre(addr(p[0]), Integer.parseInt(p[1]));
+          }
           else if (c.startsWith("sym:")) sym(addr(c.substring(4)));
           else out.println("comando desconocido");
         } catch (Exception e) {
@@ -267,6 +357,34 @@ public class Dump extends GhidraScript {
       }
       out.printf("  %s  %-40s%s%n", ins.getAddress(), ins.toString(), refs);
       ins = ins.getNext();
+    }
+  }
+
+  // Para cada llamada a ADDR: las N instrucciones anteriores al CALL (para ver de dónde sale ECX/args).
+  private void pre(Address target, int n) {
+    int k = 0;
+    for (Reference r : getReferencesTo(target)) {
+      if (!r.getReferenceType().isCall()) continue;
+      if (++k > 60) {
+        out.println("  ... (más)");
+        break;
+      }
+      Address site = r.getFromAddress();
+      out.println("  -- " + site + " en " + fname(site));
+      java.util.ArrayDeque<ghidra.program.model.listing.Instruction> q = new java.util.ArrayDeque<>();
+      ghidra.program.model.listing.Instruction ins = getInstructionAt(site);
+      for (int i = 0; i < n && ins != null; i++) {
+        ins = ins.getPrevious();
+        if (ins != null) q.addFirst(ins);
+      }
+      for (ghidra.program.model.listing.Instruction x : q) {
+        StringBuilder refs = new StringBuilder();
+        for (Reference rr : x.getReferencesFrom()) {
+          Symbol s = getSymbolAt(rr.getToAddress());
+          if (s != null && !rr.getToAddress().isStackAddress()) refs.append(" ->").append(s.getName(true));
+        }
+        out.printf("     %s  %-36s%s%n", x.getAddress(), x.toString(), refs);
+      }
     }
   }
 

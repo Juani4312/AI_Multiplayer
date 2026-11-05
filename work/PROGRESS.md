@@ -42,14 +42,12 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | §4 Setup REA + checklist 4.4 | ✅ completo (Ghidra abre el binario; proyecto persistente) |
 | Hallazgo 01 (inventario) | ✅ `findings/01-inventario.md` |
 | Hallazgo 02 (game loop) | ✅ `findings/02-game-loop.md` (hook: `ModeManager::Run` RVA 0x3A8460) |
-| Hallazgo 03 (entidad del jugador) | ⏳ siguiente |
+| Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
+| Mod fase 1+2 (proxy winmm + hook + log de posición) | ⏳ siguiente (compilar; probar requiere confirmación) |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
 ## Siguiente paso
-1. Hallazgo 03 (entidad del jugador: posición, rotación, estado). Pistas:
-   - RTTI `CATHODE::VariableThePlayer`, `PlayerCamera`, `GetCurrentCameraPos`, `Chr_PlayerCrouch`.
-   - Rutas `main/character_playable.cpp`, `Physics/Havok_character.cpp`.
-   - El update del nivel `FUN_00790000` (RVA 0x390000).
-2. Con 02 + 03 hechos: escribir la fase 1+2 del mod (proxy `winmm`, hook en `ModeManager::Run`, log por frame + posición del jugador). Compilar sí; **probar en el juego requiere confirmación del usuario**.
-3. Después: 04 (cámara), 05 (creación de entidades), 06 (scripts; nodos de multiplayer de Cathode).
+1. Escribir la fase 1+2 del mod en `mod/`: proxy `winmm.dll` (reexporta todo hacia la winmm del sistema), hook en `ModeManager::Run` (RVA 0x3A8460) con verificación de bytes, log por frame del estado del ModeManager y de la posición/yaw del jugador. Compilar con mingw. **Probar en el juego requiere confirmación del usuario.**
+2. Hallazgo 04 (cámara): RTTI `CATHODE::PlayerCamera` (vftable `0x1315D34`), `GetCurrentCameraPos`/`Target`/`Fov`.
+3. Hallazgo 05 (creación de entidades): quién llena `[[g_root+8]+0x80]`, constructor de `Character` `0x7B2390` y su factory.

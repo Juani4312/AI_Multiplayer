@@ -152,3 +152,10 @@ Detalle en `findings/02-game-loop.md`. Evidencia en `work/evidence/h02/` (salida
 - ⚠️ Chequeo de licencia de Steam en `FUN_007cad10` (casos 3/7: crash deliberado escribiendo en NULL). No tocar.
 - Opciones dev desactivadas en retail (`FUN_00d0fb70` = `return 0`, plegada por ICF). Funcionan: `monitor`, `adapter`, `benchmark`, `engine_settings`.
 - Hook recomendado para la fase 1: `ModeManager::Run` (RVA `0x3A8460`, prólogo `51 53 55 56 8B F1 83 7E 4C FF`).
+
+## 2026-11-05 — Hallazgo 03 (jugador)
+Detalle en `findings/03-jugador.md`. Evidencia en `work/evidence/h03/`.
+- `GetPlayer()` = `FUN_0078baf0`: `[[g_root+0x08]+0x80][0]` si `[[g_root+0x08]+0x84] != 0`. Recibe un índice que no usa. **El engine tiene un array de jugadores con contador.**
+- `Character`: vtable `0x12F4FC8` (sin RTTI), constructor `0x7B2390`. Posición `+0x70/+0x74/+0x78` (Y vertical). Yaw `+0x174` en radianes [-π, π] (normalizado en `SetTransform` `0x7C2710` con 1/2π y 2π). `+0x64` = definición (tipo en `+4`).
+- Vínculo estático: después de `CALL GetPlayer` se lee `[EAX+0x70..0x78]` y `[EAX+0x174]` (ver `d31.txt`).
+- Pendiente (hallazgo 05): quién llena el array de jugadores y asigna `g_root+0x08`.
