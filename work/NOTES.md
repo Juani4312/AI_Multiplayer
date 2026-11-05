@@ -335,3 +335,21 @@ Evidencia del host: `work/evidence/runtime/run5-tailscale-host.log` (gitignored)
 - Edad del último paquete al momento del resumen: mediana 28 ms, p95 83 ms, máx. 278 ms. Incluye el intervalo entre paquetes (~60 ms), así que no es la latencia.
 - **Ritmo real 15–19 paquetes/s en vez de 20:** `net_due` exige ≥ 50 ms desde el último envío y se envía una vez por frame, así que a 58–60 fps muchas veces se esperan 4 frames (66,7 ms). Arreglo simple: `last_send += send_ticks` (con tope si se atrasa mucho).
 - Mejora pendiente: en el primer `net_poll`, vaciar el backlog sin contar huecos, o abrir el socket en el primer frame. Así no se toma un estado viejo de 35 s ni se cuentan pérdidas falsas.
+- **Lado laptop** (`work/windows/logs/aimp-red-20261105-114132.log`, reporte en `work/windows/report.md`, paso 3):
+  - Tailscale 1.104.5 (winget). `tailscale ping papito`: directo por LAN (192.168.1.6:41641). La interfaz de Tailscale queda como red Private y el Wi-Fi como Public. **Windows no preguntó por `AI.exe`**: en modo join el socket solo manda primero, y las respuestas entran por el estado de la conexión. Si el amigo hace de host en Windows, ahí sí puede aparecer el cartel del firewall.
+  - `NET: cerrado (enviados 5503, recibidos 5141, perdidos 0 en total)`. 60 fps en partida. Salida limpia.
+- **Los dos sentidos verificados con las marcas F8.** Cada máquina recibió exactamente la posición que la otra registró en sus marcas:
+  - papito MARCA 1 (2,43, 13,28, 33,20) yaw 1,607 → la laptop recibió (2,431, 13,279, 33,195) yaw 1,607;
+  - papito MARCA 2 (−0,15, 13,28, 34,04) → la laptop recibió (−0,146, 13,279, 34,038);
+  - laptop MARCA 1 (7,59, 13,28, 33,34) yaw −1,728 → papito recibió (7,592, 13,278, 33,339) yaw −1,728;
+  - laptop MARCA 2 (6,62, 13,28, 34,61) yaw −2,048 → papito recibió (6,617, 13,277, 34,610) yaw −2,048.
+- **Fase 3 cerrada:** Windows 10 nativo ↔ Linux/Proton por Tailscale, en los dos sentidos.
+
+## 2026-11-05 — COMMANDS.PAK: solo uno de papito es distinto del original
+Dato de la laptop (`work/windows/report.md`, "COMMANDS.PAK en la laptop"):
+| Archivo | laptop | papito |
+|---------|--------|--------|
+| `BSP_LV426_PT01/WORLD/COMMANDS.PAK` | `EB9FDBF197308941F6E43CDE7BD1712024011A16967A4819C71F2FB49076ED77` | `DDA19F70…A47F` (**distinto**) |
+| `TECH_COMMS/WORLD/COMMANDS.PAK` | `42FD34D7…DD3A` | igual |
+- No está confirmado si el usuario verificó la integridad en la laptop. Igual se puede concluir que el de la laptop es el de Steam: si la copia por red hubiera traído el archivo de papito, serían iguales. Ese archivo no vino de papito, así que salió de Steam (de los servidores o de una verificación). **La laptop está limpia** (por lo menos en estos dos).
+- Conclusión: **en papito solo `BSP_LV426_PT01/WORLD/COMMANDS.PAK` está modificado.** `TECH_COMMS` es el original (su mtime 2026-10-05 no indica un mod). El pendiente de PROGRESS pasa de "2 COMMANDS.PAK" a uno.

@@ -92,7 +92,7 @@ Ver hallazgo 09 (`FUN_0084dbe0`): las entidades de UI usan nombres internados (`
 
 ### Los nodos de multiplayer no se usan en ningún nivel
 
-Se buscaron los ShortGuids de 15 tipos de nodo MP en los `COMMANDS.PAK` de los **21 niveles** de la instalación, incluidos los dos modificados:
+Se buscaron los ShortGuids de 15 tipos de nodo MP en los `COMMANDS.PAK` de los **21 niveles** de la instalación, incluidos los dos que se creían modificados (después se comprobó que solo `BSP_LV426_PT01` difiere del original; NOTES, 2026-11-05):
 `IsMultiplayerMode`, `HostOnlyTrigger`, `NetPlayerCounter`, `SyncOnAllPlayers`, `SyncOnFirstPlayer`, `AllPlayersReady`, `NumConnectedPlayers`, `NumPlayersOnStart`, `NumDeadPlayers`, `NetworkedTimer`, `ParticipatingPlayersList`, `RespawnConfig`, `SpawnGroup`, `BroadcastTrigger` y `RespawnExcluder`.
 
 **Hay 0 apariciones en todos.** Los nodos existen en el código (hallazgo 01) pero ningún nivel distribuido los usa. Es coherente con un modo multijugador que se descartó y con la red del engine dormida (hallazgo 10).

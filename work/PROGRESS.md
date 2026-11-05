@@ -3,14 +3,14 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió seguir hasta usar ~70 % de los tokens)_
+_Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 1–3 verificadas en Windows nativo y por Tailscale)_
 
 ## Decisiones vigentes
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
 - Mod: DLL proxy cross-compilada con `i686-w64-mingw32` (CMake). **Proxy elegido (provisorio): `winmm.dll`** (hallazgo 01). Tiene que reexportar todas las exports de la winmm del sistema. Falta verificar KnownDLLs en el Windows del amigo.
 - `AI.exe` tiene ASLR: el mod trabaja siempre con **RVAs**. Para validar la build en runtime: RVA de `ovr_Initialize` = `0xBA83B0`.
 - Compatibilidad con ReShade: deseable, no obligatoria.
-- La IA del usuario es vanilla (verificado). Quedan 2 COMMANDS.PAK modificados (skip de misión): antes de la fase 5 hay que restaurarlos o que el amigo use los mismos. La laptop de pruebas, verificada, va a dar los hashes vanilla para compararlos (NOTES, "Laptop de pruebas").
+- La IA del usuario es vanilla (verificado). **Solo `BSP_LV426_PT01/WORLD/COMMANDS.PAK` está modificado** (comparado con la laptop, que tiene el de Steam; `TECH_COMMS` es el original). Antes de la fase 5 hay que restaurarlo o que el amigo use el mismo (NOTES, "COMMANDS.PAK: solo uno").
 
 ## Herramientas
 - Ghidra 12.1.2 en `/opt/ghidra`, mingw-w64-gcc 16.2.0, Node 24.22.1 portable en `~/tools/node-v24.22.1-linux-x64` (para REA), REA 6.8.0 compilado en `/home/juano/Documents/clones/rea`.
@@ -44,7 +44,7 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 | Hallazgo 02 (game loop) | ✅ `findings/02-game-loop.md` (hook: `ModeManager::Run` RVA 0x3A8460) |
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
 | Mod fase 1+2 (proxy winmm + hook + log de posición) | ✅ **verificado en runtime** (2026-11-05, Proton): fase 1 (código por frame) y fase 2 (posición, yaw, cámara). ✅ **También en Windows 10 nativo** (laptop de pruebas: 195 exports resueltos y 10 ausentes que el juego no usa, ASLR reubica `AI.exe` y anda igual; `work/windows/report.md`) |
-| Mod fase 3 (UDP mínimo con la posición) | 🟡 **verificada en local** (juego host + peer de prueba, los dos sentidos, 0 perdidos). Falta la prueba por Tailscale con el amigo |
+| Mod fase 3 (UDP mínimo con la posición) | ✅ **verificada por Tailscale** (2026-11-05): laptop Windows 10 nativo (join) ↔ papito Proton (host). Los dos sentidos, 0 perdidos, y las posiciones recibidas coinciden con las marcas F8 del otro lado. Mejoras menores pendientes: ritmo real ~16/s en vez de 20 y backlog del socket antes del primer frame |
 | Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
 | Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–7 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; cola A en loopback; **cola B = salida a la red, descartada en retail**; registro de handlers de la cola A) |
@@ -66,16 +66,20 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 - El mod quedó instalado en el juego con el trazado activo (`aimp.cfg`). `work/scripts/runtime_setup.sh revert` lo saca todo.
 
 ## Pendientes que requieren al usuario
-0. **Tailscale** para cerrar la fase 3:
-   - en la máquina del usuario, `sudo pacman -S tailscale && sudo systemctl enable --now tailscaled && sudo tailscale up` (requiere su confirmación);
-   - el amigo instala Tailscale en Windows;
-   - el host pone `AIMP_NET=host` y el que se une, `AIMP_NET=join` y `AIMP_NET_PEER=<IP de Tailscale del host>:47811` (en `aimp.cfg`).
+0. ~~Tailscale para cerrar la fase 3~~: hecho con la laptop. papito es 100.126.161.126 y papulaptop, 100.126.159.45. Para el amigo:
+   - instala Tailscale y se une a la red del usuario;
+   - el host pone `AIMP_NET=host` y el que se une, `AIMP_NET=join` y `AIMP_NET_PEER=<IP de Tailscale del host>:47811` (en `aimp.cfg`);
+   - con dos máquinas y **una sola cuenta de Steam**, una de las dos tiene que estar en modo sin conexión: Steam no deja correr el juego en dos PCs a la vez.
 1. (Opcional) corrida corta con marcas F8 para separar puerta e ítem (instrucciones en el hallazgo 11, "Pendiente").
 2. Aprobar (o no) que el MCP de REA use el proyecto de Ghidra.
 3. KnownDLLs en el Windows del amigo; hash de su `AI.exe` cuando reinstale; que use el mismo COMMANDS.PAK (mod de saltear la misión 9) o los dos el vanilla.
 
 ## Siguiente paso
-1. **Fase 3:** hecha en local (protocolo UDP propio, `mod/src/net.c`). Falta la prueba por Tailscale (pendiente 0). ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
+1. **Fase 3:** ✅ cerrada por Tailscale (Windows nativo ↔ Proton). Mejoras chicas en `mod/src/net.c`:
+   - mantener 20 paquetes/s con `last_send += send_ticks` (hoy salen ~16/s a 60 fps);
+   - en el primer `net_poll`, vaciar el backlog sin contar huecos (hoy da 361 "perdidos" falsos y un estado viejo de 35 s).
+
+   ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
 2. **Fase 4 (preparación estática):** cómo representar al otro jugador. Opciones del hallazgo 05: spawnear un NPC con la definición de un humano y moverlo con `SetTransform` (`0x7C2710`), o un segundo personaje-jugador sin controlador. El request de spawn (0x130 bytes, RPC 0x29) ya se puede capturar en runtime con el trazado.
 3. Investigar qué escribe en los canales NETZ durante el juego: posible camino para el movimiento de personajes.
 4. Estático pendiente: semántica de los RPCs 0x1E/0x20/0x22/0x23/0x28 y del B 0x07; dispatcher de los comandos de UI (hallazgo 09); inventario (07).
