@@ -1,5 +1,6 @@
 /* Verificación de la build y hook del loop principal. */
 #include "game.h"
+#include "ghost.h"
 #include "hook.h"
 #include "log.h"
 #include "probe.h"
@@ -80,5 +81,6 @@ int game_init(void)
                       (void *)detour_mode_run, (void **)&g_run_orig))
         return 0;
     trace_install(); /* opcional: AIMP_TRACE_QUEUES=1 */
+    ghost_install(); /* opcional: AIMP_TRACE_SPAWN=1 / AIMP_GHOST=1 (fase 4, experimental) */
     return 1;
 }
