@@ -436,3 +436,27 @@ Ambas con `AIMP_GHOST=3` (DLL `c2f86d1`), en Tech_Hub, por Tailscale (directo po
 - La cadencia fija de la red se ve en la práctica: ~20/s de los dos lados (antes, ~16/s).
 - El descarte del backlog también: `NET: descartados 221 paquetes que llegaron antes del primer frame`.
 - Desvío del NPC con el objetivo quieto: 0,1 a 0,35 m, por su IA. Arreglado en `8bc1f7e` (se lo vuelve a poner si se aleja más de 2 cm), sin probar todavía.
+
+## 2026-11-05 — Fase 5 (experimental): "usar" compartido (`mod/src/sync.c`)
+- El "usar" sigue el mismo patrón que el spawn (`work/evidence/h12/f9.txt`, `f10.txt`, `f11.txt`):
+  - `FUN_007a3110(this, personaje, usable)` arma `objetivo[8] | personaje[8] | flag[4]` (`FUN_00772840`) y llama al productor `FUN_00795d00(this, payload, 0)`.
+  - El productor es `thiscall` con `ret 8` y prólogo `55 8B EC 56 57 8B F9`. Llama a `this->vf[1]` y encola A con el tipo de `[0x163652C]`, que vale 0 en el archivo.
+  - El handler A `FUN_00418a10` (`cdecl`) reenvía a B con el tipo de `[0x1636540]`.
+  - El handler de sesión `FUN_00418980` (`cdecl`) llama a `ctx->vf[1]`.
+  - El `this` del productor es un objeto grande (campos hasta `+0x27084`) que llega desde `FUN_007c51e0` ← `FUN_007ca0b0`.
+- Diseño v0 (`AIMP_SYNC_USE=1`):
+  - hook en el productor: si el personaje del payload es el jugador local, el payload sale como evento `AIMP_EVT_USE`;
+  - el receptor, en el mismo nivel, encola un A 0x26 (`FUN_00a2a290`) con ese objetivo y su propio jugador como personaje;
+  - hooks de traza en los dos handlers (`AIMP_TRACE_USE=1`).
+
+  Si el uso remoto no tiene efecto, las trazas dicen si el camino A → sesión corre en local, o si hay que llamar al productor con su `this`.
+- Protocolo de eventos (`net.c`):
+  - paquete `AimpEvt` de 76 bytes (tipo 4);
+  - cada evento se manda 3 veces y el receptor descarta repetidos con una ventana de 64 bits, que acepta eventos fuera de orden;
+  - si la secuencia retrocede más de 64, se toma como reinicio del otro lado; en un BYE o con un par nuevo, se reinicia la ventana.
+- Tests:
+  - `test_net`: entrega única, repetidos, fuera de orden, reinicio;
+  - `test_sync` (nuevo): stubs con los prólogos reales del productor (`ret 8`), los dos handlers (`cdecl`) y el wrapper A. Verifica el balance del stack, que el uso del NPC no se mande, el payload y el nivel, el personaje sustituido, que no haya eco, y que se ignoren los usos de otro nivel o sin tipo asignado.
+
+  **Todos los tests OK.**
+- `aimp_check.ps1 -Extra AIMP_SYNC_USE=1` (claves extra para `aimp.cfg`).

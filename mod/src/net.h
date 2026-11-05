@@ -15,7 +15,12 @@
 #define AIMP_NET_VERSION 1
 #define AIMP_PKT_STATE 2
 #define AIMP_PKT_BYE 3
+#define AIMP_PKT_EVENT 4    /* evento discreto (fase 5): se manda 3 veces, el receptor descarta repetidos */
 #define AIMP_FLAG_PLAYER 1u /* el emisor tiene jugador en el nivel */
+#define AIMP_EVT_USE 1      /* "usar" del jugador (RPC A 0x26, hallazgo 11): objetivo[8] | personaje[8] | flag[4] */
+#define AIMP_EVT_DATA 52
+#define AIMP_EVT_QUEUE 16
+#define AIMP_EVT_REPEAT 3
 
 #pragma pack(push, 1)
 typedef struct {
@@ -33,6 +38,19 @@ typedef struct {
     float cam_pos[3];   /* cámara activa +0x3C */
     uint8_t char_id[8]; /* Character+0x54 (id de 8 bytes de los RPCs, hallazgo 11) */
 } AimpPkt;              /* 76 bytes */
+
+typedef struct {
+    uint32_t magic;
+    uint8_t version;
+    uint8_t type; /* AIMP_PKT_EVENT */
+    uint16_t flags;
+    uint32_t seq;     /* secuencia de eventos (aparte de la de estados) */
+    uint32_t time_ms;
+    uint16_t kind;    /* AIMP_EVT_* */
+    uint16_t size;    /* bytes válidos en data */
+    uint32_t level;   /* nivel del emisor: el receptor lo aplica solo en el mismo nivel */
+    uint8_t data[AIMP_EVT_DATA];
+} AimpEvt;            /* 76 bytes */
 #pragma pack(pop)
 
 typedef struct {
@@ -52,6 +70,15 @@ typedef struct {
     AimpPkt remote;
     int64_t remote_at; /* ticks de QPC cuando llegó */
     char peer_str[32];
+    /* eventos (fase 5) */
+    uint32_t evt_seq;                       /* último enviado */
+    AimpEvt out[AIMP_EVT_QUEUE];             /* pendientes de (re)envío */
+    uint8_t out_left[AIMP_EVT_QUEUE];        /* envíos que faltan de cada uno */
+    uint32_t evt_last_in;                   /* mayor secuencia recibida */
+    uint64_t evt_window;                    /* bit i: llegó evt_last_in - i (descarta repetidos fuera de orden) */
+    AimpEvt in[AIMP_EVT_QUEUE];              /* recibidos, sin aplicar */
+    uint32_t in_head, in_tail;              /* anillo: head = próximo a leer */
+    uint32_t evt_sent, evt_recv, evt_dup;   /* totales */
 } AimpNet;
 
 /* Lee la config y abre el socket. Devuelve 0 si la red queda apagada. */
@@ -61,6 +88,12 @@ void net_poll(AimpNet *n, int64_t now);
 /* ¿Toca mandar el estado? (así el que llama arma el paquete solo cuando hace falta) */
 int net_due(const AimpNet *n, int64_t now);
 void net_send(AimpNet *n, int64_t now, const AimpPkt *local);
+/* Encola un evento para mandar (sale en los próximos AIMP_EVT_REPEAT net_send_events). 0 si no hay par o lugar. */
+int net_event(AimpNet *n, uint16_t kind, uint32_t level, const void *data, uint16_t size);
+/* Por frame: manda una copia de cada evento pendiente. */
+void net_send_events(AimpNet *n);
+/* Saca el próximo evento recibido. 1 si había. */
+int net_take_event(AimpNet *n, AimpEvt *out);
 /* Una línea de log con las estadísticas del período (y las resetea). */
 void net_status(AimpNet *n, int64_t now);
 void net_close(AimpNet *n);

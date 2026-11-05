@@ -2,6 +2,7 @@
 #include "game.h"
 #include "crash.h"
 #include "ghost.h"
+#include "sync.h"
 #include "hook.h"
 #include "log.h"
 #include "probe.h"
@@ -84,5 +85,6 @@ int game_init(void)
         return 0;
     trace_install(); /* opcional: AIMP_TRACE_QUEUES=1 */
     ghost_install(); /* opcional: AIMP_TRACE_SPAWN=1 / AIMP_GHOST=1 (fase 4, experimental) */
+    sync_install(probe_net()); /* opcional: AIMP_TRACE_USE=1 / AIMP_SYNC_USE=1 (fase 5, experimental) */
     return 1;
 }
