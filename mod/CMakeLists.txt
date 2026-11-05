@@ -41,6 +41,7 @@ add_library(aimp_winmm SHARED
   src/hook.c
   src/probe.c
   src/trace.c
+  src/net.c
   src/log.c
   src/mem.c
   src/fmt.c
@@ -73,7 +74,13 @@ target_compile_options(test_core PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter
 set_target_properties(test_core PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 # test_probe: la sonda (probe.c + log.c) contra una imagen de AI.exe simulada.
-add_executable(test_probe test/test_probe.c src/probe.c src/trace.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_probe test/test_probe.c src/probe.c src/trace.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_probe PRIVATE src)
 target_compile_options(test_probe PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_probe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+# test_net: host y cliente del protocolo de la fase 3 en el mismo proceso (UDP por 127.0.0.1).
+add_executable(test_net test/test_net.c src/net.c src/log.c src/mem.c src/fmt.c src/rt.c)
+target_include_directories(test_net PRIVATE src)
+target_compile_options(test_net PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
+set_target_properties(test_net PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)

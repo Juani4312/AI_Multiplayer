@@ -67,6 +67,7 @@ static const uint8_t AIMP_MODEMGR_RUN_PROLOGUE[10] __attribute__((unused)) = {
 #define CM_NNPCS                  0xD4
 #define CM_NPENDING               0x174
 #define AIMP_RVA_VT_CHARACTER     0x00EF5D80u  /* vtable final (clase derivada) */
+#define CHR_ID                    0x54  /* id de 8 bytes (verificado en runtime: va en los RPCs, hallazgo 11) */
 #define CHR_DEF                   0x64  /* definición: +0x04 tipo, +0x1C/+0x1F flags de jugador */
 #define CHR_POS                   0x70  /* float x, y (vertical), z */
 #define CHR_YAW                   0x174 /* float, radianes [-pi, pi] */
