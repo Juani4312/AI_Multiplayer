@@ -114,6 +114,11 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_GHOST` | 0 | 1 = **fase 4, experimental** (escribe en el juego): clona el pedido de spawn del jugador y mueve el clon (líneas `GHOST`). Ver abajo |
 | `AIMP_GHOST_DELAY_MS` | 8000 | cuánto esperar, desde que aparece el jugador, para pedir el clon |
 | `AIMP_GHOST_FROM` | −1 | clave (`+0x00`) del pedido a clonar; −1 = el último del jugador (tipo 0) |
+| `AIMP_GHOST_NPC_MS` | 20000 (modo 2) / sin límite (modo 3) | cuánto tiempo el NPC hace de avatar; ≤ 0 = sin límite |
+| `AIMP_SYNC_USE` | 0 | 1 = **fase 5, experimental**: los "usar" del jugador local se mandan al otro, que los aplica con su jugador (hallazgo 13) |
+| `AIMP_SYNC_USE_SKIP` | `3e3ec35d,1e38b898` | prefijos de objetivo (4 bytes en hex, como en el log) que no se mandan: lockers y terminal de guardado. `0` = mandar todo |
+| `AIMP_TRACE_USE` | 0 | 1 = loguea cada uso y sus dos handlers (solo mira) |
+| `AIMP_CRASHLOG` | 1 | registro de excepciones (VEH): código, módulo+RVA, registros y stack si el juego se cae |
 
 ## Fase 3: red mínima (UDP)
 

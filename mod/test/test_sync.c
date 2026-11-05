@@ -177,13 +177,18 @@ int main(void)
     memcpy(payload, use_npc, 20);
     ((UseFn)(void *)(img + AIMP_RVA_USE_PRODUCER))(g_use_this, NULL, payload, 0);
     CHECK(g_uses == 2, "el uso de un NPC también pasa por el original");
+    static const uint8_t use_locker[20] = { 0x3e, 0x3e, 0xc3, 0x5d, 0xbe, 0xbf, 0xb3, 0xd2, /* locker: no se manda */
+                                            0x2f, 0xf7, 0x22, 0xb2, 0x09, 0x9d, 0x5b, 0x9b, 0x00, 0x7c, 0x58, 0x01 };
+    memcpy(payload, use_locker, 20);
+    ((UseFn)(void *)(img + AIMP_RVA_USE_PRODUCER))(g_use_this, NULL, payload, 0);
+    CHECK(g_uses == 3, "el uso del locker corre igual en esta máquina");
     for (int i = 0; i < AIMP_EVT_REPEAT; i++)
         sync_frame(&cli, 16);
     Sleep(30);
     net_poll(&host, now.QuadPart);
     AimpEvt e;
     int got = net_take_event(&host, &e), more = net_take_event(&host, &(AimpEvt){ 0 });
-    CHECK(got && !more, "llegó un solo evento (el del jugador local; el del NPC no se manda)");
+    CHECK(got && !more, "llegó un solo evento (el del botón; ni el del NPC ni el del locker se mandan)");
     CHECK(got && e.kind == AIMP_EVT_USE && e.size == 20 && e.level == 16 && memcmp(e.data, use_local, 20) == 0,
           "evento de uso con el payload intacto y el nivel 16");
 
@@ -207,7 +212,7 @@ int main(void)
     CHECK(memcmp(g_enq_data, use_local, 8) == 0 && memcmp(g_enq_data + 8, "\x2f\xf7\x22\xb2\x09\x9d\x5b\x9b", 8) == 0 &&
               memcmp(g_enq_data + 16, use_local + 16, 4) == 0,
           "objetivo y flag del otro, personaje = jugador local");
-    CHECK(g_uses == 2, "aplicar no vuelve a pasar por el productor (no hay eco)");
+    CHECK(g_uses == 3, "aplicar no vuelve a pasar por el productor (no hay eco)");
     in.level = 9;
     in.seq = 8;
     cli.in[cli.in_tail] = in;
@@ -244,6 +249,9 @@ int main(void)
     expect(log, "AIMP_SYNC_USE=1 (fase 5, experimental)", 1);
     expect(log, "objetivo 044106b16f529959, personaje 2ff722b2099d5b9b (jugador local), flag 01587c00", 1);
     expect(log, "SYNC   mandado al otro jugador (evento 1, nivel 16)", 1);
+    expect(log, "no se mandan los objetivos con prefijo [3e3ec35d,1e38b898]", 1);
+    expect(log, "SYNC   no se manda: el objetivo empieza con un prefijo de AIMP_SYNC_USE_SKIP", 1);
+    expect(log, "SYNC   mandado al otro jugador (evento 2", 0);
     expect(log, "objetivo eed179bb3c7301a5, personaje 1c3460b37e03a5dc, flag 00000000", 1);
     expect(log, "SYNC: aplicando uso remoto (evento 7): objetivo 044106b16f529959, RPC A 0x26", 1);
     expect(log, "del nivel 9; acá el nivel es 16: se ignora", 1);
