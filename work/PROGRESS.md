@@ -86,7 +86,7 @@ _Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 
 
    ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
 2. **Siguiente** (a elegir con el usuario):
-   - **Fase 6, scripts:** cada máquina corre sus propios disparadores (corrida 14: un diálogo se repitió). Es el núcleo del coop. Opciones: hookear los disparadores de CATHODE y que el host los decida (hallazgos 06 y 10; nodos `HostOnlyTrigger`, `SyncOnAllPlayers`).
+   - **Fase 6, scripts:** cada máquina corre sus propios disparadores (corrida 14: un diálogo se repitió). Es el núcleo del coop. **Diseño y opciones en `work/DESIGN_PHASE6.md`.** Recomendación: replicar los disparadores de zona (diálogos, cinemáticas, objetivos) hookeando el despacho de pines de CATHODE, y sincronizar por checkpoints como respaldo. Primer paso: ubicar el despacho y trazarlo en el diálogo de Tech_Hub.
    - **Armas:** hookear el disparo y el lanzamiento (hallazgo 14).
    - **Ítems compartidos:** hoy el botín es por jugador. Si se quiere compartido, sacar el ítem del mundo en la otra máquina.
    - Hecho en la corrida 14: el avatar no autoritativo no tiene IA (`AIMP_GHOST_NOAUTH`, activado por defecto en el modo 3).
