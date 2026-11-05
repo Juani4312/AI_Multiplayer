@@ -181,3 +181,9 @@ Detalle en `findings/05-creacion-de-personajes.md`. Evidencia en `work/evidence/
 - API del `CharacterManager` (nombres de los `strncpy` a `0x16F17F8`): `request_character` `0x7D0470`, `finish_spawning` `0x7B80C0`, `release_player` `0x7999B0`, `release_npc` `0x7997E0`, `release_dead_npc` `0x799B50`, `cleanup_all_deleted_characters` `0x799CE0`, `update1` `0x7CC080`, `update3` `0x7CC2E0`.
 - `FinishSpawning`: el flag `def+0x1C` decide jugador (vector `+0x80/+0x84`) o NPC (`+0xD0/+0xD4`). No hay límite de 1 jugador.
 - `SpawnCharacter` `0x7D3B50` = slot 1 de la vtable de interfaz `0x12F68E0` (subobjeto `gestor+0x04`). Llama a NETZ (`FUN_007ddc60`) antes de `RequestCharacter`. **Ghidra no desensambló esa zona** (solo se alcanza por vtable): ojo con conclusiones de "sin referencias".
+
+## 2026-11-05 — Hallazgo 08 (IA y múltiples jugadores, parte 1)
+Detalle en `findings/08-ia-y-multiples-jugadores.md`. Evidencia en `work/evidence/h08/`.
+- IA en `0x6C0000`–`0x740000` (menace `0x6CF080`, alien_attack `0x6E3DB0`, visibility `0x6FCF80`–`0x725330`).
+- 24 call sites de `GetPlayer()` en IA (13 funciones); ~70 `GetPlayer()` inlineados en todo el binario.
+- Loops sobre todos los jugadores: `FUN_00725330` (visibilidad: jugadores + NPCs), `FUN_00734690`, y varios del `CharacterManager` (`update1` `0x7CC080`, `0x7D3DB0`, `0x7D41B0`…).

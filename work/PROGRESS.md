@@ -47,12 +47,13 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
 | Hallazgo 10 (NETZ: red del engine) | 🟡 parte 1 en `findings/10-netz-red-del-engine.md` (capa dormida, sin transporte) |
 | Hallazgo 05 (creación de personajes) | 🟡 parte 1 en `findings/05-creacion-de-personajes.md` (FinishSpawning: `def+0x1C` → vector de jugadores) |
-| Hallazgo 08 (IA del Alien: ¿usa solo `GetPlayer()`?) | ⏳ siguiente |
+| Hallazgo 08 (IA y múltiples jugadores) | 🟡 parte 1 en `findings/08-ia-y-multiples-jugadores.md` (IA mixta) |
+| Hallazgo 09 (guardado/checkpoints/carga de nivel) | ⏳ siguiente |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
 ## Siguiente paso
-1. Hallazgo 08 (parte 1): ¿la IA (selección de objetivo del Alien, sentidos, menace) usa solo `GetPlayer()` (índice 0) o recorre el vector de jugadores `[[g_root+8]+0x80]`? Pistas: `behavior_manager/menace_manager.cpp`, `alien_attack_manager.cpp`, `visibility_manager.cpp`, tareas `AI_*` (hallazgo 04), los 180 callers de `GetPlayer` (`0x78BAF0`).
-2. Hallazgo 05 parte 2: estructura del `request` de `SpawnCharacter` (`0x7D3B50`) y de dónde sale la definición del jugador.
-3. Hallazgo 10 parte 2: productores/consumidores de mensajes NETZ y flag de modo multijugador.
+1. Hallazgo 09 (guardado, checkpoints, carga de nivel): nombre del nivel actual (`FUN_0078bbe0` + tabla `FUN_00a2e810`, entradas de 0x46), RTTI `Checkpoint`/`SaveGlobalProgression`/`SwitchLevel`/`LevelLoaded`, estados del `ModeManager`.
+2. Hallazgo 08 parte 2: selección de objetivo del Alien (`FUN_006e3db0`, menace `FUN_006cf080`).
+3. Hallazgo 05 parte 2 (request de `SpawnCharacter`), hallazgo 10 parte 2 (productores/consumidores NETZ), hallazgo 06 (scripts/entity manager), hallazgo 07 (items).
 4. Mod fase 1+2: pendiente, para hacer junto con el usuario.
