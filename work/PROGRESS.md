@@ -41,15 +41,15 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | §3 Identificar build | ✅ hecho |
 | §4 Setup REA + checklist 4.4 | ✅ completo (Ghidra abre el binario; proyecto persistente) |
 | Hallazgo 01 (inventario) | ✅ `findings/01-inventario.md` |
-| Hallazgo 02 (game loop) | ⏳ siguiente |
+| Hallazgo 02 (game loop) | ✅ `findings/02-game-loop.md` (hook: `ModeManager::Run` RVA 0x3A8460) |
+| Hallazgo 03 (entidad del jugador) | ⏳ siguiente |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
 ## Siguiente paso
-1. Hallazgo 02 (game loop / tick principal). Pistas del 01:
-   - `SteamAPI_RunCallbacks` en `FUN_00a58eb0`, que se referencia desde una vtable en `0x13E9B5C`.
-   - `timeBeginPeriod(1)` en `FUN_00d1a7d0`, llamado desde `0xD06F0D`.
-   - El message pump (`PeekMessageA/W` + `DispatchMessageA/W`, 2 funciones cada uno).
-   - `D3D11CreateDeviceAndSwapChain` (thunk `0x01008a76`): la swapchain → `Present`.
-   - La ruta `main/main.cpp` y el entry `0xA71E61` → `WinMain`.
-2. Después: 03 (entidad del jugador), 04 (cámara), 05 (creación de entidades), 06 (scripts; incluye los nodos de multiplayer de Cathode).
+1. Hallazgo 03 (entidad del jugador: posición, rotación, estado). Pistas:
+   - RTTI `CATHODE::VariableThePlayer`, `PlayerCamera`, `GetCurrentCameraPos`, `Chr_PlayerCrouch`.
+   - Rutas `main/character_playable.cpp`, `Physics/Havok_character.cpp`.
+   - El update del nivel `FUN_00790000` (RVA 0x390000).
+2. Con 02 + 03 hechos: escribir la fase 1+2 del mod (proxy `winmm`, hook en `ModeManager::Run`, log por frame + posición del jugador). Compilar sí; **probar en el juego requiere confirmación del usuario**.
+3. Después: 04 (cámara), 05 (creación de entidades), 06 (scripts; nodos de multiplayer de Cathode).
