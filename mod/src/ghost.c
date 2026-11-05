@@ -190,8 +190,13 @@ int ghost_install(void)
     static const char *const names[] = { "", "clon del jugador", "NPC existente y después clon", "solo NPC existente" };
     if (g_mode) {
         g_state = G_WAIT_PLAYER;
-        log_printf("AIMP_GHOST=%d (fase 4, experimental: %s): empieza %d ms después de que aparece el jugador; NPC de tipo %d durante %d ms",
-                   g_mode, names[g_mode], delay, g_npc_type, npc_ms);
+        char dur[32];
+        if (npc_ms > 0)
+            aimp_snprintf(dur, sizeof dur, "durante %d ms", npc_ms);
+        else
+            aimp_snprintf(dur, sizeof dur, "sin límite");
+        log_printf("AIMP_GHOST=%d (fase 4, experimental: %s): empieza %d ms después de que aparece el jugador; NPC de tipo %d %s",
+                   g_mode, names[g_mode], delay, g_npc_type, dur);
     } else {
         log_printf("AIMP_TRACE_SPAWN=1: se loguean los pedidos de spawn (solo mira)");
     }
@@ -436,7 +441,15 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
     }
     float dx = t[0] - g_last_pos[0], dy = t[1] - g_last_pos[1], dz = t[2] - g_last_pos[2], dyaw = tyaw - g_last_yaw;
     int moved = dx * dx + dy * dy + dz * dz > 0.0004f || dyaw > 0.01f || dyaw < -0.01f;
-    if (moved || !g_last_tp || now - g_last_tp > g_freq / 2) {
+    /* La IA del NPC lo sigue moviendo entre teleports (corrida 9: se corría ~27 cm en 500 ms
+     * con el objetivo quieto). Si se alejó más de 2 cm del objetivo, se lo vuelve a poner. */
+    float cur[3];
+    int drift = 0;
+    if (mem_read(g_chr + CHR_POS, cur, sizeof cur)) {
+        float ex = cur[0] - t[0], ey = cur[1] - t[1], ez = cur[2] - t[2];
+        drift = ex * ex + ey * ey + ez * ez > 0.0004f;
+    }
+    if (moved || drift || !g_last_tp || now - g_last_tp > g_freq / 2) {
         /* SetTransform copia la posición con MOVAPS (FUN_00401410): tiene que ser un vector
          * de 16 bytes alineado a 16. Con un float[3] en el stack el juego se cayó (corrida 7:
          * acceso en 0xffffffff, que es como Windows reporta un MOVAPS desalineado). El cuarto
