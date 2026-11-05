@@ -65,9 +65,49 @@ Todos en el thread principal. "A" = cola local (`FUN_00a2a290`); "B" = sesión, 
 - **Interacciones del jugador remoto:** inyectar un 0x26 con el id del personaje remoto podría hacer que el juego ejecute la interacción para ese personaje. Hipótesis, no probado.
 - **Movimiento y animación:** no pasan por estas colas. Opción A (transform manual) o los canales NETZ (investigar qué escribe en ellos).
 
+## Corrida 3: acciones separadas con marcas F8 (13:39–13:46, `work/evidence/runtime/run3-interacciones.log`)
+
+El usuario apretó F8 antes y después de cada acción. Las marcas quedan en el log con frame y posición.
+
+| Acción | Marcas (t) | Mensajes entre las marcas |
+|--------|------------|---------------------------|
+| Botón para llamar al transit | 1–2 (189,5–192,4) | A 0x26: objetivo `044106b1 6f529959` |
+| Puerta automática | 3–4 (216,8–222,7) | **ninguno** |
+| Caja 1 | 5–6 (238,7–242,1) | A 0x26: objetivo `eed179bb 3c7301a5` |
+| Caja 2 | 7–8 (248,2–250,2) | A 0x26: objetivo `eed179bb 6abd978c` |
+| Molotov del piso | 9–10 (256,7–258,2) | A 0x26: objetivo `f7fb2113 d783f856`; 1,5 s después, **A 0x23** `5d9b3722 00000000` |
+| Viaje en transit (sin marcas) | — | 8× **A 0x24** (88 bytes: matrices y posiciones float) → B 0x22 (96 bytes, desde `0x396197`); después, cambio de nivel 10 → 16 `Production\Tech_Hub` (carga de 6,2 s) |
+| Entrar al locker | 11–12 (355,7–360,4) | A 0x26: objetivo `3e3ec35d b0c13784` |
+| Salir del locker | 13–14 (361,3–364,8) | **ninguno** |
+| Terminal (abrir, 2–3 opciones, cerrar con Q) | 15–16 (372,9–387,3) | A 0x26 al abrir: objetivo `1e38b898 68328994`; las opciones y la salida **no** generan mensajes |
+
+### Payloads (bytes en orden de memoria)
+
+- **0x26** (20 bytes) = `objetivo[8] | personaje[8] | flag[4]`.
+  - Personaje en HAB_ShoppingCentre: `2ff722b2 b89a5172`, que como dwords da `0xB222F72F 0x72519AB8` = `Character+0x54/+0x58`.
+  - Personaje en Tech_Hub: `2ff722b2 099d5b9b`; cambia la segunda mitad.
+  - El flag es siempre `01587c00`.
+  - Las dos cajas comparten la primera mitad (`eed179bb`).
+  - Hipótesis: id = par (grupo/composite, instancia) de ShortGuids.
+- **0x29** (spawn, 304 bytes; se ven los primeros 64): `índice | 3 handles (familia 0x..9b3722) | 1 | id[8] (segunda mitad 82fc64f8 común a todos) | 0 | id[8] | id del personaje[8] | tipo de definición | …`. El #2 es el jugador: id `2ff722b2 b89a5172`, tipo 0. Los NPCs tienen tipos 3 y 6 y ids que empiezan con `1c3460b3`.
+- **0x28** (8 bytes) = `índice del spawn | flags` (`01a41301`, `013ef77b`); uno por personaje del spawn.
+- **0x23** (8 bytes) = un handle de la familia `0x..9b3722` (`5d9b3722`). Aparece después de agarrar un ítem: hipótesis, fin del pickup o alta en el inventario.
+- **0x24** (88 bytes) = transforms (matrices con `0x3f800000` = 1,0 y posiciones); 8 antes de la carga del transit.
+- **B 0x07** (32 bytes, ~113 al cargar el nivel) = `16 bytes en 0 | id[8] | contador/flag`. Hipótesis: registro de entidades.
+
+### Lectura
+
+1. **0x26 es "usar" genérico**: botones, contenedores, ítems, lockers y terminales pasan todos por el mismo RPC, con la referencia de 8 bytes de la entidad objetivo. Para la etapa 2 del proyecto (mundo compartido) es el punto de sincronización de las interacciones.
+2. **Lo que pasa después de "usar" es local**: salir del locker, las opciones de la terminal y las puertas automáticas no generan mensajes.
+   - Las puertas automáticas dependen de triggers de proximidad.
+   - Con dos jugadores en el mismo mundo, cada juego abre las suyas: hay que ver si los triggers miran a todos los personajes (hallazgo 06).
+3. Las referencias de entidad parecen estables entre corridas para los objetos del nivel. Los ids de los personajes cambian por nivel en la segunda mitad.
+
 ## Pendiente
 
-- Separar puerta e ítem: corrida con marcas F8 antes y después de cada acción y payloads de los tipos raros en el log (`trace.c`).
+- ~~Separar puerta e ítem~~: hecho en la corrida 3.
+- Confirmar que la referencia de 8 bytes es estable entre corridas y máquinas: cargar el mismo checkpoint dos veces y comparar los objetivos de 0x26.
+- Probar la inyección: encolar en A un 0x26 con un objetivo conocido (p. ej. una caja) y ver si se abre.
 - Semántica de 0x1E, 0x20, 0x22, 0x23, 0x28 y del B 0x07 (113 por nivel, zona NETZ `0x7E1540`).
 - Qué escribe en los canales NETZ durante el juego (máscara `ff:01`).
 
