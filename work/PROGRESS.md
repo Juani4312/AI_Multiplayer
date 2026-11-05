@@ -49,12 +49,12 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Hallazgo 05 (creación de personajes) | 🟡 parte 1 en `findings/05-creacion-de-personajes.md` (FinishSpawning: `def+0x1C` → vector de jugadores) |
 | Hallazgo 08 (IA y múltiples jugadores) | 🟡 parte 1 en `findings/08-ia-y-multiples-jugadores.md` (IA mixta) |
 | Hallazgo 09 (niveles/checkpoints/guardado) | 🟡 parte 1 en `findings/09-niveles-checkpoints-guardado.md` |
-| Hallazgo 06 (scripts/entity manager) | ⏳ siguiente |
+| Hallazgo 06 (scripts/entidades) | 🟡 parte 1 en `findings/06-scripts-y-entidades.md` |
+| Hallazgo 07 (items/inventario) | ⏳ siguiente |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
 ## Siguiente paso
-1. Hallazgo 06 (scripts y entity manager): tareas `ENTITY_MANAGER` (`0x783500`) y `ENTITY_MANAGER_TICK` (`0x783640`), clases RTTI `CATHODE::Door`, `AccessTerminal`, `UI_Keypad`, `Logic_*`, `Trigger*`; cómo se dispara un trigger o un método de entidad; el dispatcher de los comandos de UI del hallazgo 09.
-2. Partes 2 pendientes: 08 (objetivo del Alien), 05 (request de `SpawnCharacter`), 10 (productores/consumidores NETZ), 09 (dispatcher de comandos).
-3. Hallazgo 07 (items e inventario).
-4. Mod fase 1+2: pendiente, para hacer junto con el usuario.
+1. Hallazgo 07 (items e inventario): `pickup_manager.cpp`, tarea `PICKUP_MANAGER_TICK` (`FUN_007ca0b0`), vftables `PickupSpawner`/`AddToInventory`/`InventoryItem` (hallazgo 06).
+2. Partes 2 pendientes: 08 (objetivo del Alien), 06 (comportamiento por tipo, enumerar entidades), 05 (request de `SpawnCharacter`), 10 (productores/consumidores NETZ, flag MP), 09 (dispatcher de comandos UI).
+3. Mod fase 1+2: pendiente, para hacer junto con el usuario.

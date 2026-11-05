@@ -194,3 +194,10 @@ Detalle en `findings/09-niveles-checkpoints-guardado.md`. Evidencia en `work/evi
 - Comandos de la UI de menús (`FUN_0084dbe0`): 75 nombres → IDs (de 3 en 3). Ejemplos: `load_level` 0x7E, `cache_level` 0x81, `load_checkpoint` 0x99, `request_load_checkpoint` 0xD5, `back_to_frontend` 0xC3.
 - Guardados en Steam Cloud (`userdata/<id>/214490/remote/`): `CHSV00/01.ais`, `MSSV01-19.ais`, `PROGRESSION.ais`, `input.cfg`; `local/settings.bin`.
 - `SHGetFolderPathW(CSIDL_LOCAL_APPDATA)` es de LibOVR, no del guardado.
+
+## 2026-11-05 — Hallazgo 06 (scripts y entidades, parte 1)
+Detalle en `findings/06-scripts-y-entidades.md`. Evidencia en `work/evidence/h06/`.
+- Entity manager de Cathode: `[0x174EF40]`; `Tick` `0x932040` (estado `+0xA4`, activo `+0xB8 == 1`, lote `+0x80/+0x84`).
+- Las vtables de entidades de script con comportamiento (Door, TriggerSimple, HostOnlyTrigger) son idénticas entre sí: el comportamiento está en datos/handlers por tipo.
+- Vftables RTTI de tipos clave listadas en el hallazgo (para identificar entidades en runtime).
+- `IsMultiplayerMode` = variable booleana (los overrides son get/set genéricos).
