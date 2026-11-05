@@ -62,6 +62,14 @@ Detalle del lado de la laptop (`work/windows/logs/aimp-usar-20261105-132155.log`
 - La cámara queda fija adentro.
 - 1 recibido, 2 repetidos descartados, 0 excepciones, salida limpia; 60 fps, 0 perdidos.
 
+## Corrida 11: filtro y botón (los dos lados)
+
+- Lockers y terminal de guardado: filtrados en las dos máquinas (no se mandan). El otro jugador no se mueve.
+- Botón del transit (`044106b1 eb7fc7c0`): se replica y **el transit se llama en los dos juegos**. El jugador que recibe salta ~5,5 m al anclaje del botón (yaw −90° exacto) y queda trabado 2 a 4 s por la animación.
+- Lo que se cambia adentro de una terminal no se replica: no genera RPCs.
+- **El filtro por tipo no alcanza:** todo uso con animación lleva al que lo ejecuta hasta el anclaje.
+- **Siguiente:** que el uso remoto lo haga el avatar (`AIMP_SYNC_USE_ACTOR=1`, `cba2b2e`). El avatar ya está donde está el otro jugador. Sin probar: hay que ver si el engine acepta que un NPC use el botón.
+
 ## Limitaciones y siguiente paso
 
 - **El que recibe hace la misma acción con su propio jugador.** Para el estado del mundo (cajas abiertas, botones, puertas, ítems) es lo que se busca. Para acciones del jugador (meterse en un locker, abrir la terminal de guardado) no: en un coop, solo se esconde el que se mete.
