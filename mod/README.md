@@ -115,6 +115,12 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 
 Protocolo propio v1 (`src/net.h`): un paquete `AimpPkt` de 76 bytes con nivel, posición, yaw, cámara, contador de simulación e id de 8 bytes del personaje, a `AIMP_NET_HZ` por segundo. Sin threads: todo corre en el hook del frame con sockets no bloqueantes; Winsock se resuelve en tiempo de ejecución. El host aprende la dirección del cliente del primer paquete. En el log, líneas `NET` (una por segundo, con lo último que llegó del otro jugador).
 
+Detalles:
+- El envío mantiene una cadencia fija: el próximo envío se cuenta desde el horario previsto, no desde el frame en que salió el anterior. Si el juego estuvo trabado (una carga), manda uno y sigue la cadencia normal, sin ráfaga.
+- El socket se abre al cargar la DLL, pero se lee desde el primer frame. El primer `net_poll` descarta lo que llegó antes (`NET: descartados N paquetes que llegaron antes del primer frame`). Así no se toma un estado viejo ni se cuentan pérdidas falsas.
+- Mientras un juego carga un nivel no corre el hook por frame: ese lado no manda nada. Del otro lado se ve `recibidos 0` y la edad del último estado crece. No es pérdida.
+- Verificado por Tailscale entre Windows 10 nativo y Proton el 2026-11-05 (`work/NOTES.md`).
+
 Prueba sin un segundo juego: `python3 -I work/scripts/aimp_peer.py --join 127.0.0.1:47811` hace de otro jugador (posición falsa que da vueltas) contra el juego en modo `host`, y muestra lo que manda el juego.
 
 ## Qué hay en el log

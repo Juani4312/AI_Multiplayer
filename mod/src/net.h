@@ -46,6 +46,8 @@ typedef struct {
     /* estadísticas del período y totales */
     uint32_t sent, recv, bad, lost, sent_total, recv_total, lost_total;
     uint32_t last_seq_in;
+    int polled;           /* ya hubo un net_poll (el primero descarta lo viejo) */
+    uint32_t stale_total; /* descartados en el primer net_poll */
     int have_remote;
     AimpPkt remote;
     int64_t remote_at; /* ticks de QPC cuando llegó */

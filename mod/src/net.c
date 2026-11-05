@@ -213,7 +213,13 @@ void net_poll(AimpNet *n, int64_t now)
     if (!n->mode)
         return;
     SOCKET s = (SOCKET)n->sock;
-    for (int i = 0; i < 64; i++) {
+    /* El socket se abre al cargar la DLL y se lee desde el primer frame (~35 s después).
+     * Lo que llegó en ese tiempo es viejo: el primer poll lo descarta sin procesarlo. Si
+     * no, se toma un estado de hace medio minuto y el hueco que dejó el kernel con el
+     * buffer lleno se cuenta como perdidos (corrida por Tailscale del 2026-11-05: 361). */
+    int first = !n->polled;
+    n->polled = 1;
+    for (int i = 0; i < (first ? 8192 : 1024); i++) {
         AimpPkt buf[2]; /* lugar de sobra: paquetes más largos se truncan y cuentan como malos */
         struct sockaddr_in from;
         int fl = sizeof from;
@@ -226,8 +232,14 @@ void net_poll(AimpNet *n, int64_t now)
                 break;
             continue;
         }
+        if (first) {
+            n->stale_total++;
+            continue;
+        }
         handle_packet(n, buf, r, from.sin_addr.s_addr, from.sin_port, now);
     }
+    if (first && n->stale_total)
+        log_printf("NET: descartados %u paquetes que llegaron antes del primer frame", n->stale_total);
 }
 
 int net_due(const AimpNet *n, int64_t now) { return n->mode && n->have_peer && now - n->last_send >= n->send_ticks; }
@@ -252,7 +264,12 @@ void net_send(AimpNet *n, int64_t now, const AimpPkt *local)
         n->sent++;
         n->sent_total++;
     }
-    n->last_send = now;
+    /* Cadencia fija: el próximo envío se cuenta desde el horario previsto, no desde el
+     * frame en que salió. Si no, a ~60 fps muchas veces hay que esperar 4 frames
+     * (66,7 ms) y salen ~16/s en vez de 20 (medido en la laptop y en papito). */
+    n->last_send += n->send_ticks;
+    if (now - n->last_send >= n->send_ticks) /* muy atrasados (carga, pausa): sin ráfagas */
+        n->last_send = now;
 }
 
 void net_status(AimpNet *n, int64_t now)
