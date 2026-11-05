@@ -62,3 +62,19 @@ Ver hallazgo 09 (`FUN_0084dbe0`): las entidades de UI usan nombres internados (`
 
 - `FUN_0092e810` es el único que escribe `DAT_0174ef40`. Inicializa el manager y parsea tres strings hexadecimales tipo GUID con `FUN_008bf7f0`: `"00FF00FF00FF00FF00FF00FF00FF00FF"`, `"FFEEDDCCBBAA00AABBCCDDEEFF00FFEE"` y `"00112233445566778899AABBCCDDEEFF"`, probablemente valores centinela.
 - Hipótesis: **los ids de entidad/composite de Cathode son GUIDs de 128 bits**. Hay que tenerlo en cuenta para referenciar entidades entre máquinas en la fase 5. Ver el resto del constructor en `work/evidence/h06/s7.txt`.
+
+## Parte 2 (cont.) - Nombre → GUID / ShortGuid de Cathode
+
+- **Evidencia:** `./work/evidence/h06/s8.txt` … `s11.txt`.
+- **Confianza:** alta para la estructura del algoritmo. Media-alta para que el hash sea SHA-1 (estructura idéntica a la RFC 3174, pero no se vieron las constantes). El orden exacto de bytes falta verificarlo con valores conocidos.
+
+| Función | Qué hace |
+|---------|----------|
+| `FUN_008bf7f0(out32, nombre)` (41+ usos) | **ShortGuid (32 bits) de un nombre** = `FUN_008bf730(FUN_008bf460(nombre))` |
+| `FUN_008bf460(out128, s)` | GUID de 128 bits: saltea un `$` inicial. Si `s` es un GUID en hex de 32 dígitos (`FUN_008bf300`), lo parsea de a 2 caracteres (`FUN_008bf280`). Si no, `digest = HASH(s)` (20 bytes, `FUN_008638f0`) y arma los 16 bytes del GUID reordenando el digest por grupos |
+| `FUN_008bf730(out32, guid128)` | si el GUID no es el nulo (`DAT_0174e240..4c`), lo pasa a hex (`FUN_008bf690`, 32 caracteres), aplica `HASH(hex)` y toma 4 bytes |
+| `FUN_008638f0` / `FUN_00863880` | `HASH(datos, n, digest20)`. Contexto: bloque de 64 bytes en `+0x1C`, índice `+0x5C`, largo en bits en `+0x14`/`+0x18`, flags `+0x60`/`+0x61`. Es la estructura de `SHA1Input` de la RFC 3174 |
+
+- Usos: el entity manager busca entidades globales por nombre (`FUN_005a3f80`: `inventory`, `inventory_database`, `pickup_manager`, `camera_manager`, `LOADING_SCREEN_MANAGER`, `npc_group_manager`, `EXPLOSIVE_MANAGER`, `ALLIANCES`, `SCREEN_FX`, `global_container_item_pool`, `area_hit_manager`), con el mapa en `DAT_0174ef90` (= entity manager + 0x50).
+- **Para el mod:** con este algoritmo se pueden calcular los ShortGuids de entidades, métodos y parámetros a partir de sus nombres. Sirve para ubicar en runtime entidades de `COMMANDS.PAK` (puertas, terminales) y referenciarlas igual en las dos máquinas, sin depender de punteros.
+- **Verificación pendiente:** calcular el ShortGuid de un nombre conocido y buscarlo en un `COMMANDS.PAK` o en la memoria del juego. Así se fija el orden de bytes y se confirma SHA-1.
