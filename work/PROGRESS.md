@@ -44,6 +44,7 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 | Hallazgo 02 (game loop) | ✅ `findings/02-game-loop.md` (hook: `ModeManager::Run` RVA 0x3A8460) |
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
 | Mod fase 1+2 (proxy winmm + hook + log de posición) | ✅ **verificado en runtime** (2026-11-05, Proton): fase 1 (código por frame) y fase 2 (posición, yaw, cámara) |
+| Mod fase 3 (UDP mínimo con la posición) | 🟡 **verificada en local** (juego host + peer de prueba, los dos sentidos, 0 perdidos). Falta la prueba por Tailscale con el amigo |
 | Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
 | Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–7 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; cola A en loopback; **cola B = salida a la red, descartada en retail**; registro de handlers de la cola A) |
@@ -65,12 +66,16 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 - El mod quedó instalado en el juego con el trazado activo (`aimp.cfg`). `work/scripts/runtime_setup.sh revert` lo saca todo.
 
 ## Pendientes que requieren al usuario
+0. **Tailscale** para cerrar la fase 3:
+   - en la máquina del usuario, `sudo pacman -S tailscale && sudo systemctl enable --now tailscaled && sudo tailscale up` (requiere su confirmación);
+   - el amigo instala Tailscale en Windows;
+   - el host pone `AIMP_NET=host` y el que se une, `AIMP_NET=join` y `AIMP_NET_PEER=<IP de Tailscale del host>:47811` (en `aimp.cfg`).
 1. (Opcional) corrida corta con marcas F8 para separar puerta e ítem (instrucciones en el hallazgo 11, "Pendiente").
 2. Aprobar (o no) que el MCP de REA use el proyecto de Ghidra.
 3. KnownDLLs en el Windows del amigo; hash de su `AI.exe` cuando reinstale; que use el mismo COMMANDS.PAK (mod de saltear la misión 9) o los dos el vanilla.
 
 ## Siguiente paso
-1. **Fase 3:** UDP mínimo que mande la posición y el yaw del jugador local (ya verificados) y loguee los del otro. Primero entre dos procesos en la misma máquina y después por Tailscale. Decidir con el usuario: ENet (requiere descargarlo) o UDP propio para empezar.
+1. **Fase 3:** hecha en local (protocolo UDP propio, `mod/src/net.c`). Falta la prueba por Tailscale (pendiente 0). ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
 2. **Fase 4 (preparación estática):** cómo representar al otro jugador. Opciones del hallazgo 05: spawnear un NPC con la definición de un humano y moverlo con `SetTransform` (`0x7C2710`), o un segundo personaje-jugador sin controlador. El request de spawn (0x130 bytes, RPC 0x29) ya se puede capturar en runtime con el trazado.
 3. Investigar qué escribe en los canales NETZ durante el juego: posible camino para el movimiento de personajes.
 4. Estático pendiente: semántica de los RPCs 0x1E/0x20/0x22/0x23/0x28 y del B 0x07; dispatcher de los comandos de UI (hallazgo 09); inventario (07).
