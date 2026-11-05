@@ -505,3 +505,8 @@ Evidencia: `work/evidence/runtime/run11-filtro-host.log` (gitignored), DLL `1c1d
 - Alternativas más baratas para después:
   - experimento en runtime: poner el flag de autoridad del bloque del avatar (`bloque+0x4F`, hallazgo 10) en 0 y medir si bajan los teleports por segundo (hoy ~50 con la IA empujando, ~2 si se queda quieto);
   - buscar escrituras a campos de sentidos en `behavior_manager` (`0x6C0000`–`0x740000`).
+
+## 2026-11-05 — Corrida 13: qué generan armas, arrojables e ítems (hallazgo 14); el experimento NOAUTH no se aplicó
+- Lanzallamas: A 0x18 (56 bytes, daño o impacto con posición) y A 0x0C (16 bytes: jugador → NPC avatar, agresión). Alien: A 0x22. Bengala: nada. Balas del revólver: A 0x26, un "usar" con prefijo de ítem `f7fb2113`. Detalle en el hallazgo 14.
+- `AIMP_GHOST_NOAUTH`: "no se encontró el bloque del avatar". Error de offset: los bloques están a `+0x22C` del `this` de `SpawnCharacter`, que es la interfaz en `CM+0x04`. O sea, en `CM+0x230`. Corregido (`CM_BLOCKS` = 0x230) y el test ajustado. Se prueba en la próxima corrida.
+- El avatar se mantuvo en el objetivo todo el tiempo: entre ~70 y 110 teleports por segundo mientras el jugador camina, y 2 por segundo cuando los dos están quietos.

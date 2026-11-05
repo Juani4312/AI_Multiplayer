@@ -351,7 +351,7 @@ int main(void)
     expect(log, "igual al último del spawn de autoridad", 1);
     expect(log, "SC   devolvió 0x", 1);
     expect(log, "GHOST: NPC elegido para mover: NPCs[0]", 1);
-    expect(log, "GHOST: bloque del avatar = CM+0x79c (índice 3), autoridad 1; se pone en 0", 1);
+    expect(log, "GHOST: bloque del avatar = CM+0x7a0 (índice 3), autoridad 1; se pone en 0", 1);
     expect(log, "\"INNOCENT\"", 1);
     expect(log, "GHOST: primer teletransporte de 0x", 1);
     expect(log, "GHOST: fin del modo NPC; se intenta el clon", 1);
