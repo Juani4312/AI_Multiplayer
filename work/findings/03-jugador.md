@@ -9,7 +9,9 @@
   | `GetPlayer()` (devuelve `Character*` o NULL; 180 call sites) | `0x0078BAF0` | `0x38BAF0` |
   | `g_root` (puntero) | `0x016F0C88` | `0x12F0C88` |
   | Array de jugadores: `[[g_root+0x08]+0x80]` (punteros), cantidad `[[g_root+0x08]+0x84]` | — | — |
-  | vtable de `Character` (sin RTTI) | `0x012F4FC8` | `0xEF4FC8` |
+  | vtable **final** de los personajes (clase derivada, sin RTTI) | `0x012F5D80` | `0xEF5D80` |
+  | vtable de la clase base `Character` (la pisa el constructor derivado) | `0x012F4FC8` | `0xEF4FC8` |
+  | Constructor derivado (llama al base y pone la vtable final) | `0x007CEC20` | `0x3CEC20` |
   | Constructor `Character` (`thiscall(this, a, b*, def*)`) | `0x007B2390` | `0x3B2390` |
   | Destructor (referencia la vtable) | `0x007B83B0` | `0x3B83B0` |
   | `Character::GetAimPosition(out, flag)` (thiscall; pos + (0, 1, 0) y casos especiales) | `0x007B8590` | `0x3B8590` |
@@ -38,7 +40,10 @@ Character* GetPlayer(void) {
 
 | Offset | Tipo | Significado | Evidencia |
 |--------|------|-------------|-----------|
-| `+0x00` | ptr | vtable `0x012F4FC8` | constructor `FUN_007b2390` |
+| `+0x00` | ptr | vtable: en runtime `0x012F5D80`, la de la clase derivada. El constructor base pone `0x012F4FC8` y el derivado `FUN_007cec20` la reemplaza (corrección del 2026-11-05, ver hallazgo 05) | `FUN_007b2390`, `FUN_007cec20` |
+| `+0x10` | char[64] | nombre de la instancia (`"Character: %d"` si viene vacío) | `RequestCharacter` `FUN_007d0470` |
+| `+0x1120` | short | índice en la lista de personajes del gestor | `RequestCharacter` |
+| `+0x2CB0`/`+0x2CB4` | ptr/int | interfaz de refcount / contador de referencias | `FUN_007cec20`, `RequestCharacter` |
 | `+0x50` | dword | arg 2 del constructor | constructor |
 | `+0x54`, `+0x58` | dword×2 | copiados de `*arg3` (¿id/handle de entidad?) | constructor |
 | `+0x64` | ptr | definición/info del personaje (arg 4). `+0x04` = tipo (0, 1 = jugador según varios `if`, otro); `+0x1C` y `+0x1F` = flags que `PlayerTorch` exige para "es un jugador" | `FUN_004cd050`, `FUN_007caef0`, `FUN_007c2710` |
@@ -62,7 +67,7 @@ if (root) {
   uintptr_t pm  = *(uintptr_t*)(root + 0x08);
   if (pm && *(int*)(pm + 0x84) > 0) {
     uintptr_t chr = **(uintptr_t**)(pm + 0x80);
-    if (chr && *(uintptr_t*)chr == base + 0xEF4FC8) {       // vtable esperada
+    if (chr && *(uintptr_t*)chr == base + 0xEF5D80) {       // vtable final esperada (clase derivada)
       float x = *(float*)(chr + 0x70), y = *(float*)(chr + 0x74), z = *(float*)(chr + 0x78);
       float yaw = *(float*)(chr + 0x174);
     }
