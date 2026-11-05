@@ -19,22 +19,23 @@ _Última actualización: 2026-11-05_
 | Ghidra 12.1.2 (`/opt/ghidra`, pacman) + JDK 21 | ✅ instalados |
 | mingw-w64-gcc 16.2.0 (`i686-w64-mingw32-g++`) | ✅ instalado |
 | REA `npm ci` | ✅ (deps en `/home/juano/Documents/clones/rea/node_modules`; esbuild postinstall bloqueado por npm 12 allowScripts) |
-| REA `npm run build:cached` | ❌ **falla con Node 26.12.1**: hace falta Node 24.22.1 |
-| Registrar REA como MCP (scope local) | ⏳ pendiente (después del build) |
-| Checklist 4.4 | parcial (ver NOTES.md) |
+| Node 24.22.1 portable | ✅ `~/tools/node-v24.22.1-linux-x64` (SHA-256 verificado contra SHASUMS256.txt). El Node del sistema (26) queda intacto |
+| REA build (`npm ci && npm run build:cached` con Node 24) | ✅ REA 6.8.0 compilado |
+| `rea doctor --provider ghidra` | ✅ healthy (todos los checks) |
+| REA registrado como MCP (scope local) | ✅ `claude mcp get rea` → Connected. Backup previo en `~/.claude.json.bak-before-rea-*` |
+| Skill de REA | ⚠️ no instalada (el scope local no la instala). Es opcional |
+| Checklist 4.4 | falta: abrir `game/AI.exe` en Ghidra vía REA |
 | Hallazgo 01 (inventario del binario) | ⏳ no empezado |
 | Hash del AI.exe del amigo | ⏳ pendiente, lo tiene que pasar el usuario |
 
 ## Siguiente paso
-1. Conseguir Node 24.22.1 sin tocar el Node del sistema (portable en `~/tools/`, con confirmación del usuario) y recompilar REA: `PATH=<node24>/bin:$PATH npm ci && npm run build:cached`.
-2. Registrar el MCP (desde esta carpeta):
-   ```
-   claude mcp add --scope local rea \
-     --env GHIDRA_INSTALL_DIR=/opt/ghidra \
-     --env GHIDRA_HEADLESS_MAXMEM=8G \
-     --env REA_GHIDRA_STARTUP_TIMEOUT_MS=900000 \
-     -- <node> /home/juano/Documents/clones/rea/scripts/rea.mjs mcp
-   ```
-   El usuario reinicia Claude Code y se verifica con `binary_session {}`.
-3. `rea doctor --provider ghidra --json`, abrir `game/AI.exe` y completar el checklist 4.4.
-4. Hallazgo 01 → `work/findings/01-inventario.md`.
+1. (Sesión nueva, después de reiniciar Claude Code) Verificar que están las tools MCP de REA: llamar `binary_session` con `{}` y leer `result.tool_availability`.
+2. Leer las docs de REA que faltan para el análisis: `docs/cli.md`, `docs/native-investigation.md`, `docs/binary-diagnostics.md`, `docs/pe-imports.md`, `docs/mcp-contracts.md` (en `/home/juano/Documents/clones/rea`).
+3. Abrir `/home/juano/Documents/Claude/AI_Multiplayer/game/AI.exe` con el provider `ghidra` (el binario es grande; el timeout de arranque es de 15 min). Marcar el checklist 4.4 en NOTES.md.
+4. Hallazgo 01 → `work/findings/01-inventario.md`: imports (incluida la carga dinámica de DLLs con LoadLibrary, para confirmar la elección del proxy), strings relevantes, símbolos/RTTI, protecciones.
+
+### Cómo correr REA por CLI (sin MCP)
+```
+export PATH="$HOME/tools/node-v24.22.1-linux-x64/bin:$PATH" GHIDRA_INSTALL_DIR=/opt/ghidra
+node /home/juano/Documents/clones/rea/scripts/rea.mjs <comando> --json
+```
