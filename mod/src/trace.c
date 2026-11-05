@@ -34,11 +34,15 @@ int trace_enabled(void) { return g_enabled; }
 
 static char qname(int q) { return q ? 'B' : 'A'; }
 
-void trace_note(int q, uint32_t type, uint32_t size, uintptr_t ret)
+#define TR_PAYLOAD_SAMPLES 8  /* payloads logueados por tipo (los tipos raros son los interesantes) */
+#define TR_PAYLOAD_MAX 64
+
+void trace_note(int q, uint32_t type, const void *data, uint32_t size, uintptr_t ret)
 {
     uint32_t t = type & 0xFFFF;
     TStat *s = &g_tr[q & 1][t < TR_TYPES ? t : TR_TYPES];
-    LONG first = InterlockedIncrement(&s->total) == 1;
+    LONG nth = InterlockedIncrement(&s->total);
+    LONG first = nth == 1;
     InterlockedIncrement(&s->count);
     InterlockedExchangeAdd(&s->bytes, (LONG)size);
     InterlockedExchangeAdd(&s->tbytes, (LONG)size);
@@ -74,19 +78,31 @@ void trace_note(int q, uint32_t type, uint32_t size, uintptr_t ret)
                    (unsigned)size, (unsigned)site, bit == 1 ? "principal" : "otro");
     else if (new_site)
         log_printf("TR cola %c: tipo 0x%04x, call site nuevo rva 0x%x", qname(q), t, (unsigned)site);
+    if (nth <= TR_PAYLOAD_SAMPLES && data && size) {
+        uint8_t b[TR_PAYLOAD_MAX];
+        char hex[TR_PAYLOAD_MAX * 3 + 8];
+        uint32_t k = size < TR_PAYLOAD_MAX ? size : TR_PAYLOAD_MAX;
+        size_t n = 0;
+        if (mem_read((uintptr_t)data, b, k)) {
+            for (uint32_t i = 0; i < k; i++)
+                n += (size_t)aimp_snprintf(hex + n, sizeof hex - n, (i && i % 4 == 0) ? " %02x" : "%02x", b[i]);
+            log_printf("TR   payload %c 0x%04x #%ld (%u bytes%s): %s", qname(q), t, nth, (unsigned)size,
+                       size > k ? ", recortado" : "", hex);
+        }
+    }
 }
 
 __attribute__((cdecl, force_align_arg_pointer, noinline)) static uint32_t det_a(uint32_t type, const void *data,
                                                                               uint32_t size)
 {
-    trace_note(0, type, size, (uintptr_t)__builtin_return_address(0));
+    trace_note(0, type, data, size, (uintptr_t)__builtin_return_address(0));
     return g_wrap_a(type, data, size);
 }
 
 __attribute__((cdecl, force_align_arg_pointer, noinline)) static uint32_t det_b(uint32_t type, const void *data,
                                                                               uint32_t size)
 {
-    trace_note(1, type, size, (uintptr_t)__builtin_return_address(0));
+    trace_note(1, type, data, size, (uintptr_t)__builtin_return_address(0));
     return g_wrap_b(type, data, size);
 }
 
