@@ -58,7 +58,11 @@ log, en lugar de crashear sin explicación.
 
 ## Instalar
 
-### Linux (Proton)
+### Linux (Proton), automatizado
+
+`work/scripts/runtime_setup.sh install [--cfg "AIMP_X=1;AIMP_Y=2"]` copia la DLL y agrega al registro del prefix `AppDefaults\AI.exe\DllOverrides: winmm=native,builtin`, que equivale a la opción de lanzamiento pero no toca la config de Steam. Guarda un backup de `user.reg` antes de la primera edición. `runtime_setup.sh revert` deshace todo; `status` muestra el estado. Se niega a correr con el juego abierto.
+
+### Linux (Proton), a mano
 
 1. Copiar `mod/build/winmm.dll` a la carpeta del juego, al lado de `AI.exe`:
    `"/mnt/1,8TB/SteamLibrary/steamapps/common/Alien Isolation/"`.
@@ -85,7 +89,10 @@ log, en lugar de crashear sin explicación.
 Borrar `winmm.dll` de la carpeta del juego (y sacar la opción de lanzamiento). El mod no deja otros
 archivos fuera de la carpeta del log.
 
-## Variables de entorno
+## Variables de entorno y `aimp.cfg`
+
+Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X=valor`, `#` comenta), en `%LOCALAPPDATA%\AI_Multiplayer\aimp.cfg` o al lado de la DLL. Sirve en Windows, donde Steam no acepta `VAR=valor` en las opciones de lanzamiento. Si una variable está en el entorno y en el archivo, gana el entorno. Solo se aplican claves que empiezan con `AIMP_`.
+
 
 | Variable | Default | Uso |
 |----------|---------|-----|
