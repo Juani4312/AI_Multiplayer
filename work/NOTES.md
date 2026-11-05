@@ -521,3 +521,10 @@ Evidencia: `work/evidence/runtime/run14-items-noauth-host.log` (gitignored). pap
 - **Ítems:** las balas (`f7fb2113 162bda8d`, el mismo id que en la corrida 13: estable entre sesiones) y una placa coleccionable (`cd567644 4cafe144`) se mandan y se aplican con el avatar. **No desaparecen en la otra máquina:** el NPC no puede levantar ítems.
   - Cada jugador se queda con su copia (botín por jugador). Si se quiere que desaparezcan para los dos, hay que sacarlos del mundo sin dárselos al otro. No investigado.
 - **Scripts:** un evento (NPCs que hablan y se van) se disparó en cada máquina cuando entró su jugador. En la laptop se repitió; en la PC, no. Cada máquina corre sus propios scripts. Es el problema de la fase 6: disparadores decididos por el host.
+- Lado laptop de la corrida 14 (`work/windows/logs/aimp-usar-20261105-140742.log`, reporte "Paso 7d"; DLL `cba2b2e`, sin NOAUTH):
+  - las balas y la placa se usaron en las dos máquinas, con 4 a 5 s de diferencia: el uso del avatar no saca el ítem del mundo;
+  - `NPCs 5 -> 4 -> 3` a los 137 s: los NPCs del diálogo que "se van";
+  - **un uso de papito mientras la laptop estaba en el menú se descartó y no se reintenta** ("del nivel 16; acá el nivel es 0: se ignora");
+  - 0 excepciones, salida limpia.
+- Mejora pendiente: guardar los eventos de otro nivel en una cola hasta que el receptor llegue a ese nivel (con un tope de tiempo), en lugar de descartarlos.
+- papito: salida limpia, 0 excepciones (`run14-items-noauth-host.log`).
