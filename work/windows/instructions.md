@@ -146,6 +146,32 @@ powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action rev
    Si el push falla por la primera vez (pasó en Linux), reintentar una vez.
 3. Avisale al usuario que ya está subido, para que la sesión Linux haga `git pull`.
 
+## 6. Avatar del otro jugador por red (fase 4, experimental)
+
+En cada máquina, un civil del nivel (un NPC "INNOCENT") pasa a seguir la posición del jugador de la otra. Probado en Linux sin red el 2026-11-05: el civil sigue al jugador local sin errores.
+
+Requisitos:
+- los del paso 3;
+- `git pull`, porque hay una DLL nueva en `mod/dist`;
+- que la sesión Linux tenga su juego en host con `AIMP_GHOST=3`. Pedile al usuario que lo coordine.
+
+1. Instalar en modo join con el avatar:
+   ```
+   powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Net join -Peer <IP_de_papito>:47811 -Ghost 3
+   ```
+2. Steam en modo sin conexión en la laptop (ver "Problemas conocidos"). Arrancar el juego y cargar la partida. El juego Linux también tiene que estar en una partida, en el mismo nivel.
+3. Unos 8 s después de entrar, un civil tendría que ponerse donde está el jugador de la otra máquina y seguirlo. El usuario aprieta F8 cuando lo ve, F8 otra vez después de mover al jugador de la otra máquina, y sale.
+4. Recolectar:
+   ```
+   powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action collect -Tag avatar
+   ```
+5. Qué tiene que aparecer:
+   - `GHOST: NPC elegido para mover: NPCs[…]`;
+   - `GHOST: primer teletransporte … [red]`;
+   - líneas `GHOST: personaje en (…), objetivo (…) [red]` en las que el objetivo cambia;
+   - ninguna `EXCEPCIÓN`.
+   Si aparece una `EXCEPCIÓN`, copiarla con las 3 líneas siguientes (registros y stack): es lo que necesita la sesión Linux.
+
 ## Problemas conocidos
 
 - **No aparece `aimp.log`:** el proxy no cargó. Revisar KnownDLLs, que `winmm.dll` esté al lado de `AI.exe` (no en una subcarpeta) y que el juego haya llegado a arrancar.
