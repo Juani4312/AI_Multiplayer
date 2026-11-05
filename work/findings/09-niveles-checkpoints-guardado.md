@@ -16,7 +16,7 @@
 - **Evidencia:** `./work/evidence/h09/s1.txt` … `s6.txt`; `./work/evidence/h02/dump14.txt` (máquina de estados). El listado de la carpeta de Steam Cloud se hizo solo leyendo.
 - **Confianza:** alta para la lista de niveles y el registro de comandos. Media para el uso de los comandos (no se vio el dispatcher).
 - **Cómo verificar en runtime:** con `L = [[0x1BE1C4C]]` (doble indirección, ver la corrección), leer `[L+0x2BC8]` (índice) y el nombre en `L + índice·0x46` al cargar distintos niveles. El mod de la fase 1+2 lo hace solo (`mod/src/probe.c`).
-- **Verificado en runtime:** no.
+- **Verificado en runtime:** **sí**, la lista de niveles con **doble** indirección (Corridas del 2026-11-05 con el mod de la fase 1+2 (Proton 9.0-203); logs en `work/evidence/runtime/run1-menu.log` y `run2-juego.log`, resumen en el hallazgo 11): 35 niveles; 0 = `Production\Frontend`, 10 = `Production\HAB_ShoppingCentre`. El índice actual `+0x2BC8` cambia al cargar o salir de un nivel.
 
 ## Lista de niveles
 

@@ -25,7 +25,7 @@
 - **Evidencia:** `./work/evidence/h04/c1.txt` … `c7.txt` (salidas de `Dump.java`). `game/data/TASKS.TXT` es una copia del archivo del juego (SHA-256 `451f1fa3…a5787`, no se commitea).
 - **Confianza:** alta para el registro de tareas y sus callbacks, el gestor de cámara en `g_root+0x58` y las variables del timer. Media para el layout de la cámara activa (`+0x2C` cuaternión, `+0x3C` posición); sale del uso, no de un constructor.
 - **Cómo verificar en runtime:** leer `[[g_root+0x58]+0x1DC]`: `+0x3C/+0x40/+0x44` tiene que quedar cerca de la posición del jugador más la altura de los ojos, y el cuaternión en `+0x2C` tiene que tener norma 1. `DAT_016410DC` tiene que subir 1 por frame.
-- **Verificado en runtime:** no.
+- **Verificado en runtime:** **sí** (Corridas del 2026-11-05 con el mod de la fase 1+2 (Proton 9.0-203); logs en `work/evidence/runtime/run1-menu.log` y `run2-juego.log`, resumen en el hallazgo 11). La cámara activa `[[g_root+0x58]+0x1DC]` tiene un cuaternión `+0x2C` de norma 1 y su posición `+0x3C` queda a 1,57 m sobre los pies del jugador (0,85 m agachado). El dt real `0x16410D0` ≈ 1/fps. **Corrección:** `0x16410DC` cuenta **frames de simulación**: +1 por frame mientras se juega y 0 en menú o pausa, donde el timer usa `FUN_00773280` (decisión en `FUN_007ddae0` por `[DAT_016f194c+4] & DAT_012f3014`). El tiempo de juego `0x16410A8` se comporta igual.
 
 ## Mapa de tareas del frame (`DATA/TASKS.TXT` + `FUN_007d6370`)
 
