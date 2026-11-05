@@ -96,6 +96,16 @@ int main(void)
     putp(img, AIMP_RVA_G_ROOT, root);
     putp(img, AIMP_RVA_NET_SESSION, sess);
     putp(img, AIMP_RVA_QUEUE_A, qa); /* el global de la cola A == g_root+0x50 */
+    /* Lista de endpoints de la cola A: 2 endpoints dentro de la imagen (como en el juego). */
+    uint8_t *ep0 = img + 0x1236100, *ep1 = img + 0x1236120;
+    putp(ep1, EP_NEXT, ep0);
+    put32(ep1, EP_FN, b + 0x397490);
+    put32(ep1, EP_CTX, 0x1234);
+    ((uint16_t *)(ep1 + EP_TYPE))[0] = 0;
+    put32(ep0, EP_FN, b + 0x7DDC60);
+    ((uint16_t *)(ep0 + EP_TYPE))[0] = 1;
+    putp(img, AIMP_RVA_RPC_LIST_A, ep1);
+    put32(qa, QA_NHANDLERS, 2);
     putp(img, AIMP_RVA_LEVEL_LIST_PP, levels_pp); /* doble indirección */
     putp(levels_pp, 0, levels);
 
@@ -229,6 +239,11 @@ int main(void)
     expect(log, "INESPERADO: hay proveedor", 0);
     expect(log, "ModeManager::Run devolvió 0", 1);
     expect(log, "OJO:", 0);
+    expect(log, "EV tablas de handlers: cola A 2, sesión 0", 1);
+    expect(log, "RPC   A tipo 0x0000 handler rva 0x397490 ctx 0x00001234 endpoint rva 0x1236120", 1);
+    expect(log, "RPC   A tipo 0x0001 handler rva 0x7ddc60", 1);
+    expect(log, "RPC lista A: 2 endpoints", 1);
+    expect(log, "RPC lista sesión: 0 endpoints", 1);
     expect(log, "cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 16, frames con datos 61/61", 1);
     expect(log, "hook encolar A (FUN_00a2a290): instalado", 1);
     expect(log, "hook encolar B (FUN_00a2a810): instalado", 1);

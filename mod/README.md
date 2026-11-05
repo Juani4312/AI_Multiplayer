@@ -109,6 +109,7 @@ archivos fuera de la carpeta del log.
   cámara y de la red. Cualquier cosa marcada `INESPERADO` contradice el análisis estático.
 - `ST ...`: resumen periódico con fps, tiempo de `Run`, estado, nivel, personajes, **posición y yaw del
   jugador**, cámara (posición, cuaternión, diferencia con el jugador), NETZ, sesión y tamaño de la cola A.
+- `RPC ...`: catálogo de endpoints de la cola A y de la sesión (tipo → handler), una vez por sesión de juego.
 - `TR ...` (solo con `AIMP_TRACE_QUEUES=1`): tipos nuevos con su call site, informe por período y totales al salir.
 - `==== volcado ====`: estructuras en crudo (dwords + float) del root, `ModeManager`,
   `CharacterManager` (con la lista de jugadores y NPCs), jugador, definición, controlador, cámara, NETZ,
