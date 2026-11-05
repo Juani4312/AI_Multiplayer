@@ -18,7 +18,7 @@
   - `work/evidence/runtime/run10-usar-host.log` (gitignored);
   - el log y el reporte de la laptop, cuando los suba (`work/windows/`).
 - **Confianza:** alta para el camino, que se observó en runtime en las dos máquinas. Media para el significado del flag.
-- **Verificado en runtime:** **sí** (corrida 10, 2026-11-05: papito Proton en host ↔ laptop Windows 10 en join, por Tailscale).
+- **Verificado en runtime:** **sí** (corridas 10 a 12, 2026-11-05: papito Proton en host ↔ laptop Windows 10 en join, por Tailscale). Con el avatar como actor (corrida 12), los botones funcionan en los dos sentidos sin mover al otro jugador.
 
 ## El camino de un uso (runtime, corrida 10)
 
@@ -69,6 +69,19 @@ Detalle del lado de la laptop (`work/windows/logs/aimp-usar-20261105-132155.log`
 - Lo que se cambia adentro de una terminal no se replica: no genera RPCs.
 - **El filtro por tipo no alcanza:** todo uso con animación lleva al que lo ejecuta hasta el anclaje.
 - **Siguiente:** que el uso remoto lo haga el avatar (`AIMP_SYNC_USE_ACTOR=1`, `cba2b2e`). El avatar ya está donde está el otro jugador. Sin probar: hay que ver si el engine acepta que un NPC use el botón.
+
+## Corrida 12: el avatar hace el uso remoto (`AIMP_SYNC_USE_ACTOR=1`, `cba2b2e`) — **funciona**
+
+- Evidencia: `work/evidence/runtime/run12-avatar-actor-host.log` (gitignored), `work/windows/logs/aimp-usar-20261105-133822.log` y `work/windows/report.md` (paso 7c).
+- **papito → laptop:** botón `044106b1 eb7fc7c0`.
+  - La laptop lo aplicó con `personaje = el avatar (1c3460b37e03a5dc)`, el NPC "CV5".
+  - **El jugador de la laptop no se movió:** quieto en (3,158, 13,278, 39,554) de 68 a 77 s.
+- **laptop → papito:** otro botón del mismo tipo, `044106b1 071fbb9e`.
+  - papito lo aplicó con el avatar. Su jugador quedó quieto en (6,556, 13,276, 40,089) de 210 a 226 s.
+  - El avatar quedó en el objetivo exacto: la corrección del desvío (`8bc1f7e`) funciona, con ~50 teleports por segundo mientras la IA lo empuja.
+- **El usuario:** "hice F8 y transit button en ambos y ambos funcionaron". **El transit viene en las dos máquinas y nadie se teletransporta:** el engine acepta que un NPC use el botón.
+- Sin excepciones en las dos máquinas, salida limpia, 0 perdidos.
+- Además: **disparar el lanzallamas no se replica**, porque no pasa por el "usar". En la máquina donde se dispara, el avatar (un civil) ve el fuego y su IA quiere huir; el teleport lo mantiene en el lugar. Es otro motivo para apagarle la IA al avatar.
 
 ## Limitaciones y siguiente paso
 

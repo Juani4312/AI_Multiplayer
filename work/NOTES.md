@@ -484,3 +484,9 @@ Evidencia: `work/evidence/runtime/run11-filtro-host.log` (gitignored), DLL `1c1d
   - el botón remoto (`044106b1 eb7fc7c0`) se aplicó con el jugador local: **J0 saltó ~5,5 m al anclaje del botón (yaw −90° exacto) y quedó trabado 2 a 4 s** (animación de apretar);
   - 0 excepciones, salida limpia, 0 perdidos.
   - Conclusión de las dos sesiones: el filtro por tipo no alcanza, porque todo objeto con animación de uso arrastra al otro. Hace falta que el uso remoto lo haga el avatar (`cba2b2e`, sin probar).
+
+## 2026-11-05 — Corrida 12: el avatar hace el uso remoto — botones OK en los dos sentidos
+- DLL `cba2b2e`, con `AIMP_SYNC_USE_ACTOR=1` por defecto. En cada sentido, el botón del transit (dos instancias de `044106b1`) se aplicó con el id del NPC avatar. **El jugador que recibe no se movió** en ninguna de las dos máquinas, y el transit vino en las dos (usuario: "ambos funcionaron").
+- El avatar quedó en el objetivo exacto: la corrección del desvío (`8bc1f7e`) funciona, con ~50 teleports por segundo mientras su IA lo empuja.
+- El lanzallamas no se replica (no es un "usar"). El avatar civil reacciona al fuego local y quiere huir.
+- 0 excepciones en las dos máquinas. Detalle en el hallazgo 13.
