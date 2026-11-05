@@ -65,6 +65,7 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 - Herramienta clave: `work/scripts/ghidra/dump.sh` + `Dump.java` (4 s por consulta sobre el proyecto persistente).
 
 ## Siguiente paso
+0. Leer `work/RUNTIME_PLAN.md`: el plan consolidado de verificación en runtime (qué leer, dónde y qué esperar).
 1. **Con el usuario:** fase 1+2 del mod (proxy `winmm`, hook en `ModeManager::Run`, log de estado y posición). Es la forma de verificar en runtime todo lo anterior. Requiere su confirmación para compilar, colocar la DLL y ejecutar el juego.
 2. Experimentos de runtime prioritarios (cuando haya mod):
    - `GetPlayer`, la posición `+0x70`, el yaw `+0x174`, la cámara `[[g_root+0x58]+0x1DC]`;
