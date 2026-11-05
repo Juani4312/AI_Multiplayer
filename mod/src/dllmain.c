@@ -1,4 +1,5 @@
 /* Entry point de la DLL (sin CRT). */
+#include "githash.h" /* generado en cada build: AIMP_GIT_HASH (antes de aimp.h, que trae un valor por defecto) */
 #include "aimp.h"
 #include "log.h"
 #include "proxy.h"
