@@ -302,3 +302,10 @@ for (ep = DAT_01be1bd0; ep; ep = ep->next) {
 ## Catálogo pendiente
 
 Para mapear id → tipo → handler en runtime: recorrer `DAT_01be1bd0` y loguear `(id, fn, ctx)`. Después correlacionar con el enum de nombres de la parte 1 y con las acciones del juego.
+
+### Endpoints registrados estáticamente (parte 5, cont.)
+
+- Escrituras a la cabeza de la lista `DAT_01be1bd0`: **8 inicializadores estáticos** (`FUN_01140c60`, `…ca0`, `…ce0`, `…d20`, `…d60`, `…da0`, `…de0`, `…e00`). Cada uno hace `ep->next = cabeza; cabeza = &ep`.
+- Endpoints: `0x01636534`, `0x01636558`, `0x0163657C`, `0x016365A0`, `0x016365C4`, `0x016365E8`, `0x0163660C`, `0x0163661C` (casi todos separados 0x24).
+- **Inconsistencia a resolver:** el "tipo" que usa el spawn (`DAT_016361e4`, en el descriptor `0x016361D8`…) **no** está entre estos 8, y hay 70+ productores. Hipótesis: el descriptor del spawn pertenece a la **cola B** (`FUN_00a2a810`/`FUN_00a2a760`) o a otro registro con su propia tabla. Es posible que el modelo "un endpoint = un tipo" de arriba esté incompleto. Verificar en runtime (bloque 3.5 de `RUNTIME_PLAN.md`).
+- Los valores iniciales de esos globales en `.data` son el stub `0x8D21E0`; se inicializan en runtime y su valor final no se puede leer estáticamente.
