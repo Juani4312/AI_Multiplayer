@@ -75,3 +75,4 @@
 - 16:31 Cerrado el juego Linux (estaba en el menú) a pedido del usuario: la laptop lo abre en modo offline de Steam (misma cuenta) y después se rehostea.
 - 16:35 Llegan paquetes AIMP de la laptop (100.126.159.45:62046, menú, sin jugador) por Tailscale: la ida laptop→papito anda. Relanzado el juego Linux en host.
 - 16:42 Fase 3 por Tailscale: laptop (join, Steam offline) ↔ papito (host). Host: 4732 recibidos, 0 perdidos después del backlog inicial (361 por buffer lleno antes del primer frame), estado remoto nivel 16 con jugador y posición en movimiento. BYE de la laptop a los 325 s. Falta el log de la laptop (ida papito → laptop).
+- 16:44 Laptop subió el paso 3 (8984ec0): join 5503 enviados / 5141 recibidos / 0 perdidos. Las posiciones recibidas coinciden con las marcas F8 del otro lado, en los dos sentidos. Fase 3 cerrada. COMMANDS.PAK: solo BSP_LV426_PT01 de papito difiere (el de la laptop es el de Steam).
