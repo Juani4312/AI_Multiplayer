@@ -1,17 +1,16 @@
-# Mod AI_Multiplayer (fase 1+2)
+# Mod AI_Multiplayer
 
-DLL proxy `winmm.dll` para `AI.exe` (Alien: Isolation, build de Windows). Esta versión no agrega
-multiplayer todavía. Sirve para:
+DLL proxy `winmm.dll` para `AI.exe` (Alien: Isolation, build de Windows). Funciona en Windows 10 nativo y en Linux con Proton. Por fase:
 
-- **fase 1**: probar que el código del mod corre una vez por frame en el thread del juego (hook en
-  `ModeManager::Run`, hallazgo 02);
-- **fase 2**: leer y loguear la posición y el yaw del jugador, la cámara y el estado del juego
-  (hallazgos 03 y 04);
-- verificar en runtime, **solo leyendo**, los offsets de los hallazgos 02–10 (`work/RUNTIME_PLAN.md`,
-  bloques 0 a 3): loop, nivel, personajes, cámara, NETZ, sesión de red y cola RPC A.
+- **fases 1 y 2**: el código del mod corre una vez por frame en el thread del juego (hook en `ModeManager::Run`, hallazgo 02). Lee la posición y el yaw del jugador, la cámara y el estado del juego (hallazgos 03 y 04). Solo lee;
+- **fase 3**: red UDP propia entre dos máquinas (`AIMP_NET`), con el estado del jugador a 20 paquetes/s;
+- **fase 4** (experimental, `AIMP_GHOST=3`): un NPC civil del nivel hace de avatar del otro jugador (hallazgo 12);
+- **fase 5** (experimental, `AIMP_SYNC_USE=1`): los "usar" (botones, cajas, ítems) se replican a la otra máquina, donde los hace el avatar (hallazgo 13).
 
-El mod **nunca escribe** en estructuras del juego. Lo único que modifica son los primeros 6 bytes de
-`ModeManager::Run` (el JMP del hook) y, solo con `AIMP_TRACE_QUEUES=1`, los de los dos wrappers de encolado. Siempre con la build verificada.
+Sin opciones, el mod **solo lee**: lo único que modifica son los primeros bytes de `ModeManager::Run` (el JMP del hook), y siempre con la build verificada.
+- Los trazados (`AIMP_TRACE_QUEUES`, `AIMP_TRACE_SPAWN`, `AIMP_TRACE_USE`) agregan hooks que solo miran.
+- Las fases 4 y 5 sí escriben en el juego y llaman a funciones del engine: el teleport del avatar y el encolado de usos.
+- Cada paso queda en el log antes de hacerlo, y un registro de excepciones (`src/crash.c`) deja la causa si el juego se cae.
 
 ## Build soportada
 
@@ -135,13 +134,30 @@ Prueba sin un segundo juego: `python3 -I work/scripts/aimp_peer.py --join 127.0.
 
 ## Fase 4 (experimental): avatar del otro jugador
 
-`AIMP_GHOST=1` (`src/ghost.c`, hallazgo 12):
-1. Captura los pedidos de spawn del nivel.
-2. `AIMP_GHOST_DELAY_MS` después de que aparece el jugador, clona el suyo con otra clave y otro id, y lo pasa por la función original del engine.
-3. Cuando aparece el personaje nuevo, le apaga el controlador de jugador para que no lea el input local.
-4. En cada frame lo teletransporta (`FUN_007c6330`): a la posición del otro jugador si hay red y están en el mismo nivel, o a 1,5 m en x del jugador local.
+`AIMP_GHOST=3` (`src/ghost.c`, hallazgo 12; el modo recomendado):
+1. `AIMP_GHOST_DELAY_MS` (8000) después de que aparece el jugador local, elige un NPC del nivel de tipo `AIMP_GHOST_NPC_TYPE` (6 = civil "INNOCENT").
+2. En cada frame lo teletransporta (`FUN_007c6330`):
+   - si hay red y están en el mismo nivel, a la posición y el yaw del otro jugador;
+   - si no, a 1,5 m en x del jugador local.
 
-Cada paso queda en el log (`GHOST: …`) antes de hacerlo. Si el juego se cae, la última línea dice dónde. `test_ghost` lo prueba contra stubs con los prólogos y el `ret N` reales.
+   También lo vuelve a poner si su IA lo corre más de 2 cm.
+3. Si el NPC desaparece, elige otro. No tiene límite de tiempo.
+
+La posición se le pasa al engine como un vector de 16 bytes alineado a 16: `SetTransform` la copia con `MOVAPS` (corrida 7).
+
+Los modos 1 y 2 clonan el pedido de spawn del jugador para crear un personaje propio. **Hacen caer el juego** (el nivel no tiene recursos para una clave nueva), así que quedan solo para investigar. `AIMP_TRACE_SPAWN=1` loguea los pedidos de spawn.
+
+`test_ghost` prueba todo contra stubs con los prólogos y el `ret N` reales del spawn, `SpawnCharacter` y el teleport. Verifica el balance del stack y la alineación.
+
+## Fase 5 (experimental): "usar" compartido
+
+`AIMP_SYNC_USE=1` (`src/sync.c`, hallazgo 13), con red:
+- **Envío:** un hook en el productor del "usar" (`FUN_00795d00`) manda cada uso del jugador local como evento de red. El evento se manda 3 veces y el receptor descarta los repetidos.
+- **Filtro:** no se mandan los objetivos cuyo prefijo está en `AIMP_SYNC_USE_SKIP`. Por defecto son los lockers y la terminal de guardado, que son acciones de cada jugador.
+- **Aplicación:** el receptor, si está en el mismo nivel, encola el RPC A 0x26 con ese objetivo. El que lo usa es el avatar (`AIMP_SYNC_USE_ACTOR=1`) o, si no hay avatar, el jugador local. El engine lo ejecuta por su camino normal: handler A → handler de sesión → `FUN_00793FB0`.
+- **Resultado:** verificado con el botón del transit en los dos sentidos. El transit viene en las dos máquinas y ningún jugador se teletransporta.
+
+`test_sync` lo prueba contra stubs del productor, los dos handlers y el wrapper de encolado. `test_net` prueba el protocolo de eventos.
 
 ## Qué hay en el log
 
