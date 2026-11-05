@@ -87,3 +87,4 @@
 - 17:40 Corrida 8 (fase 4): AIMP_GHOST=2, DLL commit c4676ed (vector alineado), juego lanzado.
 - 17:45 Corrida 8: avatar con NPC existente OK 20 s (visto por el usuario). Clon por SpawnCharacter cae en RequestCharacter (recurso por clave nulo). Fase 4 v1 = NPC del nivel (AIMP_GHOST=3, sin límite, reelige). aimp_check.ps1 -Ghost.
 - 17:45 dist: winmm.dll commit c2f86d1 (SHA-256 82c58438…); instructions.md paso 6 (avatar por red, -Ghost 3).
+- 17:46 Juego Linux en modo pasivo (aimp.cfg AIMP_GHOST=0, DLL c2f86d1).
