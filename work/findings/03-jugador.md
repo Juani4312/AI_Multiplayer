@@ -19,7 +19,7 @@
 - **Evidencia:** `./work/evidence/h03/d1.txt` … `d31.txt` (salidas de `Dump.java`). Las claves son `d15.txt` (GetPlayer), `d7.txt` (GetAimPosition), `d26.txt` (SetTransform y constructor), `d31.txt` (lecturas de `+0x70/74/78/174` justo después de `GetPlayer`) y la lectura de constantes de `.rdata`.
 - **Confianza:** alta para `GetPlayer`, la posición `+0x70/+0x74/+0x78` y el yaw `+0x174`. Media para los nombres de métodos y el significado de los demás campos.
 - **Cómo verificar en runtime:** fase 2 del mod. Por frame loguear `GetPlayer()`, `+0x70/74/78` y `+0x174`. Caminar tiene que cambiar la posición (Y casi constante en el piso); girar tiene que cambiar `+0x174` en [−π, π].
-- **Verificado en runtime:** no.
+- **Verificado en runtime:** **sí** (Corridas del 2026-11-05 con el mod de la fase 1+2 (Proton 9.0-203); logs en `work/evidence/runtime/run1-menu.log` y `run2-juego.log`, resumen en el hallazgo 11). `[[g_root+8]+0x80][0]` es el jugador (vtable final `0x12F5D80`, nombre "Character: 6"). La posición `+0x70/74/78` cambia al caminar (2,4 m/s) y Y es vertical (una escalera la sube de 14,5 a 18,6). El yaw `+0x174` cubre [−3,138, 2,969] al girar 360°. `+0x54/+0x58` = id de 8 bytes del personaje (p. ej. `b222f72f 72519ab8`), el mismo que va en el payload del RPC de interacción (hallazgo 11).
 - **Preguntas abiertas:** al final.
 
 ## Cómo llegar al jugador

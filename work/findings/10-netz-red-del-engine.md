@@ -20,7 +20,7 @@
   - Media-alta: que en retail nunca se le asigna transporte (solo se encontró la escritura a 0 del constructor).
   - Baja: que se pueda reactivar. No se investigó qué código produce los mensajes ni si está condicionado a un modo multijugador.
 - **Cómo verificar en runtime:** con el mod, leer `[[g_root+0x04]+0x69C]` (transporte) y la máscara de canales sucios `+0x10/+0x14` durante el juego. Si `+0x69C` es siempre 0 y la máscara cambia, el engine está produciendo mensajes que nadie envía.
-- **Verificado en runtime:** no.
+- **Verificado en runtime:** **sí** (Corridas del 2026-11-05 con el mod de la fase 1+2 (Proton 9.0-203); logs en `work/evidence/runtime/run1-menu.log` y `run2-juego.log`, resumen en el hallazgo 11). Transporte NETZ `+0x69C` = 0 y proveedor de la sesión = 0 siempre. La máscara de canales pasa a `000000ff:00000001` con personajes en el nivel. Global de la cola A == `g_root+0x50`. Catálogo real: **44 endpoints en la cola A y 47 en la sesión**. Los mensajes se encolan y se vacían dentro del mismo frame (el tamaño leído después de `Run` es siempre 0). Flujo observado: RPC en la cola A → handler local → mensaje equivalente en la cola B (sesión) que se descarta. Detalle en el hallazgo 11.
 
 ## Evidencia
 

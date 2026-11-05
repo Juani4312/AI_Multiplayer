@@ -43,7 +43,8 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 | Hallazgo 01 (inventario) | ✅ `findings/01-inventario.md` |
 | Hallazgo 02 (game loop) | ✅ `findings/02-game-loop.md` (hook: `ModeManager::Run` RVA 0x3A8460) |
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
-| Mod fase 1+2 (proxy winmm + hook + log de posición) | 🟡 **implementado y probado fuera del juego** (`mod/`, tests con wine OK). Falta la corrida en el juego (requiere al usuario) |
+| Mod fase 1+2 (proxy winmm + hook + log de posición) | ✅ **verificado en runtime** (2026-11-05, Proton): fase 1 (código por frame) y fase 2 (posición, yaw, cámara) |
+| Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
 | Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–7 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; cola A en loopback; **cola B = salida a la red, descartada en retail**; registro de handlers de la cola A) |
 | Hallazgo 05 (creación de personajes) | 🟡 partes 1–2 en `findings/05-creacion-de-personajes.md` (FinishSpawning, controlador de jugador, request y spawner de script) |
@@ -55,34 +56,21 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
-## Resumen para el usuario (cierre de la sesión de la tarde del 2026-11-05)
-- **Mod de la fase 1+2 listo y probado fuera del juego** (`mod/`, ver `mod/README.md`). Es un proxy `winmm.dll` sin CRT con un hook en `ModeManager::Run`. Loguea a `aimp.log`, solo leyendo:
-  - la posición y el yaw del jugador, la cámara, el estado y el nivel;
-  - NETZ, la sesión y las dos colas de mensajes;
-  - el catálogo de endpoints RPC.
-  Opcional: `AIMP_TRACE_QUEUES=1` traza tipo, tamaño y call site de cada mensaje. Tests con wine: OK. Analizador del log: `work/scripts/analyze_aimp_log.py`.
-- **Hallazgos nuevos** (estáticos):
-  - la cola B es la salida a la red de la sesión y en retail se descarta en cada frame (hallazgo 10, parte 6);
-  - `FUN_00a2a2b0` registra los handlers de la cola A desde una lista estática, con ids iguales entre máquinas (parte 7);
-  - corrección: la lista de niveles tiene doble indirección (hallazgo 09).
-- **Bloqueante:** el disco de 1,8 TB no está montado (NTFS "dirty"). Hasta resolverlo no se puede correr el juego.
-- Detalle: el primer `git push -q` después de un commit falló dos veces con "failed to push some refs"; el reintento sin `-q` funcionó las dos. No se investigó.
+## Resumen para el usuario (2026-11-05, después de las corridas en el juego)
+- **Fases 1 y 2 del mod verificadas en runtime** (Proton 9.0-203): hook por frame, posición/yaw del jugador, cámara (1,57 m sobre los pies; 0,85 m agachado), nivel, personajes y NETZ. Offsets de los hallazgos 01–05, 09 y 10 confirmados (ver "Verificado en runtime" en cada uno).
+- **Hallazgo 11:**
+  - el patrón RPC cliente/servidor funciona en retail: cola A (local) → handler → cola B (red, descartada);
+  - 0x29 = spawn (304 bytes) y 0x26 = interacción con un objeto usable (20 bytes con ids de 8 bytes del objetivo y del personaje);
+  - el movimiento y la IA no pasan por estas colas.
+- El mod quedó instalado en el juego con el trazado activo (`aimp.cfg`). `work/scripts/runtime_setup.sh revert` lo saca todo.
 
-## Pendientes que requieren al usuario (en orden)
-1. **Montar el disco de 1,8 TB** (`sda1`): no se montó en el arranque porque el NTFS quedó "dirty" (detalle en `NOTES.md`, sección "Mod fase 1+2"). Opción segura: chkdsk desde Windows; opción rápida: `sudo ntfsfix -d /dev/sda1 && sudo mount /mnt/1,8TB`.
-2. **Primera corrida del mod**: copiar `mod/build/winmm.dll` al lado de `AI.exe`, poner `WINEDLLOVERRIDES="winmm=n,b" %command%` en Steam y seguir el checklist de `mod/README.md` ("Primera prueba"). Después revisar `aimp.log` contra `work/RUNTIME_PLAN.md`.
-3. Aprobar (o no) que el MCP de REA use el proyecto de Ghidra (ver arriba).
-4. KnownDLLs en el Windows del amigo; hash de su `AI.exe` cuando reinstale.
-5. Comparar el `COMMANDS.PAK` suelto del disco raíz (`/mnt/1,8TB/COMMANDS.PAK` con el disco desmontado; SHA-256 `dda19f70…8a47f`) con los del backup.
+## Pendientes que requieren al usuario
+1. (Opcional) corrida corta con marcas F8 para separar puerta e ítem (instrucciones en el hallazgo 11, "Pendiente").
+2. Aprobar (o no) que el MCP de REA use el proyecto de Ghidra.
+3. KnownDLLs en el Windows del amigo; hash de su `AI.exe` cuando reinstale; que use el mismo COMMANDS.PAK (mod de saltear la misión 9) o los dos el vanilla.
 
 ## Siguiente paso
-0. Leer `mod/README.md`, `work/RUNTIME_PLAN.md` y `work/DESIGN_OPTIONS.md`.
-1. **Con el usuario:** primera corrida del mod (pendiente 2). El log responde los bloques 0–3 del plan de runtime: offsets base, jugador, cámara, NETZ, crecimiento de las colas A y B y catálogo de endpoints RPC. Analizarlo con `python3 -I work/scripts/analyze_aimp_log.py <aimp.log>`. Con eso se cierra la fase 2 y se decide la arquitectura (A/B/C de `DESIGN_OPTIONS.md`).
-2. Después de esa corrida:
-   - si las colas crecen por frame, segunda corrida con `AIMP_TRACE_QUEUES=1` (experimento 3.6: tipo, tamaño y call site de cada mensaje; el catálogo tipo → handler, 3.5, ya sale en la primera corrida). Con eso, mapear offline cada tipo a su productor y su handler;
-   - fase 3: UDP mínimo con la posición.
-3. Estático pendiente:
-   - 05 parte 2: definición del jugador para el spawn de un segundo personaje;
-   - 10: lado de recepción de la sesión (quién despacha lo que entregaría el proveedor) y `FUN_00a2a520`;
-   - 06 parte 2, 09 parte 2 (dispatcher de comandos de UI), 07 parte 2 (inventario);
-   - 04: matrices de vista/proyección (mejor en runtime).
+1. **Fase 3:** UDP mínimo que mande la posición y el yaw del jugador local (ya verificados) y loguee los del otro. Primero entre dos procesos en la misma máquina y después por Tailscale. Decidir con el usuario: ENet (requiere descargarlo) o UDP propio para empezar.
+2. **Fase 4 (preparación estática):** cómo representar al otro jugador. Opciones del hallazgo 05: spawnear un NPC con la definición de un humano y moverlo con `SetTransform` (`0x7C2710`), o un segundo personaje-jugador sin controlador. El request de spawn (0x130 bytes, RPC 0x29) ya se puede capturar en runtime con el trazado.
+3. Investigar qué escribe en los canales NETZ durante el juego: posible camino para el movimiento de personajes.
+4. Estático pendiente: semántica de los RPCs 0x1E/0x20/0x22/0x23/0x28 y del B 0x07; dispatcher de los comandos de UI (hallazgo 09); inventario (07).

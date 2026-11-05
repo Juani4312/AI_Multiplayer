@@ -19,7 +19,7 @@
 - **Evidencia:** `./work/evidence/h05/e1.txt` … `e12.txt` (Dump.java). `e8.txt` tiene los nombres de la API, que salen de los `strncpy` al buffer de contexto `0x016F17F8`. La llamada no registrada en `0x7D3C33` se encontró escaneando `.text` (`E8 rel32`) y se desensambló con `objdump -d --start-address=0x7d3b40`.
 - **Confianza:** alta para `FinishSpawning` y el criterio jugador/NPC, los vectores y los nombres de la API. Media para `SpawnCharacter` (código no analizado por Ghidra; se leyó solo el asm parcial).
 - **Cómo verificar en runtime:** con el mod, leer `[[g_root+8]+0x84]` (jugadores = 1), `+0xD4` (NPCs) y `+0x174` (pendientes) mientras se juega; el Alien y los humanos tienen que aparecer en el vector de NPCs.
-- **Verificado en runtime:** no.
+- **Verificado en runtime:** **parcial** (Corridas del 2026-11-05 con el mod de la fase 1+2 (Proton 9.0-203); logs en `work/evidence/runtime/run1-menu.log` y `run2-juego.log`, resumen en el hallazgo 11). Vector de jugadores `+0x80/+0x84` (1 jugador) y de NPCs `+0xD0/+0xD4` (6, después 7) OK. Definición del jugador: tipo 0, `1c=1`, `1f=1`; los NPCs, tipos 6 y 3 con `1c=0`. Controlador de jugador `+0x31C` con `+0x48 = 1` solo en el jugador. El spawn de autoridad (`FUN_00797490`) encola el RPC A `0x29` (304 bytes = 0x130, el request) 8 veces al cargar el nivel.
 
 ## Flujo de creación
 
