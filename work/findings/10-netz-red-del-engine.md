@@ -355,3 +355,16 @@ if (sesion->tamaño_B != 0) {                              // +0x1C
 - ¿Qué hace `FUN_00a2a520` (cuando el proveedor dice "no conectado")?
 - ¿Quién consume los mensajes recibidos de la sesión (el lado de recepción)?
 - ¿Las dos colas tienen tipos en el mismo espacio de ids? La sesión usa los ids de `RegisterAllRPCs` (8 endpoints estáticos); la cola A, su propia tabla.
+
+---
+
+# Parte 7 - Quién llena la tabla de handlers de la cola A
+
+- **Evidencia:** `./work/evidence/mod/q3.txt` (decompilación de `FUN_00a2a2b0` y `FUN_00a2a220`, xrefs de `DAT_01be1bcc`) y `q4.txt` (asm de los inicializadores).
+- **Confianza:** alta para el mecanismo. La cantidad de endpoints no se puede contar estáticamente (ver abajo).
+
+- **`FUN_00a2a2b0` es el `RegisterAll` de la cola A.** Cuenta la lista estática `DAT_01be1bcc`, redimensiona la tabla `[colaA+0x08]` (cantidad en `+0x0C`) y, en el orden de la lista, asigna `tipo = 0, 1, 2…` (u16 en `endpoint+0x0C`) y guarda `&endpoint->fn` en la tabla. Es el mismo layout de endpoint que el de la sesión (parte 5): `{next, fn, ctx, u16 tipo}`.
+- **La tabla de la cola A es de punteros** a pares `{fn, ctx}`. El despachador (`FUN_00a2a220`) hace `h = tabla[tipo]; consumidos = h->fn(h->ctx, payload)`; si el mensaje no tiene payload, pasa `NULL`.
+- Las listas las arman **inicializadores estáticos** (zona `0x1140840`–`0x1140F00`). Cada uno ejecuta `endpoint.next = lista; lista = &endpoint`. Ejemplos: cola A ← `0x1636190`, `0x1636520`, `0x16366F4`; sesión ← `0x1636534`. Los endpoints son globales de `.data`.
+- Ghidra no ve todos los inicializadores: el del spawn (endpoint `0x16361D8`, tipo en `0x16361E4`) no tiene xrefs. Solo los referencia la tabla de inicialización del CRT, igual que pasó con `SpawnCharacter` (hallazgo 05). Por eso **el catálogo se lee en runtime**: el mod recorre las dos listas cuando la tabla de la cola A ya tiene handlers (líneas `RPC` del log). Eso cubre el experimento 3.5.
+- Los ids dependen del orden de inicialización del CRT, que es fijo para un mismo binario: **coinciden entre máquinas con el mismo `AI.exe`** (lo mismo que la parte 5 para la sesión).

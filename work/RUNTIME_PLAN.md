@@ -52,7 +52,7 @@ Si algo no coincide: no tocar nada y loguear.
 
 Si en 3.4 la cola crece, la hipótesis "replicar el buffer de la cola del host al cliente" (hallazgo 10, parte 4) queda viva. Es el camino más corto al mundo compartido.
 
-**Actualización (hallazgo 10, parte 6):** la cola de los 41 productores del segundo wrapper es el buffer de la **sesión** (`[0x1BE1BD4]+0x18/+0x1C`), que sin proveedor se **descarta** cada frame. El mod loguea por defecto el tamaño de las dos colas después de cada frame (líneas `cola A` y `cola B` del `ST`). Con `AIMP_TRACE_QUEUES=1` además hookea los dos wrappers (`FUN_00a2a290` → cola A, `FUN_00a2a810` → sesión) y registra tipo, tamaño, thread y call site (líneas `TR`): eso cubre el 3.6. El 3.5 (catálogo de handlers) queda para después.
+**Actualización (hallazgo 10, parte 6):** la cola de los 41 productores del segundo wrapper es el buffer de la **sesión** (`[0x1BE1BD4]+0x18/+0x1C`), que sin proveedor se **descarta** cada frame. El mod loguea por defecto el tamaño de las dos colas después de cada frame (líneas `cola A` y `cola B` del `ST`). Con `AIMP_TRACE_QUEUES=1` además hookea los dos wrappers (`FUN_00a2a290` → cola A, `FUN_00a2a810` → sesión) y registra tipo, tamaño, thread y call site (líneas `TR`): eso cubre el 3.6. El 3.5 (catálogo de handlers) también está cubierto: la sonda recorre las listas de endpoints de la cola A (`DAT_01be1bcc`) y de la sesión (`DAT_01be1bd0`) una vez que se registraron (líneas `RPC`; hallazgo 10, parte 7).
 
 ## 4. IA (hallazgo 08)
 
