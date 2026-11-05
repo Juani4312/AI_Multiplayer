@@ -14,3 +14,5 @@
 - 01:24 REA CLI en modo proyecto (`REA_GHIDRA_PROJECT_PATH`): **~10 s por consulta** (vs ~10 min de import fresco).
 - 01:27 Decompilación de funciones sospechosas: `IsDebuggerPresent` solo para asserts y para nombrar threads; breakpoints por hardware en código muerto; el único `VirtualProtect` parchea la DLL de la cámara del DK2. No hay anti-debug ni anti-tamper.
 - 01:35 **Hallazgo 01 cerrado** → `findings/01-inventario.md`. Proxy: `winmm.dll` sigue siendo la candidata (falta verificar KnownDLLs en el Windows del amigo).
+- 01:45 Herramienta `work/scripts/ghidra/Dump.java` + `dump.sh` (4 s por corrida): `fn:`, `hdr:`, `xref:`, `vt:`, `str:`, `calls:`, `asm:`, `rtti:`.
+- 02:05 **Hallazgo 02 cerrado** → `findings/02-game-loop.md`. Loop principal en `FUN_007dae80` (RVA 0x3DB220); `g_root` en `0x16F0C88`; `ModeManager::Run` (RVA 0x3A8460) = un frame; update del nivel `FUN_00790000` (vtable `0x12F43E8`+0x14). ⚠️ `FUN_007cad10` tiene un chequeo de licencia Steam que crashea a propósito: no tocar. Las opciones dev (`skip_frontend`, `level`, …) están desactivadas en retail (`FUN_00d0fb70` = `return 0`).
