@@ -93,3 +93,4 @@
 - 17:59 Corrida 9: avatar por red OK en los dos sentidos (laptop y papito: NPC sigue al otro jugador, media 0,18 m, 0 perdidos, 0 excepciones; usuario: 'nos vemos mutuamente'). Fase 4 v1 cerrada.
 - 18:00 Juego Linux cerrado (fin de la corrida 9). Mod en modo pasivo (DLL 8bc1f7e o posterior).
 - 18:12 Fase 5 v0: sync.c (usar compartido por eventos), eventos en net.c, test_sync con stubs reales. Tests OK.
+- 18:12 dist: winmm.dll 20cf297 (SHA-256 49d90e49…); instructions.md paso 7 (usar compartido).

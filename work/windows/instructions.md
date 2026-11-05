@@ -172,6 +172,28 @@ Requisitos:
    - ninguna `EXCEPCIÓN`.
    Si aparece una `EXCEPCIÓN`, copiarla con las 3 líneas siguientes (registros y stack): es lo que necesita la sesión Linux.
 
+## 7. "Usar" compartido (fase 5, experimental)
+
+Cuando el jugador de una máquina usa algo (botón, caja, locker, terminal, ítem), el mod se lo manda a la otra. La otra lo aplica como si lo hubiera usado su propio jugador. Sin probar en el juego: puede no tener efecto o hacer caer el juego. El registro de excepciones deja la causa en el log.
+
+Requisitos: los del paso 6, con `git pull` (hay DLL nueva), y la sesión Linux en host con `AIMP_GHOST=3` y `AIMP_SYNC_USE=1`.
+
+1. Instalar:
+   ```
+   powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Net join -Peer <IP_de_papito>:47811 -Ghost 3 -Extra AIMP_SYNC_USE=1
+   ```
+2. Steam sin conexión, arrancar el juego y cargar la partida en las dos máquinas, en el mismo nivel.
+3. El usuario aprieta F8 en la máquina donde va a actuar y usa algo cerca: un locker, la terminal de guardado o una caja. Después mira la otra pantalla: ¿pasó lo mismo ahí? Después hace lo mismo al revés.
+4. Recolectar:
+   ```
+   powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action collect -Tag usar
+   ```
+5. Qué buscar en el log:
+   - del lado que usó: `SYNC uso local … (jugador local)` y `SYNC   mandado al otro jugador`;
+   - del lado que recibe: `SYNC: aplicando uso remoto (evento N): objetivo …`, y después `SYNC handler A del uso` y `SYNC handler de sesión del uso` con el mismo objetivo;
+   - cualquier `EXCEPCIÓN`, copiada con sus 3 líneas;
+   - lo que vio el usuario en cada pantalla. Es lo más importante: sin eso no se sabe si tuvo efecto.
+
 ## Problemas conocidos
 
 - **No aparece `aimp.log`:** el proxy no cargó. Revisar KnownDLLs, que `winmm.dll` esté al lado de `AI.exe` (no en una subcarpeta) y que el juego haya llegado a arrancar.
