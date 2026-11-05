@@ -36,6 +36,9 @@ static AimpNet *g_net;
 static int g_on;
 static volatile uint32_t g_level;
 static volatile LONG g_n_use, g_n_ha, g_n_hs;
+/* Prefijos de objetivo (primeros 4 bytes del id, en hex como en el log) cuyos usos no se mandan:
+ * son acciones del jugador, no estado del mundo (hallazgo 13). Lockers y terminal de guardado. */
+static char g_skip[256] = "3e3ec35d,1e38b898";
 
 static uint32_t rva(uint32_t p) { return p >= (uint32_t)g_aimp_exe ? p - (uint32_t)g_aimp_exe : p; }
 
@@ -54,6 +57,23 @@ static void hex8(char *out, const uint8_t *id)
         out[2 * i + 1] = hx[id[i] & 15];
     }
     out[16] = 0;
+}
+
+/* ¿El prefijo del objetivo (8 caracteres hex) está en g_skip? */
+static int skipped(const char *hex8chars)
+{
+    for (const char *q = g_skip; *q;) {
+        while (*q == ',' || *q == ' ')
+            q++;
+        int i = 0;
+        while (i < 8 && q[i] && (q[i] | 0x20) == hex8chars[i])
+            i++;
+        if (i == 8 && (q[8] == 0 || q[8] == ',' || q[8] == ' '))
+            return 1;
+        while (*q && *q != ',')
+            q++;
+    }
+    return 0;
 }
 
 static uint32_t local_player(void)
@@ -83,7 +103,9 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_use
             log_printf("SYNC uso local %ld: this 0x%08x (vtable rva 0x%x, vf[1] rva 0x%x), desde rva 0x%x | objetivo %s, personaje %s%s, flag %08x",
                        (long)n, (unsigned)(uintptr_t)self, rva(vt), rva(vf1), rva((uint32_t)(uintptr_t)__builtin_return_address(0)),
                        t, c, mine ? " (jugador local)" : "", rd32(p + 16));
-        if (mine && g_on && g_net && g_net->mode) {
+        if (mine && g_on && g_net && g_net->mode && skipped(t)) {
+            log_printf("SYNC   no se manda: el objetivo empieza con un prefijo de AIMP_SYNC_USE_SKIP (acción del jugador, no del mundo)");
+        } else if (mine && g_on && g_net && g_net->mode) {
             if (net_event(g_net, AIMP_EVT_USE, g_level, p, sizeof p))
                 log_printf("SYNC   mandado al otro jugador (evento %u, nivel %u)", g_net->evt_seq, g_level);
             else
@@ -133,6 +155,11 @@ int sync_install(AimpNet *net)
     if (!trace && !g_on)
         return 0;
     g_net = net;
+    wchar_t wskip[128];
+    if (aimp_env_str(L"AIMP_SYNC_USE_SKIP", wskip, 128))
+        aimp_utf8(g_skip, sizeof g_skip, wskip);
+    else if (aimp_env_int(L"AIMP_SYNC_USE_SKIP", 1) == 0)
+        g_skip[0] = 0;
     int ok = hook_install(&g_hk_use, "usar (FUN_00795d00)", (void *)(g_aimp_exe + AIMP_RVA_USE_PRODUCER),
                           AIMP_USE_PRODUCER_PROLOGUE, sizeof AIMP_USE_PRODUCER_PROLOGUE, AIMP_USE_PRODUCER_STEAL,
                           (void *)det_use, (void **)&g_use_orig);
@@ -145,8 +172,8 @@ int sync_install(AimpNet *net)
     if (!ok)
         g_on = 0;
     if (g_on)
-        log_printf("AIMP_SYNC_USE=1 (fase 5, experimental): los usos del jugador local se mandan al otro y los del otro se aplican acá%s",
-                   net && net->mode ? "" : " (sin red: solo se loguea)");
+        log_printf("AIMP_SYNC_USE=1 (fase 5, experimental): los usos del jugador local se mandan al otro y los del otro se aplican acá%s; no se mandan los objetivos con prefijo [%s]",
+                   net && net->mode ? "" : " (sin red: solo se loguea)", g_skip);
     else
         log_printf("AIMP_TRACE_USE=1: se loguean los usos y sus handlers (solo mira)");
     return ok;

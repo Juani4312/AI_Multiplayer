@@ -65,7 +65,7 @@ Detalle del lado de la laptop (`work/windows/logs/aimp-usar-20261105-132155.log`
 ## Limitaciones y siguiente paso
 
 - **El que recibe hace la misma acción con su propio jugador.** Para el estado del mundo (cajas abiertas, botones, puertas, ítems) es lo que se busca. Para acciones del jugador (meterse en un locker, abrir la terminal de guardado) no: en un coop, solo se esconde el que se mete.
-  - Opción 1: filtrar por tipo de objeto, con el primer dword del id: replicar cajas, botones e ítems, y no lockers ni terminales.
+  - Opción 1: filtrar por tipo de objeto, con el primer dword del id: replicar cajas, botones e ítems, y no lockers ni terminales. **Implementada:** `AIMP_SYNC_USE_SKIP`, por defecto `3e3ec35d,1e38b898` (lockers y terminal de guardado). El uso se ejecuta igual en la máquina propia; solo no se manda. `test_sync` lo cubre. Falta probarlo en el juego con una caja o un botón.
   - Opción 2: aplicar el uso con el avatar (el id del NPC) como personaje. Hay que probar si un NPC puede usar esas cosas.
 - **Ítems:** si los dos "usan" el mismo ítem del piso, ¿lo levantan los dos? Hay que probarlo (corrida 3: molotov `f7fb2113 d783f856`).
 - Las puertas automáticas no generan mensajes (hallazgo 11): se abren solas por proximidad del jugador local. El avatar NPC probablemente no las abre.
