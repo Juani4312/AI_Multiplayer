@@ -479,3 +479,8 @@ Evidencia: `work/evidence/runtime/run11-filtro-host.log` (gitignored), DLL `1c1d
   - Pero el jugador que recibe va al anclaje del botón para la animación.
 - **Los prefijos del id son tipos de objeto** (confirmado con terminal y botón).
 - Cambio (`AIMP_SYNC_USE_ACTOR=1`, el valor por defecto): el uso remoto lo hace **el avatar** (el NPC de `AIMP_GHOST=3`, que ya está donde está el otro jugador). Si no hay avatar, lo hace el jugador local. Falta probar si el engine acepta que un NPC "use" un botón.
+- Lado laptop de la corrida 11 (`work/windows/logs/aimp-usar-20261105-133059.log`, reporte "Paso 7b"):
+  - su terminal de guardado (`1e38b898 8722c94d`) se filtró;
+  - el botón remoto (`044106b1 eb7fc7c0`) se aplicó con el jugador local: **J0 saltó ~5,5 m al anclaje del botón (yaw −90° exacto) y quedó trabado 2 a 4 s** (animación de apretar);
+  - 0 excepciones, salida limpia, 0 perdidos.
+  - Conclusión de las dos sesiones: el filtro por tipo no alcanza, porque todo objeto con animación de uso arrastra al otro. Hace falta que el uso remoto lo haga el avatar (`cba2b2e`, sin probar).
