@@ -374,9 +374,13 @@ void net_status(AimpNet *n, int64_t now)
                    n->mode == 1 ? "host" : "join", n->peer_str, n->sent, n->recv, n->lost, n->bad, r->level,
                    (r->flags & AIMP_FLAG_PLAYER) ? "con jugador" : "sin jugador", (double)r->pos[0], (double)r->pos[1],
                    (double)r->pos[2], (double)r->yaw, r->seq, age);
-        if (n->evt_sent || n->evt_recv || n->evt_dup)
+        /* Solo cuando cambian (corrida 10: una línea por segundo con los mismos números). */
+        uint32_t sig = n->evt_sent * 2654435761u ^ n->evt_recv * 40503u ^ n->evt_dup;
+        if ((n->evt_sent || n->evt_recv || n->evt_dup) && sig != n->evt_logged) {
             log_printf("NET eventos: enviados %u, recibidos %u, repetidos descartados %u (totales)", n->evt_sent, n->evt_recv,
                        n->evt_dup);
+            n->evt_logged = sig;
+        }
     }
     n->sent = n->recv = n->lost = n->bad = 0;
 }

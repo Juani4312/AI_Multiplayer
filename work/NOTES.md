@@ -460,3 +460,12 @@ Ambas con `AIMP_GHOST=3` (DLL `c2f86d1`), en Tech_Hub, por Tailscale (directo po
 
   **Todos los tests OK.**
 - `aimp_check.ps1 -Extra AIMP_SYNC_USE=1` (claves extra para `aimp.cfg`).
+
+## 2026-11-05 — Corrida 10: "usar" compartido OK en los dos sentidos (hallazgo 13)
+- papito → laptop: locker `3e3ec35dbebfb3d2`. En la laptop, "el player de la laptop se metió conmigo al locker instantáneamente".
+- laptop → papito: el mismo locker. papito aplicó el evento (1 recibido, 2 repetidos descartados) y el camino handler A → sesión → `FUN_00793FB0` corrió en 7 ms. "la PC se teletransporta dentro también".
+- En runtime:
+  - el `vf[1]` del productor es `ret 4`;
+  - **los handlers de sesión se ejecutan en local en el mismo frame**;
+  - la ejecución real es `ctx->vf[1]` = `FUN_00793FB0` (vtable `0xEF4EE4`).
+- Siguiente: filtrar por tipo de objeto. Los lockers y terminales son acciones del jugador; las cajas, botones e ítems, estado del mundo.

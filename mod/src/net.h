@@ -79,6 +79,7 @@ typedef struct {
     AimpEvt in[AIMP_EVT_QUEUE];              /* recibidos, sin aplicar */
     uint32_t in_head, in_tail;              /* anillo: head = próximo a leer */
     uint32_t evt_sent, evt_recv, evt_dup;   /* totales */
+    uint32_t evt_logged;                    /* firma de los totales ya logueados */
 } AimpNet;
 
 /* Lee la config y abre el socket. Devuelve 0 si la red queda apagada. */

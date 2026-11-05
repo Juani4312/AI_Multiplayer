@@ -47,6 +47,7 @@ _Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 
 | Mod fase 3 (UDP mínimo con la posición) | ✅ **verificada por Tailscale** (2026-11-05): laptop Windows 10 nativo (join) ↔ papito Proton (host). Los dos sentidos, 0 perdidos, y las posiciones recibidas coinciden con las marcas F8 del otro lado. Mejoras menores pendientes: ritmo real ~16/s en vez de 20 y backlog del socket antes del primer frame |
 | Hallazgo 12 (avatar remoto: pedido de spawn y teleport) | 🟡 `findings/12-avatar-remoto.md`: flujo del spawn de autoridad (`0x797490`), layout del pedido de 0x130 bytes y teleport (`0x7C6330`). Falta runtime |
 | Mod fase 4 (avatar del otro jugador) | ✅ **v1 por red OK** (corrida 9, Windows nativo ↔ Proton): en cada máquina un NPC humano del nivel sigue al jugador de la otra (`AIMP_GHOST=3`; `mod/src/ghost.c`). Clonar personajes hace caer el juego (hallazgo 12, parte 2) |
+| Mod fase 5 v0 ("usar" compartido) | ✅ **verificado en los dos sentidos** (corrida 10): entrar a un locker en una máquina mete también al jugador de la otra. `AIMP_SYNC_USE=1`; `findings/13-usar-compartido.md` |
 | Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
 | Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–7 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; cola A en loopback; **cola B = salida a la red, descartada en retail**; registro de handlers de la cola A) |
@@ -83,10 +84,7 @@ _Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 
    - en el primer `net_poll`, vaciar el backlog sin contar huecos (hoy da 361 "perdidos" falsos y un estado viejo de 35 s).
 
    ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
-2. **Fase 4b, que el avatar se vea bien:**
-   - probar `8bc1f7e`, que vuelve a poner al NPC si su IA lo corre;
-   - apagar la IA del NPC elegido (que no camine, no huya ni ataque) y pasarle la animación de caminar cuando el remoto se mueve;
-   - elegir el NPC lejos del jugador local y lejos de los scripts.
-   Después: crear un personaje propio (reutilizando la clave de uno liberado) y pasar a la fase 5 (mundo compartido: puertas e ítems con el RPC 0x26 del hallazgo 11).
+2. **Fase 5, filtrar qué se replica** (hallazgo 13, limitaciones): el que recibe hace la misma acción con su jugador. Replicar cajas, botones e ítems (estado del mundo) y no lockers ni terminales, usando el primer dword del id del objetivo. Probar ítems: ¿los levantan los dos? Probar si el avatar NPC puede ser el que usa.
+   - Fase 4b, pendiente: probar `8bc1f7e`, que vuelve a poner al NPC si su IA lo corre; apagar su IA y su animación.
 3. Investigar qué escribe en los canales NETZ durante el juego: posible camino para el movimiento de personajes.
 4. Estático pendiente: semántica de los RPCs 0x1E/0x20/0x22/0x23/0x28 y del B 0x07; dispatcher de los comandos de UI (hallazgo 09); inventario (07).

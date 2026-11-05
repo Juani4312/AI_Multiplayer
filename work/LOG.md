@@ -94,3 +94,5 @@
 - 18:00 Juego Linux cerrado (fin de la corrida 9). Mod en modo pasivo (DLL 8bc1f7e o posterior).
 - 18:12 Fase 5 v0: sync.c (usar compartido por eventos), eventos en net.c, test_sync con stubs reales. Tests OK.
 - 18:12 dist: winmm.dll 20cf297 (SHA-256 49d90e49…); instructions.md paso 7 (usar compartido).
+- 18:14 Corrida 10 (fase 5, usar compartido): Linux host con AIMP_NET=host;AIMP_GHOST=3;AIMP_SYNC_USE=1 (DLL 20cf297), juego lanzado.
+- 18:19 Corrida 10: usar compartido OK en los dos sentidos (locker). Hallazgo 13. NET eventos solo cuando cambian.
