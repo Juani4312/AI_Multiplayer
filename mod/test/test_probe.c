@@ -8,6 +8,26 @@
 #include "game.h"
 #include "log.h"
 #include "probe.h"
+#include "trace.h"
+
+/* Wrappers falsos con el mismo prólogo de 14 bytes que FUN_00a2a290/FUN_00a2a810:
+ * push ebp; mov ebp,esp; mov eax,[ebp+10]; mov ecx,[ebp+0C]; mov edx,[ebp+8]; push eax; push ecx.
+ * Después llaman a fake_enqueue(tipo, datos, tamaño), que cuenta. */
+uint32_t g_enq_count, g_enq_last_type, g_enq_last_size;
+__attribute__((cdecl, used)) void fake_enqueue(uint32_t type, const void *data, uint32_t size)
+{
+    g_enq_count++;
+    g_enq_last_type = type & 0xFFFF;
+    g_enq_last_size = size;
+}
+#define FAKE_WRAP(name)                                                                   \
+    __asm__(".text\n.globl _" name "\n_" name ":\n"                                     \
+            "  .byte 0x55,0x8B,0xEC,0x8B,0x45,0x10,0x8B,0x4D,0x0C,0x8B,0x55,0x08,0x50,0x51\n" \
+            "  push %edx\n  call _fake_enqueue\n  add $12, %esp\n  pop %ebp\n  ret\n");
+FAKE_WRAP("fake_wrap_a")
+FAKE_WRAP("fake_wrap_b")
+uint32_t fake_wrap_a(uint32_t type, const void *data, uint32_t size);
+uint32_t fake_wrap_b(uint32_t type, const void *data, uint32_t size);
 
 HMODULE g_aimp_self;
 uintptr_t g_aimp_exe;
@@ -75,6 +95,7 @@ int main(void)
     memcpy(img + AIMP_RVA_GAME_TIME, &gt, 8);
     putp(img, AIMP_RVA_G_ROOT, root);
     putp(img, AIMP_RVA_NET_SESSION, sess);
+    putp(img, AIMP_RVA_QUEUE_A, qa); /* el global de la cola A == g_root+0x50 */
     putp(img, AIMP_RVA_LEVEL_LIST_PP, levels_pp); /* doble indirección */
     putp(levels_pp, 0, levels);
 
@@ -132,8 +153,12 @@ int main(void)
     putp(qa, QA_DATA, qbuf);
     put32(qa, QA_SIZE, 24);
     ((uint8_t *)qbuf)[0] = 3; /* [u16 tipo = 3][payload] */
+    put32(sess, SESSION_QSIZE, 16); /* cola B */
+    putp(sess, SESSION_QDATA, qbuf);
 
     probe_init();
+    int tr_ok = trace_install_at((void *)fake_wrap_a, (void *)fake_wrap_b);
+    static const uint8_t payload[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
     LARGE_INTEGER f;
     QueryPerformanceFrequency(&f);
     const int64_t step = f.QuadPart / 60;
@@ -152,6 +177,9 @@ int main(void)
         if (i == 300)
             probe_request_dump();
         put32(img, AIMP_RVA_FRAME_COUNTER, 1000 + (uint32_t)i);
+        fake_wrap_a(3, payload, 8);
+        if (i % 10 == 0)
+            fake_wrap_b(0x10011, payload, 4); /* bits altos basura: el tipo es u16 */
         probe_after_run((uintptr_t)mm, 1, step / 2, now);
         now += step;
     }
@@ -201,6 +229,20 @@ int main(void)
     expect(log, "INESPERADO: hay proveedor", 0);
     expect(log, "ModeManager::Run devolvió 0", 1);
     expect(log, "OJO:", 0);
+    expect(log, "cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 16, frames con datos 61/61", 1);
+    expect(log, "hook encolar A (FUN_00a2a290): instalado", 1);
+    expect(log, "hook encolar B (FUN_00a2a810): instalado", 1);
+    expect(log, "TR cola A: tipo nuevo 0x0003 (8 bytes), call site rva 0x", 1);
+    expect(log, "TR cola B: tipo nuevo 0x0011 (4 bytes), call site rva 0x", 1);
+    expect(log, "TR cola A: 0x0003 n=", 1);
+    expect(log, "TR   A 0x0003 n=420 b=3360 max=8 p sitios 0x", 1);
+    expect(log, "TR   B 0x0011 n=42 b=168 max=4 p sitios 0x", 1);
+    expect(log, "TR   cola B: 1 tipos distintos", 1);
+    printf("  %s trace_install_at=%d, original ejecutado %u veces (esperado 462), último tipo 0x%x tamaño %u\n",
+           tr_ok && g_enq_count == 462 && g_enq_last_type == 0x11 && g_enq_last_size == 4 ? "ok   " : "FALLA", tr_ok,
+           g_enq_count, g_enq_last_type, g_enq_last_size);
+    if (!(tr_ok && g_enq_count == 462 && g_enq_last_type == 0x11 && g_enq_last_size == 4))
+        g_fail++;
     printf("%s (%d fallas)\n", g_fail ? "TEST_PROBE CON FALLAS" : "TEST_PROBE OK", g_fail);
     return g_fail ? 1 : 0;
 }

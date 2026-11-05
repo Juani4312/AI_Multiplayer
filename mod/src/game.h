@@ -92,5 +92,26 @@ static const uint8_t AIMP_MODEMGR_RUN_PROLOGUE[10] __attribute__((unused)) = {
 #define QA_HANDLERS               0x08
 #define QA_DATA                   0x30
 #define QA_SIZE                   0x34
+/* La cola A también está en un global: DAT_01be1bc8, que solo escribe su
+ * constructor FUN_00a2a340 (0xA2A3D7). Lo usa el wrapper de los productores. */
+#define AIMP_RVA_QUEUE_A          0x017E1BC8u
+/* Cola B = buffer de la sesión (FUN_00a2a760: +0x14 objeto buffer, +0x18 datos,
+ * +0x1C tamaño; sin lock). FUN_00a2a5c0 solo lo entrega al proveedor de red; sin
+ * proveedor lo descarta cada frame. */
+#define SESSION_QDATA             0x18
+#define SESSION_QSIZE             0x1C
+
+/* ---- Productores de mensajes (hallazgo 10, parte 3; experimento 3.6) ----
+ * Wrappers cdecl (tipo u16, datos, tamaño) -> encolar. Prólogo verificado en el
+ * archivo, sin relocations en los 14 bytes:
+ *   55 push ebp | 8B EC mov ebp,esp | 8B 45 10 mov eax,[ebp+10] | 8B 4D 0C mov ecx,[ebp+0C]
+ *   8B 55 08 mov edx,[ebp+8] | 50 push eax | 51 push ecx   (sigue MOV ECX,[global] relocado)
+ * A: FUN_00a2a290 (31 callers) -> FUN_00a2a160(cola A). B: FUN_00a2a810 (41) -> FUN_00a2a760(sesión). */
+#define AIMP_RVA_ENQUEUE_A        0x0062A290u
+#define AIMP_RVA_ENQUEUE_B        0x0062A810u
+#define AIMP_ENQUEUE_STEAL        6
+static const uint8_t AIMP_ENQUEUE_PROLOGUE[14] __attribute__((unused)) = {
+    0x55, 0x8B, 0xEC, 0x8B, 0x45, 0x10, 0x8B, 0x4D, 0x0C, 0x8B, 0x55, 0x08, 0x50, 0x51
+};
 
 #endif

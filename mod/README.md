@@ -11,7 +11,7 @@ multiplayer todavía. Sirve para:
   bloques 0 a 3): loop, nivel, personajes, cámara, NETZ, sesión de red y cola RPC A.
 
 El mod **nunca escribe** en estructuras del juego. Lo único que modifica son los primeros 6 bytes de
-`ModeManager::Run` (el JMP del hook), y solo si la build coincide.
+`ModeManager::Run` (el JMP del hook) y, solo con `AIMP_TRACE_QUEUES=1`, los de los dos wrappers de encolado. Siempre con la build verificada.
 
 ## Build soportada
 
@@ -96,6 +96,8 @@ archivos fuera de la carpeta del log.
 | `AIMP_DUMP_KEY` | `0x78` (F9) | tecla de volcado completo de estructuras |
 | `AIMP_DUMP_AT_FRAME` | 0 | volcado automático en ese frame (0 = no) |
 | `AIMP_FIRST_FRAMES` | 3 | cuántos frames iniciales se loguean uno por uno |
+| `AIMP_TRACE_QUEUES` | 0 | 1 = experimento 3.6: hookea los wrappers de encolado de las colas A y B (`FUN_00a2a290`, `FUN_00a2a810`) y registra tipo, tamaño, thread y call site de cada mensaje (líneas `TR`) |
+| `AIMP_TRACE_MS` | 5000 | cada cuánto se escribe el informe del trazado |
 
 ## Qué hay en el log
 
@@ -107,6 +109,7 @@ archivos fuera de la carpeta del log.
   cámara y de la red. Cualquier cosa marcada `INESPERADO` contradice el análisis estático.
 - `ST ...`: resumen periódico con fps, tiempo de `Run`, estado, nivel, personajes, **posición y yaw del
   jugador**, cámara (posición, cuaternión, diferencia con el jugador), NETZ, sesión y tamaño de la cola A.
+- `TR ...` (solo con `AIMP_TRACE_QUEUES=1`): tipos nuevos con su call site, informe por período y totales al salir.
 - `==== volcado ====`: estructuras en crudo (dwords + float) del root, `ModeManager`,
   `CharacterManager` (con la lista de jugadores y NPCs), jugador, definición, controlador, cámara, NETZ,
   cola A y sesión. Se hace automáticamente cuando aparece el jugador y 5 s después, y con F9.
@@ -119,6 +122,7 @@ archivos fuera de la carpeta del log.
    despacio 360°, agacharse, abrir una puerta y apretar F9 en dos lugares distintos.
 4. Salir al menú y cerrar el juego.
 5. Revisar `aimp.log`. El análisis de lo esperado está en `work/RUNTIME_PLAN.md`.
+6. Si la primera corrida anduvo, segunda corrida con `AIMP_TRACE_QUEUES=1 WINEDLLOVERRIDES="winmm=n,b" %command%`: repetir lo mismo y anotar la hora aproximada de cada acción (abrir una puerta, agarrar un item, ver al Alien), para cruzarla con los tipos de mensaje del log.
 
 Si el juego no arranca: sacar la DLL (o usar `AIMP_NOHOOK=1`) y revisar el log. Si ni siquiera hay log,
 el problema es la carga del proxy (opción de lanzamiento, KnownDLLs).

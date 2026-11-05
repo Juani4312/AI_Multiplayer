@@ -3,6 +3,7 @@
 #include "hook.h"
 #include "log.h"
 #include "probe.h"
+#include "trace.h"
 
 typedef uint32_t(__attribute__((thiscall)) * ModeRunFn)(void *self);
 static ModeRunFn g_run_orig;
@@ -78,5 +79,6 @@ int game_init(void)
                       AIMP_MODEMGR_RUN_PROLOGUE, sizeof AIMP_MODEMGR_RUN_PROLOGUE, AIMP_MODEMGR_RUN_STEAL,
                       (void *)detour_mode_run, (void **)&g_run_orig))
         return 0;
+    trace_install(); /* opcional: AIMP_TRACE_QUEUES=1 */
     return 1;
 }
