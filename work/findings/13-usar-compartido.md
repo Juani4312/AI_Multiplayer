@@ -56,6 +56,12 @@ jugador aprieta "usar" sobre un locker
 
 Sin excepciones.
 
+Detalle del lado de la laptop (`work/windows/logs/aimp-usar-20261105-132155.log`, `work/windows/report.md` paso 7). Es su segunda sesión: aplicó el evento 2 de papito, de nuevo el locker.
+- `SYNC: aplicando uso remoto (evento 2)` → handler A → handler de sesión (`ctx->vf[1]` = `0x393FB0`) en 17 ms.
+- **El jugador local salta al anclaje del locker:** en ~3 s pasa de (1,76, 13,28, 34,80) a (−3,370, 13,236, 34,810), la misma posición que el jugador de papito, igual en los 3 decimales (los dos están en el mismo anclaje).
+- La cámara queda fija adentro.
+- 1 recibido, 2 repetidos descartados, 0 excepciones, salida limpia; 60 fps, 0 perdidos.
+
 ## Limitaciones y siguiente paso
 
 - **El que recibe hace la misma acción con su propio jugador.** Para el estado del mundo (cajas abiertas, botones, puertas, ítems) es lo que se busca. Para acciones del jugador (meterse en un locker, abrir la terminal de guardado) no: en un coop, solo se esconde el que se mete.
