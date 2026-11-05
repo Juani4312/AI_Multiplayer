@@ -30,3 +30,23 @@
 - ¿Con qué build/SO juega el amigo? ¿Tiene el mismo hash de AI.exe?
 - ¿El amigo tiene también MovieFix/ReShade? (no es requisito, pero cambia qué proxy usar en su máquina).
 - ¿Hay carga dinámica de dinput8/version.dll? (verificar con REA, strings de LoadLibrary).
+
+## 2026-11-05 — Setup de REA (sección 4)
+
+REA local: `/home/juano/Documents/clones/rea`, versión 6.8.0 (commit 71f680d7c). **Sin build**: no hay `node_modules/` ni `dist/`.
+Docs leídas: README, AGENTS, DISCLAIMER, installation (setup, local scope, readiness, Linux ps, Ghidra, heap), CONTRIBUTING (source build).
+
+Requisitos según la doc:
+- Ghidra 12.x (>=12.1), verificado por REA con 12.1.4 + JDK 21. Variables: `GHIDRA_INSTALL_DIR`, opcional `JAVA_HOME`, `GHIDRA_HEADLESS_MAXMEM` (default 2G), `REA_GHIDRA_STARTUP_TIMEOUT_MS`.
+- Build desde el código fuente: `npm ci && npm run build:cached`. El toolchain de desarrollo fijado es Node 24.22.1 (`.nvmrc`) y npm 11.16.0. Acá hay Node 26.12.1 y npm 12.2.1: el runtime está soportado, pero el build de dev con esa versión no está verificado.
+- Registro solo para este proyecto (sin `--scope project`, para no commitear `.mcp.json`):
+  `claude mcp add --scope local rea --env ... -- /usr/bin/node /home/juano/Documents/clones/rea/scripts/rea.mjs mcp`
+
+### Checklist 4.4
+- [x] Node v26.12.1 (>=26.12.1)
+- [x] `ps` procps-ng 4.0.7
+- [ ] REA responde (falta el build)
+- [ ] Ghidra arranca y abre `game/AI.exe` (Ghidra no está instalado; hay JDK 21 en /usr/bin/java)
+- [x] Hash registrado: dde66521…19a90 (copia en `game/AI.exe`, verificada)
+
+Falta también mingw-w64 (i686) para compilar el mod: el paquete `mingw-w64-gcc` 16.2.0 está en extra.
