@@ -24,8 +24,15 @@
 - **Levantar ítems es un "usar" (0x26) y ya se replica** con `AIMP_SYNC_USE=1`, porque el prefijo `f7fb2113` no está filtrado. En la otra máquina lo haría el avatar. Falta probarlo con las dos máquinas: ¿desaparece el ítem allá? ¿Quién se lo queda?
 - El avatar civil recibe la agresión del lanzallamas porque está a 1,5 m del jugador (modo local). Con red, el avatar está donde está el otro jugador.
 
+## Corrida 14: ítems con dos máquinas
+
+- Balas del revólver (`f7fb2113 162bda8d`, el mismo id que en la corrida 13) y una placa coleccionable (`cd567644 4cafe144`).
+  - Se mandan y la otra máquina las aplica con el avatar.
+  - **No desaparecen en la otra:** el NPC no puede levantar ítems. Cada uno se queda con su copia: botín por jugador.
+- Con el avatar no autoritativo (`AIMP_GHOST_NOAUTH`), su IA no reacciona al lanzallamas. El avatar de la otra máquina, que tenía la IA, sí huyó.
+
 ## Pendiente
 
-- Prueba con las dos máquinas de levantar un ítem.
+- ~~Prueba con las dos máquinas de levantar un ítem~~: hecha (botín por jugador). Si se quiere botín compartido, sacar el ítem del mundo en la otra máquina sin dárselo.
 - Hookear el disparo (lanzallamas, revólver) y el lanzamiento de arrojables.
 - Mirar el payload de 0x22 cuando aparece el Alien: subir `TR_PAYLOAD_SAMPLES` o tomar muestras por período.

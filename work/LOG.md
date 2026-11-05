@@ -110,3 +110,5 @@
 - 18:52 AIMP_GHOST_NOAUTH (experimento: avatar no autoritativo, bloque+0x4F=0) con test. Tests OK.
 - 18:53 Corrida 13 (avatar no autoritativo + trazado de armas/ítems): cfg AIMP_GHOST=3;AIMP_GHOST_NOAUTH=1;AIMP_TRACE_QUEUES=1;AIMP_TRACE_USE=1 (DLL e137d39), juego lanzado.
 - 18:58 Corrida 13: hallazgo 14 (armas e ítems: lanzallamas -> A 0x18/0x0C, Alien -> 0x22, bengala nada, ítem -> 0x26). Corregido CM_BLOCKS = 0x230 para NOAUTH.
+- 19:00 Corrida 14 (ítems con dos máquinas + NOAUTH corregido): host con AIMP_NET=host;AIMP_GHOST=3;AIMP_GHOST_NOAUTH=1;AIMP_SYNC_USE=1, juego lanzado.
+- 19:07 Corrida 14: NOAUTH apaga la IA del avatar (por defecto en el modo 3); ítems por jugador (no se sincronizan); scripts locales (el evento se repite). Tests OK.
