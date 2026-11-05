@@ -53,3 +53,4 @@
 - 13:02 Mod: trazado opcional de las colas (`AIMP_TRACE_QUEUES=1`, hooks en los dos wrappers con prólogo de 14 bytes verificado) con tipo, tamaño, thread y call site; la sonda por defecto suma el tamaño de la cola B por frame y el chequeo del global de la cola A. Tests ampliados: todo OK.
 - 13:05 **Hallazgo 10 (parte 7)**: `FUN_00a2a2b0` es el RegisterAll de la cola A (lista estática `DAT_01be1bcc` que llenan inicializadores globales; ids en orden de lista, iguales entre máquinas). La sonda loguea el catálogo tipo → handler de las dos listas en runtime (experimento 3.5). Tests OK.
 - 13:07 `work/scripts/analyze_aimp_log.py`: analizador de `aimp.log` contra los chequeos de RUNTIME_PLAN (probado con los logs de los tests). Ruta de log por defecto verificada bajo Wine.
+- 13:08 Cierre de la sesión por presupuesto de tokens (pedido: ~70 % como máximo; estimado por tiempo). PROGRESS con el resumen y los pendientes del usuario. Todo commiteado.

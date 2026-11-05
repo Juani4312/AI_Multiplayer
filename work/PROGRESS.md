@@ -55,15 +55,18 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
-## Resumen para el usuario (estado al cierre de la sesión autónoma del 2026-11-05)
-- Hallazgos 01–04 completos; 05–10 con una primera parte cada uno (ver `work/findings/`).
-- Descubrimientos que cambian el diseño (todos sin verificar en runtime):
-  1. El engine tiene una **capa de red propia (NETZ)**, dormida: no tiene transporte (hallazgo 10).
-  2. Hay un **vector de jugadores** (`[[g_root+8]+0x80]`, contador `+0x84`). Cualquier personaje con la definición de jugador entra ahí y recibe un **controlador de jugador** (hallazgos 03 y 05).
-  3. La condición del Alien **`TargetIsPlayer` no depende de `GetPlayer()`** (hallazgo 08).
-  4. **Más de 70 productores de mensajes de replicación** (patrón RPC "ejecutar local + encolar") escriben en dos colas aunque no haya red (hallazgo 10, parte 3). Interceptar esas colas podría dar la sincronización de eventos casi "gratis". Es el experimento de runtime prioritario. Además, la cola A (`g_root+0x50`) se **despacha en loopback** cada frame (`FUN_00a2a3f0` → `FUN_00a2a220`): el camino de "recepción" corre en retail. Ver la parte 4 del hallazgo 10 para el plan de coop que habilita.
-- **Verificado offline:** el algoritmo de ShortGuid de Cathode (`work/scripts/shortguid_check.py`, contra `COMMANDS.PAK`) y que ningún nivel usa los nodos MP.
-- Herramienta clave: `work/scripts/ghidra/dump.sh` + `Dump.java` (4 s por consulta sobre el proyecto persistente).
+## Resumen para el usuario (cierre de la sesión de la tarde del 2026-11-05)
+- **Mod de la fase 1+2 listo y probado fuera del juego** (`mod/`, ver `mod/README.md`). Es un proxy `winmm.dll` sin CRT con un hook en `ModeManager::Run`. Loguea a `aimp.log`, solo leyendo:
+  - la posición y el yaw del jugador, la cámara, el estado y el nivel;
+  - NETZ, la sesión y las dos colas de mensajes;
+  - el catálogo de endpoints RPC.
+  Opcional: `AIMP_TRACE_QUEUES=1` traza tipo, tamaño y call site de cada mensaje. Tests con wine: OK. Analizador del log: `work/scripts/analyze_aimp_log.py`.
+- **Hallazgos nuevos** (estáticos):
+  - la cola B es la salida a la red de la sesión y en retail se descarta en cada frame (hallazgo 10, parte 6);
+  - `FUN_00a2a2b0` registra los handlers de la cola A desde una lista estática, con ids iguales entre máquinas (parte 7);
+  - corrección: la lista de niveles tiene doble indirección (hallazgo 09).
+- **Bloqueante:** el disco de 1,8 TB no está montado (NTFS "dirty"). Hasta resolverlo no se puede correr el juego.
+- Detalle: el primer `git push -q` después de un commit falló dos veces con "failed to push some refs"; el reintento sin `-q` funcionó las dos. No se investigó.
 
 ## Pendientes que requieren al usuario (en orden)
 1. **Montar el disco de 1,8 TB** (`sda1`): no se montó en el arranque porque el NTFS quedó "dirty" (detalle en `NOTES.md`, sección "Mod fase 1+2"). Opción segura: chkdsk desde Windows; opción rápida: `sudo ntfsfix -d /dev/sda1 && sudo mount /mnt/1,8TB`.
