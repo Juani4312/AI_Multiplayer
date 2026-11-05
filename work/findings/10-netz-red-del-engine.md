@@ -74,3 +74,50 @@
 3. ¿Qué flag representa "modo multijugador" (lo que lee el nodo `IsMultiplayerMode`)? ¿Quién lo escribe?
 4. ¿Qué es `[0x17073FC]` (segunda mitad de `NET_AI_UPDATE`) y `g_root+0x4C` (`FUN_007e10d0`)?
 5. ¿Cómo se representa un segundo jugador en el gestor `g_root+0x08` (`+0x80`/`+0x84`)? (hallazgo 05)
+
+---
+
+# Parte 2 - Canales por personaje y "autoridad" de red
+
+- **Evidencia:** `./work/evidence/h10/n9.txt` … `n15.txt`; `./work/evidence/h05/e13.txt` (`SpawnCharacter` decompilado). Antes hubo que crear funciones en destinos de vtables con `work/scripts/ghidra/SeedVtables.java` (ver abajo).
+- **Confianza:** alta para el flujo (decompilación directa). Media para los nombres.
+
+## Cada personaje reserva un canal NETZ
+
+`SpawnCharacter` (`0x7D3B50`, hallazgo 05):
+1. Calcula `replicado`: si `request+0x4C`, lo saca de una tabla de `[root+0xAC0]` por id (`request+0x48`); si no, de `IsAuthority()`.
+2. `canal = NETZ->AllocateChannel(replicado)` (`FUN_007ddc60`):
+   - toma un slot libre de un bitmap (`+0x08`, `+0x0C…`; 32 canales);
+   - le asigna un id incremental (`+0x618[slot] = +0x698++`);
+   - si `replicado`, lo marca en la máscara que recorre el dispatch (`+0x10/+0x14`);
+   - inicializa el buffer (`FUN_00a2abd0`, `FUN_00a2a900`) y devuelve `NETZ + 0x18 + slot·0x30`.
+3. `pj = RequestCharacter(bloque, request)`.
+4. `bloque+0x164 = [this+0x24]->vf[+0x10](canal, pj)`: **asocia el canal con el personaje**.
+5. Si el personaje **no** es autoritativo (`bloque+0x4F == 0`), lo registra además en otra lista (`FUN_00789e70`).
+
+## La "sesión de red" (`g_root+0x54`, global `DAT_01be1bd4`)
+
+- Constructor `FUN_00a2a6b0`: pone **`+0x00` (proveedor de red) en NULL**, reserva un buffer de 0x4000 bytes y registra `DAT_01be1bd4 = this`. Es el único writer del global.
+- `IsAuthority()` (`FUN_00a2a4f0`, también `FUN_00a2a4a0(this)`): si el proveedor es NULL devuelve **1**; si no, `proveedor->vf[1]()`.
+- `IsClient()` (`FUN_00a2a4c0`): devuelve 1 solo si hay proveedor, flag `+0x2C` y `!proveedor->vf[1]()`. **En retail es siempre 0.**
+- Otros accesores: `+0x28` (`FUN_00a2a490`), byte `+0x2D` (`FUN_00a2a480`). Lista global de objetos de red: `DAT_01be1bd0`, recorrida por `FUN_00a2a620`.
+
+**Conclusión:** el engine distingue **autoridad local vs. cliente** y reserva canales de replicación por personaje. Sin proveedor (retail) todo es autoridad local y nada se transmite: NETZ no tiene transporte (parte 1).
+
+## Palanca potencial (hipótesis de alto riesgo, no probar sin plan)
+
+Un mod podría instalar un **proveedor** propio en `[DAT_01be1bd4]+0x00` y el flag `+0x2C`, y un **transporte** en `[g_root+0x04]+0x69C`. Así el engine trabajaría en su modo cliente/host original, con canales por personaje y personajes no autoritativos. No se sabe:
+- qué interfaz completa esperan el proveedor y el transporte;
+- si el código de serialización y recepción está completo en retail;
+- qué otras partes del juego se rompen en modo cliente.
+
+Requiere investigar la vtable esperada del proveedor (`vf[1]` = ¿es autoridad?) y experimentos en runtime controlados.
+
+## Nota de herramientas: funciones que Ghidra no había creado
+
+- Mucho código que solo se alcanza por vtables no estaba definido como función: `SpawnCharacter`, `NETZ::AllocateChannel` y la evaluación de `TargetIsPlayer`.
+- `work/scripts/ghidra/SeedVtables.java` recorre `.rdata` buscando corridas de ≥3 punteros a `.text` y crea las funciones que faltan:
+  - 3.985 corridas, 5.971 zonas desensambladas, **22.608 funciones nuevas**;
+  - corre en 35 s y modifica el proyecto de análisis;
+  - backup previo en `game/ghidra_backup/`.
+- Los conteos de "funciones" de los hallazgos 01–09 son de antes de este paso (67.007).

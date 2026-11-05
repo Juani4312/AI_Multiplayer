@@ -207,3 +207,8 @@ Detalle en `findings/07-items-e-inventario.md`. Evidencia en `work/evidence/h07/
 - `PICKUP_MANAGER_TICK` = `0x7CA0B0` → `FUN_007c51e0(dt)`: pickups/interacción solo para el jugador 0; `g_root+0xA0` (de `FUN_007b0bb0`) tiene un temporizador en `+0x55B8/+0x55C4/+0x55C8`.
 - `pickup_manager.cpp` `0x786300` (casts de física); `thrown_item_manager.cpp` `0x792E00`.
 - (Hallazgo 08, parte 2) Árboles de comportamiento Legend en `DATA/BEHAVIOR` (copias en `game/data/BEHAVIOR/`). Fábrica de nodos `FUN_0072b950`. `CONDITION_TARGET_IS_PLAYER` = `0x6EFD10`: `[[ctx+0x34A8]+0x10]` (objetivo) → `+0x31C` (controlador de jugador) → `+0x48` (activo). No usa `GetPlayer()`.
+
+## 2026-11-05 — Hallazgo 10 (parte 2) y seeding de funciones
+- `work/scripts/ghidra/SeedVtables.java` creó 22.608 funciones (destinos de vtables no analizados). Backup del proyecto anterior en `game/ghidra_backup/`. El proyecto cambió: REA en modo proyecto va a ver otro fingerprint (es normal).
+- `NETZ::AllocateChannel` = `0x7DDC60` (32 canales; id incremental `+0x698`; máscara de replicados `+0x10/+0x14`). Lo llama `SpawnCharacter` por cada personaje y asocia canal ↔ personaje.
+- "Sesión de red" = `g_root+0x54` = `*DAT_01be1bd4` (ctor `0xA2A6B0`): `+0x00` proveedor (NULL en retail), `+0x2C`/`+0x2D` flags, `+0x28` int. `IsAuthority()` `0xA2A4F0`/`0xA2A4A0` (1 sin proveedor), `IsClient()` `0xA2A4C0` (0 en retail).
