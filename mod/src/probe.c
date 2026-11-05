@@ -11,6 +11,7 @@
 #include "trace.h"
 #include "net.h"
 #include "ghost.h"
+#include "sync.h"
 #include <tlhelp32.h>
 
 typedef struct {
@@ -468,6 +469,8 @@ void probe_init(void)
 
 void probe_request_dump(void) { g_dump_requested = 1; }
 
+AimpNet *probe_net(void) { return &g_net; }
+
 void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t now)
 {
     g_frames++;
@@ -583,6 +586,8 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
     }
     /* Fase 3: red (si está activada). El paquete se arma solo cuando toca enviar. */
     net_poll(&g_net, now);
+    /* Fase 5 (experimental, apagada por defecto): usos remotos que llegaron y usos locales por mandar. */
+    sync_frame(&g_net, g_cur.level_cur);
     if (net_due(&g_net, now)) {
         AimpPkt lp;
         aimp_memset(&lp, 0, sizeof lp);

@@ -43,6 +43,21 @@ static const uint8_t AIMP_SPAWN_CHAR_PROLOGUE[9] __attribute__((unused)) = {
 #define AIMP_RVA_OBS_AUTH_POST    0x012F3230u
 #define AIMP_RVA_OBS_RPC_PRE      0x012A6728u
 #define AIMP_RVA_OBS_RPC_POST     0x012A672Cu
+/* Fase 5 (hallazgo 12, parte 3): "usar" del jugador (RPC A 0x26, hallazgo 11). */
+#define AIMP_RVA_USE_PRODUCER     0x00395D00u  /* FUN_00795d00: thiscall(this, payload*, flag), ret 8 */
+#define AIMP_USE_PRODUCER_STEAL   5            /* push ebp; mov ebp,esp; push esi; push edi */
+static const uint8_t AIMP_USE_PRODUCER_PROLOGUE[7] __attribute__((unused)) = { 0x55, 0x8B, 0xEC, 0x56, 0x57, 0x8B, 0xF9 };
+#define AIMP_RVA_USE_HANDLER_A    0x00018A10u  /* FUN_00418a10: cdecl(ctx, payload), A 0x26 -> B 0x29 */
+#define AIMP_USE_HANDLER_A_STEAL  6
+static const uint8_t AIMP_USE_HANDLER_A_PROLOGUE[11] __attribute__((unused)) = {
+    0x55, 0x8B, 0xEC, 0x53, 0x56, 0x57, 0xB8, 0x24, 0x00, 0x00, 0x00
+};
+#define AIMP_RVA_USE_HANDLER_S    0x00018980u  /* FUN_00418980: cdecl(ctx, payload), sesión 0x29: ctx->vf[1](copia) */
+#define AIMP_USE_HANDLER_S_STEAL  5
+static const uint8_t AIMP_USE_HANDLER_S_PROLOGUE[10] __attribute__((unused)) = {
+    0x55, 0x8B, 0xEC, 0x56, 0x57, 0xB8, 0x24, 0x00, 0x00, 0x00
+};
+#define AIMP_RVA_USE_TYPE_A       0x0123652Cu  /* u16: id del RPC A de uso (0 en el archivo; lo asigna el registro) */
 #define SREQ_KEY2                 0xF0  /* repite la clave (arg 1 de FUN_00787450) */
 #define SREQ_POS                  0x50  /* float[3]: posición del spawn */
 #define SREQ_YAW                  0x60  /* float */
