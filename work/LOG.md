@@ -86,3 +86,4 @@
 - 17:38 Corrida 7: crash en el primer teleport del NPC por MOVAPS desalineado (pos float[3] del stack; registro de excepciones: AI.exe+0x1414, lectura 0xffffffff). Camino real del spawn: sesión 0x2E -> FUN_00414a70 -> SpawnCharacter (CM+4). Arreglado: vector alineado a 16, clon desde el pedido de SpawnCharacter. Tests OK.
 - 17:40 Corrida 8 (fase 4): AIMP_GHOST=2, DLL commit c4676ed (vector alineado), juego lanzado.
 - 17:45 Corrida 8: avatar con NPC existente OK 20 s (visto por el usuario). Clon por SpawnCharacter cae en RequestCharacter (recurso por clave nulo). Fase 4 v1 = NPC del nivel (AIMP_GHOST=3, sin límite, reelige). aimp_check.ps1 -Ghost.
+- 17:45 dist: winmm.dll commit c2f86d1 (SHA-256 82c58438…); instructions.md paso 6 (avatar por red, -Ghost 3).
