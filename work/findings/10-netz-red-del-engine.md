@@ -311,3 +311,47 @@ Para mapear id → tipo → handler en runtime: recorrer `DAT_01be1bd0` y loguea
 - Endpoints: `0x01636534`, `0x01636558`, `0x0163657C`, `0x016365A0`, `0x016365C4`, `0x016365E8`, `0x0163660C`, `0x0163661C` (casi todos separados 0x24).
 - El tipo que usa el spawn (`DAT_016361e4`) no está entre estos 8. Es coherente con la corrección: pertenece a la tabla de la cola A, no a la de la sesión.
 - Los valores iniciales de esos globales en `.data` son el stub `0x8D21E0`; se inicializan en runtime y su valor final no se puede leer estáticamente.
+
+---
+
+# Parte 6 - La cola B es el buffer de la sesión y sin proveedor se descarta
+
+- **Evidencia:** `./work/evidence/mod/q1.txt` (encolado A/B y wrappers) y `q2.txt` (update de la sesión, escritores de los globales, ctor de la cola A). Bytes y relocations verificados en el archivo con un parser PE propio.
+- **Confianza:** alta (decompilación y asm directos). No verificado en runtime.
+
+## Los dos caminos de encolado
+
+| | Wrapper (cdecl `tipo, datos, tamaño`) | Callers | Encolar (thiscall, `ret 0xC`) | Objeto | Buffer |
+|---|---|---|---|---|---|
+| A | `FUN_00a2a290` | 31 | `FUN_00a2a160` | `[0x1BE1BC8]` = cola A (lo escribe solo su ctor `FUN_00a2a340`, en `0xA2A3D7`) | `+0x30` datos, `+0x34` tamaño, capacidad `+0x38` = 0x4000; sección crítica `+0x14` (spin 0xFA0) |
+| B | `FUN_00a2a810` | 41 | `FUN_00a2a760` | `[0x1BE1BD4]` = **la sesión** (`g_root+0x54`) | `+0x14` objeto buffer, `+0x18` datos, `+0x1C` tamaño; **sin lock** |
+
+- Cada wrapper es el único caller de su función de encolado (refs = 1).
+- Prólogo de los dos wrappers: `55 8B EC 8B 45 10 8B 4D 0C 8B 55 08 50 51`, sin relocations; después viene `MOV ECX,[global]`, relocado. `FUN_00a2a160` tiene una relocation en `+6` (el `PUSH imm32` del SEH): no se hookea ahí.
+
+## Update de la sesión (`FUN_00a2a5c0`, fastcall `ECX = sesión`, llamado después del flush de la cola A)
+
+```c
+if (sesion->proveedor && !sesion->proveedor->vf[1]())   // ¿conectado?
+    { FUN_00a2a520(); return; }
+if (sesion->tamaño_B != 0) {                              // +0x1C
+    if (sesion->proveedor) {
+        sesion->proveedor->vf[2](&sesion->buffer_B);      // +0x14: enviar
+        sesion->proveedor->vf[4](sesion->m_24);
+    }
+    sesion->tamaño_B = 0;                                 // se vacía SIEMPRE
+}
+```
+
+## Consecuencias
+
+1. **Cola A**: se despacha localmente (*loopback*, parte 4) y además va al sumidero si lo hay.
+2. **Cola B**: **solo se envía por la red**. En retail, sin proveedor, se descarta en cada frame sin despacharse. Es el stream de salida que el engine habría mandado a los otros jugadores, y los 41 productores lo siguen generando.
+3. Para el coop (opciones B/C de `DESIGN_OPTIONS.md`): capturar la cola B del host da los mensajes que el diseño original pensaba como replicación. Del lado del cliente entrarían por el camino de recepción de la sesión (tabla de handlers `+0x08/+0x0C`, `RegisterAllRPCs`), que no se ubicó todavía.
+4. Experimento (mod, `AIMP_TRACE_QUEUES=1`): hookear los dos wrappers y registrar tipo, tamaño, thread y call site de cada mensaje. La sonda por defecto ya loguea el tamaño de las dos colas después de cada frame.
+
+## Preguntas abiertas
+
+- ¿Qué hace `FUN_00a2a520` (cuando el proveedor dice "no conectado")?
+- ¿Quién consume los mensajes recibidos de la sesión (el lado de recepción)?
+- ¿Las dos colas tienen tipos en el mismo espacio de ids? La sesión usa los ids de `RegisterAllRPCs` (8 endpoints estáticos); la cola A, su propia tabla.
