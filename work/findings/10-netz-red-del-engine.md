@@ -121,3 +121,27 @@ Requiere investigar la vtable esperada del proveedor (`vf[1]` = ¿es autoridad?)
   - corre en 35 s y modifica el proyecto de análisis;
   - backup previo en `game/ghidra_backup/`.
 - Los conteos de "funciones" de los hallazgos 01–09 son de antes de este paso (67.007).
+
+## Parte 2 (cont.) - El spawn se replica como mensaje
+
+- El spawner de script (`FUN_00490e30`, hallazgo 05) termina en `FUN_007a7a20`/`FUN_007a7a80`:
+  ```c
+  FUN_00787450(req, …);                  // inicializa el request de spawn (0x130 bytes)
+  if (IsAuthority()) FUN_00797490(req);  // solo la autoridad spawnea
+  ```
+- `FUN_00797490` (thiscall sobre la interfaz de spawn del `CharacterManager`):
+  ```c
+  n = sesion->m_28;                       // FUN_00a2a490 (≥1 para que haya spawns; ¿cantidad de pares/jugadores?)
+  if (n >= 1 && (!IsClient() || n < 1)) {
+      FUN_00789f30(req);
+      this->vf[1](req);                   // SpawnCharacter(req)  (0x7D3B50)
+      FUN_00789f60(req);
+      memcpy(copia, req, 0x130);
+      if (!sesion->flag_2D)               // FUN_00a2a480
+          FUN_00a2a290(DAT_016361e4, copia, 0x130);   // ← serializa el spawn hacia los pares
+      else if (DAT_016361f4 && PTR_FUN_016361f0)
+          PTR_FUN_016361f0(DAT_016361f4, copia);      // callback local alternativo
+  }
+  ```
+- **Interpretación (hipótesis):** el modelo original es host-autoritativo. El host spawnea y difunde el request de 0x130 bytes; un cliente (`IsClient()`) no spawnea por su cuenta. En retail no hay proveedor, así que todo es host local, y queda por ver si `FUN_00a2a290` escribe igual en un buffer (el de 0x4000 bytes de la sesión) que nadie envía.
+- Para el coop: si el request de 0x130 bytes es autosuficiente, **el host del mod podría capturarlo** (hook en `FUN_00a2a290` o en `FUN_00797490`) y reenviarlo al cliente para reproducir los spawns de NPCs/Alien. Así ambos mundos tendrían los mismos personajes.
