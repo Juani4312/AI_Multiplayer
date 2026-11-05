@@ -303,3 +303,12 @@ Autorizado por el usuario ("corré y modificá lo que necesites, siempre que lo 
   - **Fase 3 verificada en local, en los dos sentidos.**
 - Aprendido: un proceso lanzado en segundo plano desde un shell no interactivo ignora SIGINT, y Python con la salida redirigida guarda todo en buffer. `aimp_peer.py` ahora imprime con flush y maneja SIGTERM.
 - **Pendiente para cerrar la fase 3:** prueba por Tailscale con el amigo. Tailscale no está instalado en la máquina del usuario: instalarlo requiere su confirmación.
+
+## 2026-11-05 — Laptop de pruebas: el juego se copió desde papito por red local
+- El usuario instaló el juego en la laptop (Windows 10) y Steam lo copió desde `papito` (transferencia por red local). Duda: ¿vinieron los mods?
+- La FAQ oficial de Valve (help.steampowered.com, 46BD-6BA8-B012-CE43) vino sin cuerpo al leerla; según el resumen del buscador, se transfiere solo el contenido del juego (no saves, configuración, Workshop, Cloud ni shaders). Los archivos extra (DLLs de ReShade/MovieFix, `winmm.dll`, presets) no son parte del juego. **No confirmado** si la transferencia valida los archivos oficiales modificados.
+- Plan: "Verificar integridad" en la laptop con Steam cerrado en `papito` (así lo que difiera baja de los servidores de Steam). No hace falta reinstalar. Verificar no borra extras: revisar la raíz del juego a mano.
+- SHA-256 en `papito` de los dos `COMMANDS.PAK` modificados (para comparar con la laptop ya verificada):
+  - `DATA/ENV/PRODUCTION/BSP_LV426_PT01/WORLD/COMMANDS.PAK`: `DDA19F70AB8ABE5194FA7A372A680ED8C5AAE6A30842101547DA8F724F48A47F`
+  - `DATA/ENV/PRODUCTION/TECH_COMMS/WORLD/COMMANDS.PAK`: `42FD34D7FAF7EA9A22B961D7C6A0C12700FA90327CA1F796F445CC958ECBDD3A`
+- Si en la laptop verificada difieren, los de la laptop son los vanilla y se confirma que los de `papito` son del mod. Si son iguales, los de `papito` ya eran vanilla. La comparación vuelve en `work/windows/report.md` (agregado al paso 1 de `work/windows/instructions.md`).
