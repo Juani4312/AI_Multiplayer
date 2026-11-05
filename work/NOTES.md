@@ -88,3 +88,7 @@ Implicaciones:
 - [x] REA responde (`--version` 6.8.0, doctor healthy, MCP connected)
 - [ ] Ghidra abre `game/AI.exe` (siguiente sesión)
 - [x] Hash registrado
+
+## 2026-11-05 — Estado de la instalación después de "reinstalar/verificar"
+- El usuario cree haber reinstalado y verificado la integridad. **La evidencia dice que no** (por lo menos no después de instalar los mods): `AI.exe` sigue con hash dde66521…, appmanifest `LastUpdated` 1780718329 (2026-06-06) y buildid 4940658, ningún archivo modificado hoy, y los ~330 archivos de mods (14/07, 05/10, etc.) siguen con sus fechas. Un "verificar integridad" habría restaurado los BEHAVIOR/COMMANDS.PAK modificados.
+- El amigo desinstaló el juego. Cuando lo reinstale: hash de AI.exe con `certutil -hashfile AI.exe SHA256`. Esperado: dde66521…19a90 (mismo buildid 4940658).
