@@ -96,3 +96,4 @@
 - 18:12 dist: winmm.dll 20cf297 (SHA-256 49d90e49…); instructions.md paso 7 (usar compartido).
 - 18:14 Corrida 10 (fase 5, usar compartido): Linux host con AIMP_NET=host;AIMP_GHOST=3;AIMP_SYNC_USE=1 (DLL 20cf297), juego lanzado.
 - 18:19 Corrida 10: usar compartido OK en los dos sentidos (locker). Hallazgo 13. NET eventos solo cuando cambian.
+- 18:22 Corrida 10 terminada (salida limpia; 6065 enviados, 5524 recibidos, 0 perdidos; 0 excepciones). Mod en modo pasivo (DLL aed44d3).
