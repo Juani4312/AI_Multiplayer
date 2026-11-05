@@ -126,9 +126,16 @@ def main():
 
     full = [s for s in sts[1:] if s["frames"] > 0]
     if full:
-        ratio = sum(s["dgame"] for s in full) / max(1, sum(s["frames"] for s in full))
-        r.add("1. Loop", "contador de frames del juego +1 por Run", "OK" if 0.95 <= ratio <= 1.05 else "FALLA",
-              f"Δcontador/ΔRun = {ratio:.3f} en {len(full)} resúmenes")
+        # El contador 0x16410DC es de frames de SIMULACIÓN: 0 en menú y pausa (hallazgo 04).
+        sim = [s for s in full if s.get("pl", "0x00000000") != "0x00000000" and s["dgame"] > 0]
+        paused = [s for s in full if s.get("pl", "0x00000000") != "0x00000000" and s["dgame"] == 0]
+        if sim:
+            ratio = sum(s["dgame"] for s in sim) / max(1, sum(s["frames"] for s in sim))
+            r.add("1. Loop", "contador de simulación +1 por frame (en juego, sin pausa)",
+                  "OK" if 0.95 <= ratio <= 1.05 else "FALLA",
+                  f"Δcontador/ΔRun = {ratio:.3f} en {len(sim)} resúmenes; {len(paused)} resúmenes en pausa (Δ=0)")
+        else:
+            r.add("1. Loop", "contador de simulación", "sin datos", "no hubo resúmenes en juego sin pausa")
         dts = [s["dt"] for s in full if s["fps"] > 5]
         fps = [s["fps"] for s in full if s["fps"] > 5]
         if dts:
@@ -194,12 +201,16 @@ def main():
             tot = sum(s.get(q + "_sum", 0) for s in playing)
             secs = len(playing) or 1
             name = "3.4 cola A" if q == "qa" else "3.4 cola B (sesión)"
-            r.add("3. Red", name + " crece por frame mientras se juega", "OK (crece)" if nz else "no crece",
-                  f"frames con datos {nz}/{n}, máx {mx} bytes, ~{tot // secs} bytes/s")
+            r.add("3. Red", name + ": tamaño después de Run", "info",
+                  f"frames con datos {nz}/{n}, máx {mx} bytes, ~{tot // secs} bytes/s "
+                  "(las colas se vacían dentro del frame: el tráfico se mide con el trazado, 3.6)")
         same = all(s.get("qa") == s.get("qa_g") for s in sts if s.get("qa") not in (None, "0x00000000"))
         r.add("3. Red", "global de la cola A == g_root+0x50", "OK" if same else "FALLA", "")
     rpc = [t for t in text if t.startswith("RPC lista") and "endpoints" in t]
     r.add("3. Red", "3.5 catálogo de endpoints", "OK" if rpc else "sin datos", " | ".join(rpc) or "-")
+    marks = [t for t in text if t.startswith("MARCA ")]
+    if marks:
+        r.add("Marcas", "marcas del usuario (F8)", "info", " | ".join(m[:60] for m in marks[:10]))
     tr_new = [t for t in text if t.startswith("TR cola") and "tipo nuevo" in t]
     r.add("3. Red", "3.6 tipos vistos por el trazado", "info" if tr_new else "sin datos (¿AIMP_TRACE_QUEUES=1?)",
           f"{len(tr_new)} tipos nuevos: " + " | ".join(t[3:70] for t in tr_new[:6]))

@@ -103,6 +103,7 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_DUMP_KEY` | `0x78` (F9) | tecla de volcado completo de estructuras |
 | `AIMP_DUMP_AT_FRAME` | 0 | volcado automático en ese frame (0 = no) |
 | `AIMP_FIRST_FRAMES` | 3 | cuántos frames iniciales se loguean uno por uno |
+| `AIMP_MARK_KEY` | `0x77` (F8) | tecla de marca: una línea `MARCA n` con frame y posición, para cruzar acciones con el log |
 | `AIMP_TRACE_QUEUES` | 0 | 1 = experimento 3.6: hookea los wrappers de encolado de las colas A y B (`FUN_00a2a290`, `FUN_00a2a810`) y registra tipo, tamaño, thread y call site de cada mensaje (líneas `TR`) |
 | `AIMP_TRACE_MS` | 5000 | cada cuánto se escribe el informe del trazado |
 

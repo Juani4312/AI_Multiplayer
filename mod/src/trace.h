@@ -14,7 +14,7 @@ void trace_report_period(void);
 void trace_report_totals(const char *why);
 
 /* Para tests: registrar un mensaje como si lo hubiera visto el hook. */
-void trace_note(int queue, uint32_t type, uint32_t size, uintptr_t ret_addr);
+void trace_note(int queue, uint32_t type, const void *data, uint32_t size, uintptr_t ret_addr);
 /* Para tests: instalar los hooks sobre funciones arbitrarias con el mismo prólogo. */
 int trace_install_at(void *wrap_a, void *wrap_b);
 
