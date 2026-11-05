@@ -1,5 +1,7 @@
 # AI_Multiplayer — coop mod para Alien: Isolation
 
+> **¿Estás en Windows (la laptop de pruebas del usuario)?** Entonces no sigas este archivo: tu tarea está en `work/windows/instructions.md`.
+
 Antes de hacer nada en una sesión nueva, leé en este orden:
 1. `work/PROGRESS.md`: estado actual y siguiente paso.
 2. `prompt.md`: instrucciones y reglas completas del proyecto (rutas, qué pedir antes de hacer, formato de hallazgos).
