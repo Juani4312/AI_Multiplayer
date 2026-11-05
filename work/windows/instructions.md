@@ -152,3 +152,4 @@ powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action rev
 - **`build NO reconocida`:** otra versión de `AI.exe`. El mod queda como proxy puro: el juego anda normal pero no hay datos.
 - **El juego crashea al arrancar con el mod:** probar con `AIMP_NOHOOK=1` en `aimp.cfg` (solo proxy, sin hooks). Si con eso anda, el problema es el hook; si no, es el proxy. Anotar cuál.
 - **ReShade u otros mods en la carpeta:** no molestan. Igual anotarlos (los lista el chequeo).
+- **Steam no deja abrir el juego en las dos máquinas con la misma cuenta.** Poné Steam en modo sin conexión en la laptop y dejá `papito` conectado. Así se hizo la prueba de red del 2026-11-05.
