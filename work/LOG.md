@@ -34,3 +34,4 @@
 - 07:55 **Hallazgo 10 (parte 4)**: la cola A es `g_root+0x50` (sumidero `+0x00` en NULL, handlers por tipo en `+0x08`); el flush (`FUN_00a2a3f0`, una vez por frame desde `FUN_007ddae0`) **despacha en loopback** los mensajes a sus handlers (`FUN_00a2a220`). El camino de recepción corre en retail → plan de coop: replicar el buffer de la cola del host al cliente.
 - 08:05 **Hallazgo 10 (parte 5)**: `RegisterAllRPCs()` = `FUN_00a2a620` asigna ids de tipo secuenciales a los endpoints de la lista estática `DAT_01be1bd0` (layout `{next, fn, ctx, u16 tipo}`) → los ids coinciden entre máquinas con el mismo binario.
 - 08:15 `work/RUNTIME_PLAN.md`: plan consolidado de verificación en runtime (guardas de build, loop, jugador/cámara, red del engine con la cola RPC, IA).
+- 08:25 Solo 8 endpoints RPC registrados estáticamente (`0x1636534`…`0x163661C`); el tipo del spawn no está entre ellos → el modelo de colas/endpoints está incompleto (¿cola B?). Anotado para runtime.
