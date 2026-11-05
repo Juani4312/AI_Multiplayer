@@ -103,3 +103,6 @@
 - 18:31 Corrida 11: filtro OK (locker y terminal no se mandan); botón del transit se replica pero teletransporta al jugador local. Cambio: el uso remoto lo hace el avatar NPC (AIMP_SYNC_USE_ACTOR=1).
 - 18:32 Laptop subió la corrida 11 (126cdfc): botón remoto arrastra a su jugador al anclaje 2-4 s; filtro OK. Agregado al hallazgo 13.
 - 18:32 Fin de la corrida 11 (salida limpia). Instalada la DLL cba2b2e (avatar como actor) en host, lista para la corrida 12.
+- 18:33 Corrida 12 (fase 5, avatar como actor): juego Linux lanzado en host (DLL cba2b2e).
+- 18:38 Corrida 12: uso remoto aplicado con el avatar (1c3460b37e03a5dc); J0 local quieto (sin salto al botón); NPC en el objetivo exacto (corrección del desvío OK). 0 excepciones. Mod en modo pasivo.
+- 18:39 Corrida 12 de los dos lados (laptop 993f166): botones OK sin mover al otro jugador; lanzallamas no replicado; avatar quiere huir del fuego. Hallazgo 13 y PROGRESS actualizados.
