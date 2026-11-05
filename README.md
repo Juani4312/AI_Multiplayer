@@ -3,7 +3,7 @@
 Mod de investigación/interoperabilidad, uso personal, sobre copia comprada del juego.
 No contiene ni redistribuye binarios, assets ni código del juego.
 
-**Estado:** etapa 0 — identificación de build y setup de análisis. Nada jugable todavía.
+**Estado:** análisis estático de los hallazgos 01–10 hecho (`work/findings/`). Mod de la fase 1+2 implementado y probado fuera del juego (`mod/`): proxy `winmm.dll`, hook por frame y sonda de estado. Falta la primera corrida en el juego. Nada jugable todavía.
 
 ## Build soportada
 
@@ -12,7 +12,7 @@ No contiene ni redistribuye binarios, assets ni código del juego.
 | Ejecutable | `AI.exe` (Windows, PE32 i386) — corrido en Linux vía Proton |
 | SHA-256 | `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90` |
 | Steam buildid | 4940658 |
-| PE timestamp | 0x54E3199B (2015-02-17) |
+| PE timestamp | 0x54E3199D (2015-02-17) |
 
 Los dos jugadores **deben** tener exactamente este hash.
 
@@ -25,4 +25,5 @@ Los dos jugadores **deben** tener exactamente este hash.
 
 ## Cómo cargar / hostear / unirse
 
-Pendiente (fase 1 en adelante).
+- Cargar el mod (fase 1+2): ver `mod/README.md` (compilar, copiar `winmm.dll` al lado de `AI.exe` y, en Proton, `WINEDLLOVERRIDES="winmm=n,b" %command%`).
+- Hostear y unirse: pendiente (fase 3 en adelante).
