@@ -145,3 +145,68 @@ Requiere investigar la vtable esperada del proveedor (`vf[1]` = ¿es autoridad?)
   ```
 - **Interpretación (hipótesis):** el modelo original es host-autoritativo. El host spawnea y difunde el request de 0x130 bytes; un cliente (`IsClient()`) no spawnea por su cuenta. En retail no hay proveedor, así que todo es host local, y queda por ver si `FUN_00a2a290` escribe igual en un buffer (el de 0x4000 bytes de la sesión) que nadie envía.
 - Para el coop: si el request de 0x130 bytes es autosuficiente, **el host del mod podría capturarlo** (hook en `FUN_00a2a290` o en `FUN_00797490`) y reenviarlo al cliente para reproducir los spawns de NPCs/Alien. Así ambos mundos tendrían los mismos personajes.
+
+---
+
+# Parte 3 - Colas de mensajes: el engine serializa eventos replicables (sin red)
+
+- **Evidencia:** `./work/evidence/h10/n16.txt` … `n18.txt`.
+- **Confianza:**
+  - alta: la forma de las colas y el patrón de los productores;
+  - media: que los productores corran en retail; sale de las condiciones que se leyeron, falta verificarlo en runtime;
+  - baja: el consumo/flush, que no se encontró todavía.
+
+## Dos colas de salida
+
+| Cola | API (thiscall sobre la sesión/cola) | Escritor real | Productores |
+|------|--------------------------------------|---------------|-------------|
+| A | `FUN_00a2a290(u16 tipo, void* datos, size_t n)` | `FUN_00a2a160` | **31** |
+| B | `FUN_00a2a810(…)` | `FUN_00a2a760` | **más de 40** (Ghidra corta la lista en 40) |
+
+`FUN_00a2a160` toma una sección crítica (`this+0x14`), agranda un buffer (`this+0x30` datos, `this+0x34` tamaño) y **agrega `[u16 tipo][payload]`. No mira si hay proveedor de red.**
+
+Productores de la cola A por zona:
+
+| Zona | Funciones |
+|------|-----------|
+| scripts | `0x491C00`, `0x491CB0`, `0x494B30`, `0x494BD0` |
+| entidades/física | `0x654050`–`0x654430` (7) |
+| IA | `0x6D9060`, `0x6D90F0` |
+| `CharacterManager` | `0x795780`–`0x7960B0` (10), `0x797490` (spawn, request de 0x130 bytes), `0x797790` |
+| NETZ | `0x7E1210`–`0x7E18E0` (7) |
+
+Los de la cola B están sobre todo en `0x48A250`–`0x48BF90` (~30, zona de scripts/entidades), `0x414AF0`…, `0x418A10`… y `0x7E14B0`/`0x7E1540`.
+
+## Patrón de cada productor (RPC "ejecutar local + difundir")
+
+```c
+// FUN_00491c00 (script), igual que FUN_00797490 (spawn)
+if (!IsClient()) {                       // en retail siempre: no hay proveedor
+    pre(datos);
+    this->vf[1](datos);                  // ejecuta la acción localmente
+    post(datos);
+    copia = datos (n bytes);
+    if (!sesion->flag_2D)                // FUN_00a2a480
+        FUN_00a2a290(TIPO_GLOBAL, &copia, n);   // DAT_01637d24 (0x18 bytes), DAT_016361e4 (0x130 bytes), …
+    else if (callback_global) callback_global(ctx, &copia);
+}
+```
+
+Los tipos de mensaje son globales (`DAT_01637d24`, `DAT_016361e4`, …), probablemente registrados al inicio a partir de los nombres del enum de la parte 1.
+
+## Por qué importa
+
+- Si en retail los productores corren y encolan (todo indica que sí cuando `IsClient()` es 0 y `flag_2D` es 0), **el engine ya está generando, frame a frame, un flujo de eventos replicables**: spawns, acciones de scripts/entidades, física, IA, personajes. Un hook en `FUN_00a2a160`/`FUN_00a2a760` (o en el flush) le daría al host del mod ese flujo sin tener que identificar cada sistema a mano.
+- Del lado del cliente, re-inyectar esos mensajes requiere el **consumidor** (la ruta de recepción, `client_entity_manager_receive_*`, etc.) y un modo "cliente" (`IsClient()`), es decir, el proveedor de la parte 2. Es más arriesgado y queda para después.
+
+## Experimento de runtime prioritario (cuando exista el mod de la fase 1)
+
+1. Contar por frame las llamadas a `FUN_00a2a160` y `FUN_00a2a760`, con su `tipo` y `n`.
+2. Ver el tamaño de las colas (`+0x34`) y si alguien las vacía (y cuándo).
+3. Correlacionar los tipos con acciones del juego: abrir una puerta, agarrar un item, aparición de NPCs/Alien.
+
+## Preguntas abiertas
+
+- ¿Quién vacía las colas (flush/descartar)? Candidatos: `FUN_00a2a620` (recorre `DAT_01be1bd0`) y el dispatch de NETZ.
+- Mapa tipo → nombre: los globales `DAT_016*`/`DAT_0163*` contra el enum de la parte 1.
+- ¿Qué es `flag_2D` y cuándo se usa el callback global (`PTR_FUN_016361f0`/`PTR_FUN_01637d30`) en lugar de la cola?
