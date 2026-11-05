@@ -59,6 +59,12 @@ static const uint8_t AIMP_USE_HANDLER_S_PROLOGUE[10] __attribute__((unused)) = {
 };
 #define AIMP_RVA_USE_TYPE_A       0x0123652Cu  /* u16: id del RPC A de uso (0 en el archivo; lo asigna el registro) */
 #define SREQ_KEY2                 0xF0  /* repite la clave (arg 1 de FUN_00787450) */
+/* Bloques de 0x1D0 bytes por personaje en el CharacterManager (SpawnCharacter, hallazgos 05 y 10). */
+#define CM_BLOCKS                 0x22C
+#define CM_BLOCK_SIZE             0x1D0
+#define CM_BLOCK_MAX              36    /* (0x4370 - 0x22C) / 0x1D0 */
+#define BLOCK_AUTHORITY           0x4F  /* byte: 1 = autoritativo (la lógica corre acá) */
+#define BLOCK_CHARACTER           0x160 /* Character* */
 #define SREQ_POS                  0x50  /* float[3]: posición del spawn */
 #define SREQ_YAW                  0x60  /* float */
 #define AIMP_RVA_SPAWN_AUTH       0x00397490u  /* FUN_00797490: thiscall(this, pedido*, flag), ret 8 */

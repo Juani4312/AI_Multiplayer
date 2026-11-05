@@ -58,6 +58,7 @@ static float g_vec[4] __attribute__((aligned(16)));
 static uint8_t g_scq[MAX_REQS][SC_REQ_SIZE];
 static int g_mode, g_state = G_OFF, g_from_key = -1, g_npc_type = 6, g_obs_logged, g_warned_npc, g_chosen_once;
 static int64_t g_last_pick;
+static int g_noauth; /* AIMP_GHOST_NOAUTH=1: experimento, el avatar pasa a no autoritativo */
 static int64_t g_freq = 1, g_delay_ticks, g_npc_ticks, g_t0, g_deadline, g_last_log, g_last_tp;
 static uint32_t g_player, g_chr, g_before[2 * MAX_CHARS], g_nbefore, g_attempts, g_tps;
 static float g_last_pos[3], g_last_yaw;
@@ -187,6 +188,7 @@ int ghost_install(void)
     g_npc_ticks = npc_ms > 0 ? g_freq * npc_ms / 1000 : 0;
     g_from_key = aimp_env_int(L"AIMP_GHOST_FROM", -1);
     g_npc_type = aimp_env_int(L"AIMP_GHOST_NPC_TYPE", 6);
+    g_noauth = aimp_env_int(L"AIMP_GHOST_NOAUTH", 0);
     static const char *const names[] = { "", "clon del jugador", "NPC existente y después clon", "solo NPC existente" };
     if (g_mode) {
         g_state = G_WAIT_PLAYER;
@@ -312,6 +314,26 @@ static void start_moving(uint32_t p, int64_t now)
     g_tps = 0;
 }
 
+/* Experimento (AIMP_GHOST_NOAUTH=1): marcar al avatar como no autoritativo, como un "display
+ * character" del diseño de red original (hallazgo 10). Si la IA respeta el flag, el NPC deja de
+ * moverse solo y bajan los teleports por segundo. Se loguea antes y después. */
+static void set_noauth(const Chars *c, uint32_t p)
+{
+    for (uint32_t i = 0; i < CM_BLOCK_MAX; i++) {
+        uint32_t blk = c->cm + CM_BLOCKS + i * CM_BLOCK_SIZE, who = 0;
+        uint8_t auth = 0, zero = 0;
+        if (!mem_u32(blk + BLOCK_CHARACTER, &who) || who != p)
+            continue;
+        mem_u8(blk + BLOCK_AUTHORITY, &auth);
+        log_printf("GHOST: bloque del avatar = CM+0x%x (índice %u), autoridad %u; se pone en 0 (AIMP_GHOST_NOAUTH)",
+                   CM_BLOCKS + i * CM_BLOCK_SIZE, i, auth);
+        if (!mem_write(blk + BLOCK_AUTHORITY, &zero, 1))
+            log_printf("GHOST: no se pudo escribir la autoridad");
+        return;
+    }
+    log_printf("GHOST: no se encontró el bloque del avatar (AIMP_GHOST_NOAUTH no se aplica)");
+}
+
 static void pick_npc(const Chars *c, int64_t now)
 {
     uint32_t best = 0, best_i = 0;
@@ -333,6 +355,8 @@ static void pick_npc(const Chars *c, int64_t now)
         return;
     }
     describe("NPC elegido para mover", best, "NPCs", best_i);
+    if (g_noauth)
+        set_noauth(c, best);
     g_warned_npc = 0;
     if (!g_chosen_once)
         g_t0 = now;
