@@ -183,46 +183,116 @@ int sync_install(AimpNet *net)
     return ok;
 }
 
+/* Eventos recibidos que todavía no se pueden aplicar: el receptor está en otro nivel (cargando
+ * o en el menú) o su avatar todavía no apareció. Se reintentan por frame hasta g_pend_ticks
+ * (corrida 14: un uso hecho mientras el otro estaba en el menú se perdía). */
+#define PEND_MAX 16
+typedef struct {
+    AimpEvt e;
+    int64_t at;
+    int told;
+} Pend;
+static Pend g_pend[PEND_MAX];
+static int g_npend;
+static int64_t g_freq, g_pend_ticks;
+
+static int64_t qpc_now(void)
+{
+    LARGE_INTEGER t;
+    QueryPerformanceCounter(&t);
+    if (!g_freq) {
+        LARGE_INTEGER f;
+        QueryPerformanceFrequency(&f);
+        g_freq = f.QuadPart ? f.QuadPart : 1;
+        int ms = aimp_env_int(L"AIMP_SYNC_PENDING_MS", 60000);
+        g_pend_ticks = g_freq * (ms < 0 ? 0 : ms) / 1000;
+    }
+    return t.QuadPart;
+}
+
+/* 1 = aplicado, 0 = todavía no se puede (queda pendiente). */
+static int try_apply(Pend *q, uint32_t level)
+{
+    const AimpEvt *e = &q->e;
+    char t[17];
+    hex8(t, e->data);
+    if (e->level != level) {
+        if (!q->told)
+            log_printf("SYNC: uso remoto (evento %u, objetivo %s) del nivel %u; acá el nivel es %u: queda pendiente", e->seq, t,
+                       e->level, level);
+        q->told = 1;
+        return 0;
+    }
+    uint32_t pl = 0;
+    const char *who = "el avatar";
+    if (g_actor && ghost_enabled()) {
+        pl = ghost_avatar();
+        if (!pl) { /* el avatar todavía no apareció: no usar al jugador local (lo teletransportaría) */
+            if (q->told != 2)
+                log_printf("SYNC: uso remoto (evento %u, objetivo %s) en espera: todavía no hay avatar", e->seq, t);
+            q->told = 2;
+            return 0;
+        }
+    } else {
+        pl = local_player();
+        who = "el jugador local";
+    }
+    uint8_t p[20];
+    aimp_memcpy(p, e->data, sizeof p);
+    if (!pl || !mem_read(pl + CHR_ID, p + 8, 8))
+        return 0;
+    uint16_t type = *(volatile uint16_t *)(g_aimp_exe + AIMP_RVA_USE_TYPE_A);
+    if (!type) {
+        if (q->told != 3)
+            log_printf("SYNC: el id del RPC de uso todavía no está asignado: el evento %u queda pendiente", e->seq);
+        q->told = 3;
+        return 0;
+    }
+    char cid[17];
+    hex8(cid, p + 8);
+    log_printf("SYNC: aplicando uso remoto (evento %u): objetivo %s, RPC A 0x%x, personaje = %s (%s), flag %08x", e->seq, t, type,
+               who, cid, rd32(p + 16));
+    ((EnqueueFn)(void *)(g_aimp_exe + AIMP_RVA_ENQUEUE_A))(type, p, sizeof p);
+    return 1;
+}
+
 void sync_frame(AimpNet *net, uint32_t level)
 {
     g_level = level;
     if (!g_on || !net || !net->mode)
         return;
+    int64_t now = qpc_now();
     AimpEvt e;
     while (net_take_event(net, &e)) {
         if (e.kind != AIMP_EVT_USE || e.size != 20) {
             log_printf("SYNC: evento remoto desconocido (tipo %u, %u bytes): se ignora", e.kind, e.size);
             continue;
         }
-        char t[17];
-        hex8(t, e.data);
-        if (e.level != level) {
-            log_printf("SYNC: uso remoto (evento %u, objetivo %s) del nivel %u; acá el nivel es %u: se ignora", e.seq, t, e.level,
-                       level);
-            continue;
+        if (g_npend == PEND_MAX) {
+            log_printf("SYNC: demasiados usos pendientes: se descarta el evento %u", g_pend[0].e.seq);
+            for (int k = 1; k < g_npend; k++)
+                g_pend[k - 1] = g_pend[k];
+            g_npend--;
         }
-        uint32_t pl = g_actor ? ghost_avatar() : 0;
-        const char *who = "el avatar";
-        if (!pl) {
-            pl = local_player();
-            who = "el jugador local";
-        }
-        uint8_t p[20];
-        aimp_memcpy(p, e.data, sizeof p);
-        if (!pl || !mem_read(pl + CHR_ID, p + 8, 8)) {
-            log_printf("SYNC: uso remoto (evento %u) sin jugador local ni avatar: se ignora", e.seq);
-            continue;
-        }
-        uint16_t type = *(volatile uint16_t *)(g_aimp_exe + AIMP_RVA_USE_TYPE_A);
-        if (!type) {
-            log_printf("SYNC: el id del RPC de uso todavía no está asignado: se ignora el evento %u", e.seq);
-            continue;
-        }
-        char cid[17];
-        hex8(cid, p + 8);
-        log_printf("SYNC: aplicando uso remoto (evento %u): objetivo %s, RPC A 0x%x, personaje = %s (%s), flag %08x", e.seq, t,
-                   type, who, cid, rd32(p + 16));
-        ((EnqueueFn)(void *)(g_aimp_exe + AIMP_RVA_ENQUEUE_A))(type, p, sizeof p);
+        g_pend[g_npend].e = e;
+        g_pend[g_npend].at = now;
+        g_pend[g_npend].told = 0;
+        g_npend++;
     }
+    int w = 0;
+    for (int r = 0; r < g_npend; r++) {
+        Pend *q = &g_pend[r];
+        if (try_apply(q, level))
+            continue;
+        if (now - q->at > g_pend_ticks) {
+            char t[17];
+            hex8(t, q->e.data);
+            log_printf("SYNC: uso remoto (evento %u, objetivo %s) vencido sin aplicar (nivel %u, acá %u): se descarta", q->e.seq, t,
+                       q->e.level, level);
+            continue;
+        }
+        g_pend[w++] = *q;
+    }
+    g_npend = w;
     net_send_events(net);
 }

@@ -218,14 +218,19 @@ int main(void)
     cli.in[cli.in_tail] = in;
     cli.in_tail = (cli.in_tail + 1) % AIMP_EVT_QUEUE;
     sync_frame(&cli, 16);
-    CHECK(g_enq == 1, "un uso de otro nivel no se aplica");
+    CHECK(g_enq == 1, "un uso de otro nivel no se aplica todavía (queda pendiente)");
+    sync_frame(&cli, 9); /* el receptor llega a ese nivel */
+    CHECK(g_enq == 2, "al llegar al nivel 9 se aplica el pendiente (encolados %u)", g_enq);
     put32(img, AIMP_RVA_USE_TYPE_A, 0);
     in.level = 16;
     in.seq = 9;
     cli.in[cli.in_tail] = in;
     cli.in_tail = (cli.in_tail + 1) % AIMP_EVT_QUEUE;
     sync_frame(&cli, 16);
-    CHECK(g_enq == 1, "sin id de RPC asignado no se encola nada");
+    CHECK(g_enq == 2, "sin id de RPC asignado no se encola nada (queda pendiente)");
+    put32(img, AIMP_RVA_USE_TYPE_A, 0x26);
+    sync_frame(&cli, 16);
+    CHECK(g_enq == 3, "cuando el registro asigna el id, se aplica (encolados %u)", g_enq);
 
     printf("[handlers hookeados (solo traza)]\n");
     memcpy(payload, use_local, 20);
@@ -254,8 +259,8 @@ int main(void)
     expect(log, "SYNC   mandado al otro jugador (evento 2", 0);
     expect(log, "objetivo eed179bb3c7301a5, personaje 1c3460b37e03a5dc, flag 00000000", 1);
     expect(log, "SYNC: aplicando uso remoto (evento 7): objetivo 044106b16f529959, RPC A 0x26, personaje = el jugador local (2ff722b2099d5b9b)", 1);
-    expect(log, "del nivel 9; acá el nivel es 16: se ignora", 1);
-    expect(log, "todavía no está asignado: se ignora el evento 9", 1);
+    expect(log, "del nivel 9; acá el nivel es 16: queda pendiente", 1);
+    expect(log, "todavía no está asignado: el evento 9 queda pendiente", 1);
     expect(log, "SYNC handler A del uso 1: ctx 0x", 1);
     expect(log, "SYNC handler de sesión del uso 1: ctx 0x", 1);
     printf("%s (%d fallas)\n", g_fail ? "TEST_SYNC CON FALLAS" : "TEST_SYNC OK", g_fail);
