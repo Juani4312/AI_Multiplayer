@@ -51,11 +51,28 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Hallazgo 09 (niveles/checkpoints/guardado) | 🟡 parte 1 en `findings/09-niveles-checkpoints-guardado.md` |
 | Hallazgo 06 (scripts/entidades) | 🟡 parte 1 en `findings/06-scripts-y-entidades.md` |
 | Hallazgo 07 (items/inventario) | 🟡 parte 1 en `findings/07-items-e-inventario.md` |
-| Hallazgo 08 parte 2 (objetivo del Alien) | ⏳ siguiente |
+| Hallazgo 08 parte 2 (árboles del Alien) | ✅ `TargetIsPlayer` mira el controlador `+0x31C`, no `GetPlayer()` |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
+## Resumen para el usuario (estado al cierre de la sesión autónoma del 2026-11-05)
+- Hallazgos 01–04 completos; 05–10 con una primera parte cada uno (ver `work/findings/`).
+- Descubrimientos que cambian el diseño (todos sin verificar en runtime):
+  1. El engine tiene una **capa de red propia (NETZ)**, dormida: no tiene transporte (hallazgo 10).
+  2. Hay un **vector de jugadores** (`[[g_root+8]+0x80]`, contador `+0x84`). Cualquier personaje con la definición de jugador entra ahí y recibe un **controlador de jugador** (hallazgos 03 y 05).
+  3. La condición del Alien **`TargetIsPlayer` no depende de `GetPlayer()`** (hallazgo 08).
+- Herramienta clave: `work/scripts/ghidra/dump.sh` + `Dump.java` (4 s por consulta sobre el proyecto persistente).
+
 ## Siguiente paso
-1. Hallazgo 08 parte 2: selección de objetivo del Alien. Empezar por `alien_attack_manager.cpp` (`FUN_006e3db0`), el menace manager (`FUN_006cf080`), las tareas `AI_*` (callbacks en el hallazgo 04) y el estado de IA de cada personaje.
-2. Partes 2 pendientes: 06, 05, 10, 09, 07 (ver cada hallazgo).
-3. Mod fase 1+2: pendiente, para hacer junto con el usuario.
+1. **Con el usuario:** fase 1+2 del mod (proxy `winmm`, hook en `ModeManager::Run`, log de estado y posición). Es la forma de verificar en runtime todo lo anterior. Requiere su confirmación para compilar, colocar la DLL y ejecutar el juego.
+2. Experimentos de runtime prioritarios (cuando haya mod):
+   - `GetPlayer`, la posición `+0x70`, el yaw `+0x174`, la cámara `[[g_root+0x58]+0x1DC]`;
+   - los contadores del `CharacterManager` (`+0x84`, `+0xD4`, `+0x174`);
+   - el transporte NETZ `[[g_root+4]+0x69C]` y su máscara `+0x10/+0x14`.
+3. Estático pendiente:
+   - 05 parte 2: estructura del request de `SpawnCharacter` `0x7D3B50` y de dónde sale la definición del jugador.
+   - 10 parte 2: productores/consumidores de NETZ.
+   - 06 parte 2: comportamiento por tipo de entidad.
+   - 09 parte 2: dispatcher de los comandos de UI.
+   - 07 parte 2: inventario.
+   - 04: matrices de vista/proyección.
