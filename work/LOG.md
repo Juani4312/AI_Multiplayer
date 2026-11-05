@@ -108,3 +108,5 @@
 - 18:39 Corrida 12 de los dos lados (laptop 993f166): botones OK sin mover al otro jugador; lanzallamas no replicado; avatar quiere huir del fuego. Hallazgo 13 y PROGRESS actualizados.
 - 18:49 Exploración estática para apagar la IA del avatar (entidades NPC_*/CHR_*, mapa de fábricas 0x1757D80); sin terminar, anotado en NOTES. README y GitHub actualizados.
 - 18:52 AIMP_GHOST_NOAUTH (experimento: avatar no autoritativo, bloque+0x4F=0) con test. Tests OK.
+- 18:53 Corrida 13 (avatar no autoritativo + trazado de armas/ítems): cfg AIMP_GHOST=3;AIMP_GHOST_NOAUTH=1;AIMP_TRACE_QUEUES=1;AIMP_TRACE_USE=1 (DLL e137d39), juego lanzado.
+- 18:58 Corrida 13: hallazgo 14 (armas e ítems: lanzallamas -> A 0x18/0x0C, Alien -> 0x22, bengala nada, ítem -> 0x26). Corregido CM_BLOCKS = 0x230 para NOAUTH.
