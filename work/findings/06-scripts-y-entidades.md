@@ -78,3 +78,21 @@ Ver hallazgo 09 (`FUN_0084dbe0`): las entidades de UI usan nombres internados (`
 - Usos: el entity manager busca entidades globales por nombre (`FUN_005a3f80`: `inventory`, `inventory_database`, `pickup_manager`, `camera_manager`, `LOADING_SCREEN_MANAGER`, `npc_group_manager`, `EXPLOSIVE_MANAGER`, `ALLIANCES`, `SCREEN_FX`, `global_container_item_pool`, `area_hit_manager`), con el mapa en `DAT_0174ef90` (= entity manager + 0x50).
 - **Para el mod:** con este algoritmo se pueden calcular los ShortGuids de entidades, métodos y parámetros a partir de sus nombres. Sirve para ubicar en runtime entidades de `COMMANDS.PAK` (puertas, terminales) y referenciarlas igual en las dos máquinas, sin depender de punteros.
 - **Verificación pendiente:** calcular el ShortGuid de un nombre conocido y buscarlo en un `COMMANDS.PAK` o en la memoria del juego. Así se fija el orden de bytes y se confirma SHA-1.
+
+### Verificación offline del ShortGuid (confirmada)
+
+- Script reproducible: `work/scripts/shortguid_check.py`. Salida en `work/evidence/h06/shortguid_check.txt`.
+- Implementa el algoritmo tal como se leyó del binario:
+  1. `d = SHA1(nombre)`;
+  2. GUID = `d[12:16] + d[8:12] + d[4:8] + d[0:4]`;
+  3. hex en mayúsculas, del último byte al primero;
+  4. ShortGuid = `SHA1(hex)[0:4]`.
+- Probado contra un `COMMANDS.PAK` **vanilla** (`BSP_LV426_PT02`, SHA-256 `0f965428…bb340`, copia en `game/data/pak/`): **13 de 21 nombres aparecen** con frecuencias plausibles (`reference` 5.878, `position` 5.113, `trigger` 2.434, `on_finished` 304, `Character` 66, `TriggerSimple` 18, `LevelLoaded` 18, `Door` 3, `PlayerTorch` 1). Las variantes de control ("sin reordenar" y "SHA-1 directo") dan **0 de 21**. Por azar se esperarían unas 0,0006 apariciones por valor en 2,7 MB.
+- **Conclusión: algoritmo, SHA-1 y orden de bytes confirmados.** El mod puede calcular los ShortGuids de tipos, pines y parámetros a partir de los nombres.
+
+### Los nodos de multiplayer no se usan en ningún nivel
+
+Se buscaron los ShortGuids de 15 tipos de nodo MP en los `COMMANDS.PAK` de los **21 niveles** de la instalación, incluidos los dos modificados:
+`IsMultiplayerMode`, `HostOnlyTrigger`, `NetPlayerCounter`, `SyncOnAllPlayers`, `SyncOnFirstPlayer`, `AllPlayersReady`, `NumConnectedPlayers`, `NumPlayersOnStart`, `NumDeadPlayers`, `NetworkedTimer`, `ParticipatingPlayersList`, `RespawnConfig`, `SpawnGroup`, `BroadcastTrigger` y `RespawnExcluder`.
+
+**Hay 0 apariciones en todos.** Los nodos existen en el código (hallazgo 01) pero ningún nivel distribuido los usa. Es coherente con un modo multijugador que se descartó y con la red del engine dormida (hallazgo 10).
