@@ -119,6 +119,24 @@ public class Dump extends GhidraScript {
             ca.retainAll(cb);
             for (Address fa : ca) out.println("  " + fname(fa));
             if (ca.isEmpty()) out.println("  ninguna");
+          } else if (c.startsWith("seq:")) {
+            // seq:REGEX1|REGEX2|N|START|END  (separador '|') -> A seguida de B en <= N instrucciones
+            String[] p = c.substring(4).split("\\|");
+            java.util.regex.Pattern pa = java.util.regex.Pattern.compile(p[0]);
+            java.util.regex.Pattern pb = java.util.regex.Pattern.compile(p[1]);
+            int win = Integer.parseInt(p[2]), n = 0;
+            for (ghidra.program.model.listing.Instruction x : currentProgram.getListing().getInstructions(
+                new ghidra.program.model.address.AddressSet(addr(p[3]), addr(p[4])), true)) {
+              if (!pa.matcher(x.toString()).find()) continue;
+              ghidra.program.model.listing.Instruction y = x.getNext();
+              for (int j = 0; j < win && y != null; j++, y = y.getNext()) {
+                if (pb.matcher(y.toString()).find()) {
+                  if (++n <= 80) out.printf("  %s %-34s | %s %-34s en %s%n", x.getAddress(), x, y.getAddress(), y, fname(x.getAddress()));
+                  break;
+                }
+              }
+            }
+            out.println("  total=" + n);
           } else if (c.startsWith("insn:")) {
             // insn:REGEX:START:END -> instrucciones cuyo texto matchea (Java regex), máx. 80
             int last = c.lastIndexOf(':'), prev = c.lastIndexOf(':', last - 1);
