@@ -400,3 +400,18 @@ Evidencia: `work/evidence/runtime/run7-ghost-npc.log` (gitignored).
 - Arreglo: vector estático `float[4]` alineado a 16, que conserva el cuarto componente del personaje (`+0x7C`). El buffer del clon también va alineado a 16. El clon ahora sale de lo que recibió `SpawnCharacter` (0xF0 bytes).
   - `test_ghost` verifica la alineación de cada posición y de cada pedido, y que se conserve `w`. El stub copia 16 bytes, como `MOVAPS`.
 - Lección: el registro de excepciones dio la causa en una corrida. Cualquier puntero a vector que se pase al engine tiene que estar alineado a 16.
+
+## 2026-11-05 — Corrida 8 (`AIMP_GHOST=2`): **el avatar con un NPC existente funciona**; el clon se cae en RequestCharacter
+Evidencia: `work/evidence/runtime/run8-ghost-npc-ok.log` (gitignored).
+- **Modo NPC: OK durante 20 s.**
+  - Eligió `NPCs[1]` "CV5" (INNOCENT, tipo 6, sin controlador).
+  - Primer teleport a (8,00, 13,28, 34,53; w 0) y después 19 resúmenes con el NPC en el objetivo, a 1 cm o menos. Entre 2 y 101 teleports por segundo (más mientras el jugador camina).
+  - Sin excepciones. El usuario lo vio: "apareció un civil, toqué F8 … el civil estaba lockeado a mi posición relativa" (`MARCA 1` a los 64,6 s).
+  - Es lo esperado del modo local: +1,5 m en x del mundo.
+- **Clon por `SpawnCharacter`: se cae en el momento.**
+  - `EXCEPCIÓN 0xc0000005 en AI.exe+0x62bc70 … lectura en 0x00000018`.
+  - Stack: `SpawnCharacter` (`0x3d3c38`) → `RequestCharacter` (`0x3d06be`) → `FUN_006b51f0(pj+0x3F0)` → `FUN_006ad740` → getter `FUN_00a2bc70`.
+  - El getter es `mov eax,[ecx+0x18]; mov al,[eax+0x94]` y recibió `this` NULL.
+  - En `FUN_006ad740`, la búsqueda de un recurso (`FUN_00a2adc0()->vf[3]()`) devuelve 0 para el clon. Guarda 0 en `pj+0x338` y llama al getter sin chequear.
+  - Hipótesis: el nivel precarga recursos por clave de spawn y la clave nueva (64) no tiene. Crear personajes **nuevos** requiere reutilizar la clave de uno liberado, o preparar esos recursos. Queda para más adelante.
+- **Decisión para la fase 4 v1: el avatar del otro jugador es un NPC humano del nivel** (`AIMP_GHOST=3`). Sigue sin límite (`AIMP_GHOST_NPC_MS` ≤ 0) y, si el NPC desaparece, elige otro. Falta la prueba por red (laptop con `aimp_check.ps1 … -Ghost 3`).

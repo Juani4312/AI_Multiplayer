@@ -56,7 +56,8 @@ static float g_vec[4] __attribute__((aligned(16)));
 /* Pedidos que recibió SpawnCharacter (0xF0 bytes: el mensaje de sesión 0x2E, hallazgo 12). */
 #define SC_REQ_SIZE 0xF0
 static uint8_t g_scq[MAX_REQS][SC_REQ_SIZE];
-static int g_mode, g_state = G_OFF, g_from_key = -1, g_npc_type = 6, g_obs_logged;
+static int g_mode, g_state = G_OFF, g_from_key = -1, g_npc_type = 6, g_obs_logged, g_warned_npc, g_chosen_once;
+static int64_t g_last_pick;
 static int64_t g_freq = 1, g_delay_ticks, g_npc_ticks, g_t0, g_deadline, g_last_log, g_last_tp;
 static uint32_t g_player, g_chr, g_before[2 * MAX_CHARS], g_nbefore, g_attempts, g_tps;
 static float g_last_pos[3], g_last_yaw;
@@ -180,9 +181,10 @@ int ghost_install(void)
         g_mode = 0;
         return ok || ok_sc;
     }
-    int delay = aimp_env_int(L"AIMP_GHOST_DELAY_MS", 8000), npc_ms = aimp_env_int(L"AIMP_GHOST_NPC_MS", 20000);
+    /* AIMP_GHOST_NPC_MS <= 0: sin límite (por defecto en el modo 3, el avatar de la fase 4). */
+    int delay = aimp_env_int(L"AIMP_GHOST_DELAY_MS", 8000), npc_ms = aimp_env_int(L"AIMP_GHOST_NPC_MS", g_mode == 3 ? 0 : 20000);
     g_delay_ticks = g_freq * (delay < 0 ? 0 : delay) / 1000;
-    g_npc_ticks = g_freq * (npc_ms < 0 ? 0 : npc_ms) / 1000;
+    g_npc_ticks = npc_ms > 0 ? g_freq * npc_ms / 1000 : 0;
     g_from_key = aimp_env_int(L"AIMP_GHOST_FROM", -1);
     g_npc_type = aimp_env_int(L"AIMP_GHOST_NPC_TYPE", 6);
     static const char *const names[] = { "", "clon del jugador", "NPC existente y después clon", "solo NPC existente" };
@@ -316,13 +318,20 @@ static void pick_npc(const Chars *c, int64_t now)
         }
     }
     if (!best) {
-        log_printf("GHOST: no hay NPC de tipo %d en el nivel (%u NPCs)%s", g_npc_type, c->nnpc,
-                   g_mode == 2 ? "; se pasa al clon" : "");
-        g_t0 = now - g_npc_ticks; /* para que el modo 2 siga con el clon */
+        if (g_mode == 2) {
+            log_printf("GHOST: no hay NPC de tipo %d en el nivel (%u NPCs); se pasa al clon", g_npc_type, c->nnpc);
+            g_t0 = now - g_npc_ticks; /* para que siga con el clon */
+        } else if (!g_warned_npc) {
+            log_printf("GHOST: no hay NPC de tipo %d en el nivel (%u NPCs); se reintenta cada 1 s", g_npc_type, c->nnpc);
+            g_warned_npc = 1;
+        }
         return;
     }
     describe("NPC elegido para mover", best, "NPCs", best_i);
-    g_t0 = now;
+    g_warned_npc = 0;
+    if (!g_chosen_once)
+        g_t0 = now;
+    g_chosen_once = 1;
     start_moving(best, now);
 }
 
@@ -398,6 +407,11 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
     uint32_t idx;
     const char *where = find_chr(c, g_chr, &idx);
     if (!where) {
+        if (g_state == G_NPC) { /* murió o lo liberó el juego: se elige otro */
+            log_printf("GHOST: el NPC 0x%08x ya no está en los vectores; se elige otro", g_chr);
+            g_chr = 0;
+            return;
+        }
         log_printf("GHOST: el personaje 0x%08x ya no está en los vectores; se deja de mover", g_chr);
         g_chr = 0;
         g_state = G_DONE;
@@ -477,6 +491,7 @@ void ghost_frame(int64_t now, const AimpNet *net, uint32_t level)
     case G_WAIT_PLAYER:
         if (local) {
             g_t0 = now;
+            g_chosen_once = 0;
             g_state = G_DELAY;
         }
         break;
@@ -487,13 +502,18 @@ void ghost_frame(int64_t now, const AimpNet *net, uint32_t level)
             do_spawn(&c, now);
         } else {
             g_state = G_NPC;
+            g_last_pick = now;
             pick_npc(&c, now);
         }
         break;
     case G_NPC:
         if (g_chr)
             move_chr(&c, net, level, now);
-        if (g_state == G_NPC && now - g_t0 >= g_npc_ticks) {
+        else if (now - g_last_pick >= g_freq) {
+            g_last_pick = now;
+            pick_npc(&c, now);
+        }
+        if (g_state == G_NPC && g_npc_ticks && now - g_t0 >= g_npc_ticks) {
             log_printf("GHOST: fin del modo NPC%s", g_mode == 2 ? "; se intenta el clon" : "");
             g_chr = 0;
             if (g_mode == 2)

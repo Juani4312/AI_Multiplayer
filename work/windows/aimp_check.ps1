@@ -17,6 +17,7 @@ param(
     [ValidateSet('check', 'install', 'collect', 'revert')] [string]$Action = 'check',
     [ValidateSet('none', 'join', 'host')] [string]$Net = 'none',
     [string]$Peer = '',
+    [ValidateRange(0, 3)] [int]$Ghost = 0,
     [string]$Tag = 'corrida'
 )
 $ErrorActionPreference = 'Stop'
@@ -143,6 +144,10 @@ function Do-Install {
         $cfg += "AIMP_NET_PEER=$Peer"
     } elseif ($Net -eq 'host') {
         $cfg += 'AIMP_NET=host'
+    }
+    if ($Ghost -gt 0) {
+        # Fase 4 (experimental): 3 = un NPC existente hace de avatar del otro jugador.
+        $cfg += "AIMP_GHOST=$Ghost"
     }
     Set-Content -Path (Join-Path $game 'aimp.cfg') -Value $cfg -Encoding ASCII
     Out-Report ''
