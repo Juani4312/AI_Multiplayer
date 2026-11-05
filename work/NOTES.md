@@ -322,3 +322,16 @@ Evidencia: `work/windows/report.md` y `work/windows/logs/aimp-partida-20261105-1
 - `FASE 1` a los 35,1 s (Frontend). Carga de Tech_Hub (nivel 16): J0 `Character(ok)`, 41 resúmenes con movimiento, `MARCA 1` con la posición. fps promedio 58,1. Salida limpia (`ModeManager::Run devolvió 0`, `DLL_PROCESS_DETACH`), sin errores en el Visor de eventos.
 - **Fases 1 y 2 verificadas también en Windows nativo.**
 - Detalle del kit: PowerShell 5.1 lee el log UTF-8 como ANSI (`mÃ³dulos`) si no se le pasa `-Encoding UTF8`. Las líneas que copia `collect` al reporte salen bien.
+
+## 2026-11-05 — Fase 3 por Tailscale: laptop (Windows 10, join) ↔ papito (Proton, host)
+Evidencia del host: `work/evidence/runtime/run5-tailscale-host.log` (gitignored). La de la laptop vuelve en `work/windows/`.
+- Tailscale: `papito` 100.126.161.126 (Linux), `papulaptop` 100.126.159.45 (Windows). Sin firewall en papito.
+- Misma cuenta de Steam en las dos: el juego no puede correr en las dos a la vez con Steam online. Solución: **Steam en modo offline en la laptop**, papito online. (Cerré el juego de papito desde el menú, la laptop arrancó offline y después relancé papito.)
+- Mientras papito estaba cerrado, un listener pasivo en UDP 47811 (Python, solo recibe) vio el primer paquete AIMP de `100.126.159.45:62046` (STATE, menú, sin jugador): la ida laptop → papito por Tailscale anda, y el firewall de Windows deja salir.
+- Con papito en host: `NET: cliente conectado desde 100.126.159.45:62046` en el primer frame (35,3 s). Conexión ~290 s, hasta el BYE de la laptop (`el otro extremo se despidió`).
+- Totales del host: enviados 5127, recibidos 4732, inválidos 0, **perdidos 361, todos en el primer segundo**. Es el backlog: el socket del host se abre al cargar la DLL (0,006 s), pero se lee desde el primer frame (35 s). En ese tiempo el buffer de recepción (rmem_default 212992) se llenó con ~238 paquetes viejos y el kernel descartó el resto. **Después: 0 perdidos.**
+- Huecos sin pérdida durante la carga de nivel de la laptop (6,5 s y 3 s): mientras carga no corre el hook por frame, así que la laptop no manda nada y la secuencia sigue sin saltos.
+- Estado remoto recibido: nivel 0 sin jugador (menú) → nivel 16 sin jugador → **nivel 16 con jugador** en (4,55, 13,62, 33,59), el mismo punto de guardado (la partida viene por Steam Cloud). La posición y el yaw cambian con la caminata de la laptop: x de 4,5 a 11,1, z de 31,7 a 34,6, yaw de −3,14 a −2,19.
+- Edad del último paquete al momento del resumen: mediana 28 ms, p95 83 ms, máx. 278 ms. Incluye el intervalo entre paquetes (~60 ms), así que no es la latencia.
+- **Ritmo real 15–19 paquetes/s en vez de 20:** `net_due` exige ≥ 50 ms desde el último envío y se envía una vez por frame, así que a 58–60 fps muchas veces se esperan 4 frames (66,7 ms). Arreglo simple: `last_send += send_ticks` (con tope si se atrasa mucho).
+- Mejora pendiente: en el primer `net_poll`, vaciar el backlog sin contar huecos, o abrir el socket en el primer frame. Así no se toma un estado viejo de 35 s ni se cuentan pérdidas falsas.
