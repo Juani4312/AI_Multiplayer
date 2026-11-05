@@ -384,3 +384,19 @@ Evidencia: `work/evidence/runtime/run6-ghost.log` (gitignored).
   - log de las cuatro listas de observadores;
   - clon por `SpawnCharacter` (no por la autoridad) con la clave en `+0x00` y en `+0xF0`;
   - modo `AIMP_GHOST=2`: primero mueve un INNOCENT existente 20 s (prueba del teleport) y después intenta el clon.
+
+## 2026-11-05 — Corrida 7 (`AIMP_GHOST=2`): camino real del spawn y crash del teleport (alineación)
+Evidencia: `work/evidence/runtime/run7-ghost-npc.log` (gitignored).
+- Las cuatro listas de observadores, leídas en runtime: **vacías** (confirmado).
+- **Camino real de creación:** `SpawnCharacter` (`0x7D3B50`) lo llama el **handler de sesión tipo 0x2E** (`FUN_00414a70`, retorno en `0x414AC0`).
+  - `ctx` = `CM+0x04`; su vtable `0xEF68E0` tiene `vf[1]` = `SpawnCharacter`.
+  - El handler copia un mensaje de **0xF0 bytes** a un buffer alineado a 16 y llama a `ctx->vf[1](copia)`.
+  - Orden al cargar Tech_Hub: ALIEN, THE_PLAYER y los 4 INNOCENT, con las mismas claves, ids y posiciones que los pedidos de autoridad. El primer bloque de 0xE4 bytes difiere, así que no es una copia literal.
+  - `this` del spawn de autoridad = `CM+0x10`. Los endpoints A 0x2B / 0x2A / 0x29 tienen `ctx` `CM+0x00` / `+0x08` / `+0x10`.
+- La corrida 6 queda explicada a medias: el clon mandado por la autoridad (A 0x29 → B 0x2C → … → sesión 0x2E) llegó a `SpawnCharacter` en el frame siguiente y algo ahí se cayó. El encadenamiento B → sesión no está mapeado.
+- **Modo NPC:** eligió `NPCs[1]` "CV5" (INNOCENT, tipo 6, sin controlador). **El primer teleport hizo caer el juego**: `EXCEPCIÓN 0xc0000005 en AI.exe+0x1414 … lectura en 0xffffffff`. Stack: `SetTransform` (`0x3C2796`) ← `FUN_007c6330` (`0x3C63A0`).
+  - `FUN_00401410` copia la posición con **`MOVAPS`**: el vector tiene que ser de 16 bytes y estar alineado a 16. El acceso en `0xffffffff` es como Windows reporta un `MOVAPS` desalineado (#GP).
+  - El mod pasaba un `float[3]` del stack. **Error del mod, no del juego.**
+- Arreglo: vector estático `float[4]` alineado a 16, que conserva el cuarto componente del personaje (`+0x7C`). El buffer del clon también va alineado a 16. El clon ahora sale de lo que recibió `SpawnCharacter` (0xF0 bytes).
+  - `test_ghost` verifica la alineación de cada posición y de cada pedido, y que se conserve `w`. El stub copia 16 bytes, como `MOVAPS`.
+- Lección: el registro de excepciones dio la causa en una corrida. Cualquier puntero a vector que se pase al engine tiene que estar alineado a 16.

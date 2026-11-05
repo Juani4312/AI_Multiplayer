@@ -50,7 +50,12 @@ static TeleportFn g_teleport;
 static volatile uintptr_t g_this, g_sc_this; /* `this` del último spawn de autoridad / SpawnCharacter */
 static uint8_t g_req[MAX_REQS][SPAWN_REQ_SIZE];
 static volatile LONG g_nreq, g_nsc;
-static uint8_t g_clone[SPAWN_REQ_SIZE];
+/* Alineados a 16: el engine lee estos datos con SSE (MOVAPS). */
+static uint8_t g_clone[SPAWN_REQ_SIZE] __attribute__((aligned(16)));
+static float g_vec[4] __attribute__((aligned(16)));
+/* Pedidos que recibió SpawnCharacter (0xF0 bytes: el mensaje de sesión 0x2E, hallazgo 12). */
+#define SC_REQ_SIZE 0xF0
+static uint8_t g_scq[MAX_REQS][SC_REQ_SIZE];
 static int g_mode, g_state = G_OFF, g_from_key = -1, g_npc_type = 6, g_obs_logged;
 static int64_t g_freq = 1, g_delay_ticks, g_npc_ticks, g_t0, g_deadline, g_last_log, g_last_tp;
 static uint32_t g_player, g_chr, g_before[2 * MAX_CHARS], g_nbefore, g_attempts, g_tps;
@@ -124,9 +129,12 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static uint32_t det
 {
     LONG n = InterlockedIncrement(&g_nsc);
     g_sc_this = (uintptr_t)self;
+    if (req)
+        mem_read((uintptr_t)req, g_scq[(n - 1) % MAX_REQS], SC_REQ_SIZE);
     if (req && n <= LOG_SC) {
         uint8_t r[SPAWN_REQ_SIZE];
-        if (mem_read((uintptr_t)req, r, sizeof r)) {
+        aimp_memset(r, 0, sizeof r);
+        if (mem_read((uintptr_t)req, r, SC_REQ_SIZE)) {
             /* ¿Es el mismo pedido que el último del spawn de autoridad? */
             LONG k = g_nreq;
             int same = k > 0 && aimp_memcmp(r, g_req[(k - 1) % MAX_REQS], 0xE4) == 0;
@@ -320,10 +328,12 @@ static void pick_npc(const Chars *c, int64_t now)
 
 static void do_spawn(const Chars *c, int64_t now)
 {
-    LONG total = g_nreq;
+    /* Se clona lo que recibió SpawnCharacter (el mensaje de sesión 0x2E de 0xF0 bytes), no el
+     * pedido de 0x130 del spawn de autoridad: es otro formato (corrida 7). */
+    LONG total = g_nsc;
     int found = -1;
     for (LONG k = total; k > 0 && k > total - MAX_REQS; k--) {
-        const uint8_t *r = g_req[(k - 1) % MAX_REQS];
+        const uint8_t *r = g_scq[(k - 1) % MAX_REQS];
         uint32_t key = rd32(r + SREQ_KEY), type = rd32(r + SREQ_TYPE);
         if ((g_from_key < 0 && type == 0) || (g_from_key >= 0 && key == (uint32_t)g_from_key)) {
             found = (int)((k - 1) % MAX_REQS);
@@ -331,8 +341,8 @@ static void do_spawn(const Chars *c, int64_t now)
         }
     }
     if (found < 0 || !g_sc_this) {
-        log_printf("GHOST: no se clona: pedido %s, SpawnCharacter %s (pedidos vistos %ld, llamadas a SpawnCharacter %ld)",
-                   found < 0 ? "no encontrado" : "ok", g_sc_this ? "visto" : "no visto", (long)total, (long)g_nsc);
+        log_printf("GHOST: no se clona: pedido %s, SpawnCharacter %s (llamadas a SpawnCharacter %ld)",
+                   found < 0 ? "no encontrado" : "ok", g_sc_this ? "visto" : "no visto", (long)total);
         g_state = G_DONE;
         return;
     }
@@ -341,12 +351,12 @@ static void do_spawn(const Chars *c, int64_t now)
         g_state = G_DONE;
         return;
     }
-    aimp_memcpy(g_clone, g_req[found], SPAWN_REQ_SIZE);
+    aimp_memset(g_clone, 0, sizeof g_clone);
+    aimp_memcpy(g_clone, g_scq[found], SC_REQ_SIZE);
     uint32_t old_key = rd32(g_clone + SREQ_KEY), key = 0x40 + g_attempts, id1 = 0x504D4941u + g_attempts; /* "AIMP" */
     char id_old[17], id_new[17];
     id_str(id_old, g_clone + SREQ_ID);
     aimp_memcpy(g_clone + SREQ_KEY, &key, 4);
-    aimp_memcpy(g_clone + SREQ_KEY2, &key, 4);
     aimp_memcpy(g_clone + SREQ_ID + 4, &id1, 4);
     id_str(id_new, g_clone + SREQ_ID);
     g_nbefore = 0;
@@ -355,7 +365,7 @@ static void do_spawn(const Chars *c, int64_t now)
     for (uint32_t i = 0; i < c->nnpc; i++)
         g_before[g_nbefore++] = c->npc[i];
     g_attempts++;
-    log_printf("GHOST: clonando el pedido (clave %u -> %u en +0x00 y +0xF0, id %s -> %s) por SpawnCharacter, this 0x%08x; antes: %u jugadores, %u NPCs, %u pendientes",
+    log_printf("GHOST: clonando el pedido de SpawnCharacter (clave %u -> %u, id %s -> %s), this 0x%08x; antes: %u jugadores, %u NPCs, %u pendientes",
                old_key, key, id_old, id_new, (unsigned)g_sc_this, c->npl, c->nnpc, c->npend);
     log_request("GHOST clon", (long)g_attempts, g_sc_this, g_clone, 0);
     uint32_t ret = g_sc_orig((void *)g_sc_this, NULL, g_clone);
@@ -413,10 +423,19 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
     float dx = t[0] - g_last_pos[0], dy = t[1] - g_last_pos[1], dz = t[2] - g_last_pos[2], dyaw = tyaw - g_last_yaw;
     int moved = dx * dx + dy * dy + dz * dz > 0.0004f || dyaw > 0.01f || dyaw < -0.01f;
     if (moved || !g_last_tp || now - g_last_tp > g_freq / 2) {
+        /* SetTransform copia la posición con MOVAPS (FUN_00401410): tiene que ser un vector
+         * de 16 bytes alineado a 16. Con un float[3] en el stack el juego se cayó (corrida 7:
+         * acceso en 0xffffffff, que es como Windows reporta un MOVAPS desalineado). El cuarto
+         * componente se copia a +0x7C: se conserva el del personaje. */
+        g_vec[0] = t[0];
+        g_vec[1] = t[1];
+        g_vec[2] = t[2];
+        if (!mem_f32(g_chr + CHR_POS + 12, &g_vec[3]))
+            g_vec[3] = 0.0f;
         if (!g_last_tp)
-            log_printf("GHOST: primer teletransporte de 0x%08x a (%.2f, %.2f, %.2f) yaw %.3f [%s]", g_chr, (double)t[0],
-                       (double)t[1], (double)t[2], (double)tyaw, src);
-        g_teleport((void *)g_chr, NULL, t, tyaw, 0);
+            log_printf("GHOST: primer teletransporte de 0x%08x a (%.2f, %.2f, %.2f; w %.2f) yaw %.3f [%s]", g_chr, (double)t[0],
+                       (double)t[1], (double)t[2], (double)g_vec[3], (double)tyaw, src);
+        g_teleport((void *)g_chr, NULL, g_vec, tyaw, 0);
         g_last_pos[0] = t[0];
         g_last_pos[1] = t[1];
         g_last_pos[2] = t[2];

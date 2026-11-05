@@ -82,3 +82,5 @@
 - 17:12 Fase 4: hallazgo 12 (spawn de autoridad, pedido de 0x130, teleport) y experimento AIMP_GHOST en mod/src/ghost.c con test_ghost (stubs con prólogos y ret reales). Todos los tests OK. Falta la corrida en el juego.
 - 17:15 Corrida 6 (fase 4): runtime_setup.sh install --cfg "AIMP_GHOST=1" (DLL commit 0547e5c), juego lanzado con steam -applaunch 214490.
 - 17:31 Corrida 6: el clon por el spawn de autoridad cerró el juego en el frame siguiente. Hallado: vf[1]/vf[2] vacíos, pedido con posición +0x50 y yaw +0x60, +0xA4 = definición. Agregado crash.c (VEH), hook de SpawnCharacter, modo NPC (AIMP_GHOST=2). Tests OK.
+- 17:32 Corrida 7 (fase 4): install --cfg "AIMP_GHOST=2" (DLL commit 957bbf2), juego lanzado.
+- 17:38 Corrida 7: crash en el primer teleport del NPC por MOVAPS desalineado (pos float[3] del stack; registro de excepciones: AI.exe+0x1414, lectura 0xffffffff). Camino real del spawn: sesión 0x2E -> FUN_00414a70 -> SpawnCharacter (CM+4). Arreglado: vector alineado a 16, clon desde el pedido de SpawnCharacter. Tests OK.
