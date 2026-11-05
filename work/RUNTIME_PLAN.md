@@ -46,7 +46,7 @@ Si algo no coincide: no tocar nada y loguear.
 | 3.2 | Máscara de canales NETZ | `[[g_root+0x04]+0x10]`, `+0x14` | ¿Cambia al spawnear NPCs? |
 | 3.3 | Proveedor de sesión | `[*(void**)0x1BE1BD4 + 0x00]` | ¿Siempre 0? (esperado: sí) |
 | 3.4 | Cola RPC (A) | `q = [g_root+0x50]`; tamaño `[q+0x34]` justo antes del flush (`0xA2A3F0`) | ¿Crece cada frame? ¿Cuántos bytes? |
-| 3.5 | Catálogo de endpoints | recorrer la lista `*(void**)0x1BE1BD0` (`{next, fn, ctx, u16 tipo}`) | listar `(tipo, fn, ctx)` una vez al cargar |
+| 3.5 | Catálogo de handlers | tabla de la cola A: `[[g_root+0x50]+0x08]` (`{fn, ctx}` por tipo); tabla de la sesión: `[[g_root+0x54]+0x08]`, cantidad en `+0x0C` (los 8 endpoints de la lista `0x1BE1BD0`) | listar `(tipo, fn, ctx)` de las dos al cargar un nivel |
 | 3.6 | Tráfico por tipo | contar los `u16` de cada mensaje dentro del buffer `[q+0x30]` (formato `[u16 tipo][payload]`; el largo lo define cada handler) | ¿Qué tipos aparecen al abrir una puerta, agarrar un item o con el Alien activo? |
 
 Si en 3.4 la cola crece, la hipótesis "replicar el buffer de la cola del host al cliente" (hallazgo 10, parte 4) queda viva. Es el camino más corto al mundo compartido.
