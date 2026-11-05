@@ -4,6 +4,8 @@
 #include "proxy.h"
 
 int game_init(void);
+int cfg_load(HMODULE self);
+const char *cfg_applied(void);
 
 HMODULE g_aimp_self;
 uintptr_t g_aimp_exe;
@@ -36,12 +38,14 @@ BOOL WINAPI DllMainCRTStartup(HINSTANCE inst, DWORD reason, LPVOID reserved)
         g_aimp_self = inst;
         g_aimp_main_tid = GetCurrentThreadId();
         DisableThreadLibraryCalls(inst);
+        int ncfg = cfg_load(inst); /* antes del log: puede definir AIMP_LOG */
         log_open();
         GetModuleFileNameW(inst, self, MAX_PATH);
         log_printf("AI_Multiplayer %s, commit %s, compilado %s %s", AIMP_VERSION, AIMP_GIT_HASH, __DATE__, __TIME__);
         log_printf("DLL: %s (0x%08x), pid %u", aimp_utf8(p8, sizeof p8, self), (unsigned)(uintptr_t)inst,
                    (unsigned)GetCurrentProcessId());
         log_printf("log: %s", log_path_utf8());
+        log_printf("config: %d archivo(s) aimp.cfg leídos; aplicadas: %s", ncfg, cfg_applied());
         log_platform();
         if (!proxy_init())
             log_printf("ERROR: sin la winmm real el juego no va a poder usar winmm");
