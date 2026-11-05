@@ -45,6 +45,8 @@ _Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
 | Mod fase 1+2 (proxy winmm + hook + log de posición) | ✅ **verificado en runtime** (2026-11-05, Proton): fase 1 (código por frame) y fase 2 (posición, yaw, cámara). ✅ **También en Windows 10 nativo** (laptop de pruebas: 195 exports resueltos y 10 ausentes que el juego no usa, ASLR reubica `AI.exe` y anda igual; `work/windows/report.md`) |
 | Mod fase 3 (UDP mínimo con la posición) | ✅ **verificada por Tailscale** (2026-11-05): laptop Windows 10 nativo (join) ↔ papito Proton (host). Los dos sentidos, 0 perdidos, y las posiciones recibidas coinciden con las marcas F8 del otro lado. Mejoras menores pendientes: ritmo real ~16/s en vez de 20 y backlog del socket antes del primer frame |
+| Hallazgo 12 (avatar remoto: pedido de spawn y teleport) | 🟡 `findings/12-avatar-remoto.md`: flujo del spawn de autoridad (`0x797490`), layout del pedido de 0x130 bytes y teleport (`0x7C6330`). Falta runtime |
+| Mod fase 4 (avatar del otro jugador) | 🧪 **experimento listo, sin probar en el juego**: `AIMP_GHOST=1` clona el pedido de spawn del jugador, le apaga el controlador y lo teletransporta (`mod/src/ghost.c`; `test_ghost` OK) |
 | Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
 | Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–7 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; cola A en loopback; **cola B = salida a la red, descartada en retail**; registro de handlers de la cola A) |
@@ -70,7 +72,8 @@ _Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 
    - instala Tailscale y se une a la red del usuario;
    - el host pone `AIMP_NET=host` y el que se une, `AIMP_NET=join` y `AIMP_NET_PEER=<IP de Tailscale del host>:47811` (en `aimp.cfg`);
    - con dos máquinas y **una sola cuenta de Steam**, una de las dos tiene que estar en modo sin conexión: Steam no deja correr el juego en dos PCs a la vez.
-1. (Opcional) corrida corta con marcas F8 para separar puerta e ítem (instrucciones en el hallazgo 11, "Pendiente").
+1. **Corrida del experimento de la fase 4** (ver "Siguiente paso" 2): unos 2 minutos en la máquina Linux. Puede cerrar el juego si el clon rompe algo.
+   - (Opcional) corrida corta con marcas F8 para separar puerta e ítem (instrucciones en el hallazgo 11, "Pendiente").
 2. Aprobar (o no) que el MCP de REA use el proyecto de Ghidra.
 3. KnownDLLs en el Windows del amigo; hash de su `AI.exe` cuando reinstale; que use el mismo COMMANDS.PAK (mod de saltear la misión 9) o los dos el vanilla.
 
@@ -80,6 +83,8 @@ _Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 
    - en el primer `net_poll`, vaciar el backlog sin contar huecos (hoy da 361 "perdidos" falsos y un estado viejo de 35 s).
 
    ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
-2. **Fase 4 (preparación estática):** cómo representar al otro jugador. Opciones del hallazgo 05: spawnear un NPC con la definición de un humano y moverlo con `SetTransform` (`0x7C2710`), o un segundo personaje-jugador sin controlador. El request de spawn (0x130 bytes, RPC 0x29) ya se puede capturar en runtime con el trazado.
+2. **Fase 4: correr el experimento** (hallazgo 12, sección "Qué mirar"). Solo en Linux, sin red: `work/scripts/runtime_setup.sh install --cfg "AIMP_GHOST=1"`. El usuario carga la partida, mira alrededor unos 20 s (el clon tendría que aparecer a 1,5 m en x a los 8 s), marca con F8 si lo ve y sale. Según el resultado:
+   - el clon anda: probar con la laptop por red;
+   - no se ve o se cae: clonar un NPC humano (`AIMP_GHOST_FROM=<clave del log>`).
 3. Investigar qué escribe en los canales NETZ durante el juego: posible camino para el movimiento de personajes.
 4. Estático pendiente: semántica de los RPCs 0x1E/0x20/0x22/0x23/0x28 y del B 0x07; dispatcher de los comandos de UI (hallazgo 09); inventario (07).

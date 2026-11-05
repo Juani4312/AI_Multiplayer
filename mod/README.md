@@ -110,6 +110,10 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_MARK_KEY` | `0x77` (F8) | tecla de marca: una línea `MARCA n` con frame y posición, para cruzar acciones con el log |
 | `AIMP_TRACE_QUEUES` | 0 | 1 = experimento 3.6: hookea los wrappers de encolado de las colas A y B (`FUN_00a2a290`, `FUN_00a2a810`) y registra tipo, tamaño, thread y call site de cada mensaje (líneas `TR`) |
 | `AIMP_TRACE_MS` | 5000 | cada cuánto se escribe el informe del trazado |
+| `AIMP_TRACE_SPAWN` | 0 | 1 = hookea el spawn de autoridad (`FUN_00797490`) y loguea cada pedido de 0x130 bytes decodificado y completo (líneas `SP`). Solo mira |
+| `AIMP_GHOST` | 0 | 1 = **fase 4, experimental** (escribe en el juego): clona el pedido de spawn del jugador y mueve el clon (líneas `GHOST`). Ver abajo |
+| `AIMP_GHOST_DELAY_MS` | 8000 | cuánto esperar, desde que aparece el jugador, para pedir el clon |
+| `AIMP_GHOST_FROM` | −1 | clave (`+0x00`) del pedido a clonar; −1 = el último del jugador (tipo 0) |
 
 ## Fase 3: red mínima (UDP)
 
@@ -122,6 +126,16 @@ Detalles:
 - Verificado por Tailscale entre Windows 10 nativo y Proton el 2026-11-05 (`work/NOTES.md`).
 
 Prueba sin un segundo juego: `python3 -I work/scripts/aimp_peer.py --join 127.0.0.1:47811` hace de otro jugador (posición falsa que da vueltas) contra el juego en modo `host`, y muestra lo que manda el juego.
+
+## Fase 4 (experimental): avatar del otro jugador
+
+`AIMP_GHOST=1` (`src/ghost.c`, hallazgo 12):
+1. Captura los pedidos de spawn del nivel.
+2. `AIMP_GHOST_DELAY_MS` después de que aparece el jugador, clona el suyo con otra clave y otro id, y lo pasa por la función original del engine.
+3. Cuando aparece el personaje nuevo, le apaga el controlador de jugador para que no lea el input local.
+4. En cada frame lo teletransporta (`FUN_007c6330`): a la posición del otro jugador si hay red y están en el mismo nivel, o a 1,5 m en x del jugador local.
+
+Cada paso queda en el log (`GHOST: …`) antes de hacerlo. Si el juego se cae, la última línea dice dónde. `test_ghost` lo prueba contra stubs con los prólogos y el `ret N` reales.
 
 ## Qué hay en el log
 

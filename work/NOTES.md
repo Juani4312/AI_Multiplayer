@@ -353,3 +353,11 @@ Dato de la laptop (`work/windows/report.md`, "COMMANDS.PAK en la laptop"):
 | `TECH_COMMS/WORLD/COMMANDS.PAK` | `42FD34D7…DD3A` | igual |
 - **Confirmado por la laptop** (commit 5264a56): el usuario borró la copia por red, reinstaló desde Steam y verificó la integridad. Salió todo correcto y no se reemplazó nada; los hashes no cambiaron. **El original de `BSP_LV426_PT01` es `EB9FDBF1…ED77`.** La pregunta de si la copia por red trae archivos modificados quedó sin respuesta, porque esa copia se borró.
 - Conclusión: **en papito solo `BSP_LV426_PT01/WORLD/COMMANDS.PAK` está modificado.** `TECH_COMMS` es el original (su mtime 2026-10-05 no indica un mod). El pendiente de PROGRESS pasa de "2 COMMANDS.PAK" a uno.
+
+## 2026-11-05 — Fase 4: preparación estática y experimento del avatar (hallazgo 12)
+- Spawn de autoridad `FUN_00797490` = `thiscall(this, pedido*, flag)`, `ret 8`: observadores antes → `this->vf[1](pedido)` → observadores después → copia de 0x130 bytes a la cola A (RPC 0x29). Prólogo `55 8B EC 53 56 57 8B F9`: hookeable con 6 bytes.
+- Pedido de 0x130 bytes: `FUN_00787450` copia 0xE4 bytes de los parámetros del spawner (`FUN_00777010`: encabezado de 0x64 bytes, nombre en `+0x64` y composite en `+0xA4`, de 0x40 cada uno) y completa la cola (`+0xF0…+0x12F`: ids/refs con valores por defecto `[0x174E254]` y −1).
+- Comparando los 8 payloads de 0x29 que ya había (run3): `+0x00` = clave (1…8), `+0x28…+0x2F` = id de 8 bytes (el del jugador `2ff722b2 b89a5172`), `+0x30` = tipo (0 jugador, 3/6 NPCs), `+0x1C` = 0 en la copia. No hay floats de posición en los primeros 64 bytes.
+- Teleport: `FUN_007c6330(pj, pos*, yaw, p3)`, `ret 0xC` → `SetTransform(pj, pos, yaw, p3, 0)`.
+- Código: `mod/src/ghost.c` (`AIMP_TRACE_SPAWN`, `AIMP_GHOST`, `AIMP_GHOST_DELAY_MS`, `AIMP_GHOST_FROM`), `mem_write` en `mem.c`. Test nuevo `test_ghost`: stubs de código máquina en las RVAs reales, con los prólogos y el `ret N` originales; verifica el balance del stack, la captura, la máquina de estados, el controlador, el teleport y el reinicio por nivel. **Todos los tests OK.**
+- Falta: la corrida en el juego (requiere al usuario).

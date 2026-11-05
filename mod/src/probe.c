@@ -10,6 +10,7 @@
 #include "log.h"
 #include "trace.h"
 #include "net.h"
+#include "ghost.h"
 #include <tlhelp32.h>
 
 typedef struct {
@@ -598,6 +599,9 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
         }
         net_send(&g_net, now, &lp);
     }
+    /* Fase 4 (experimental, apagada por defecto): el avatar del otro jugador escribe en
+     * el juego; vive en ghost.c para que esta sonda siga siendo de solo lectura. */
+    ghost_frame(now, &g_net, g_cur.level_cur);
     if (status_due) {
         status(&g_cur, now - g_last_status);
         net_status(&g_net, now);

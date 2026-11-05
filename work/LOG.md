@@ -79,3 +79,4 @@
 - 16:49 Cerrado el juego Linux (el usuario no va a jugar). Log final copiado a work/evidence/runtime/run5-tailscale-host.log.
 - 16:55 net.c: cadencia fija (20/s reales; test con tiempo simulado: 200 envíos en 10 s a 16,5 ms por frame) y descarte del backlog en el primer net_poll (test: 30 descartados, 0 perdidos). Versión 0.2.0. El commit del log se recalcula en cada build (cmake/githash.cmake, '+cambios' si mod/src está sucio). Tests OK.
 - 16:56 mod/dist/winmm.dll actualizada (0.2.0, commit 22c4704, SHA-256 8704ed44…). Instalada también en el juego Linux (runtime_setup.sh install --cfg AIMP_NET=host).
+- 17:12 Fase 4: hallazgo 12 (spawn de autoridad, pedido de 0x130, teleport) y experimento AIMP_GHOST en mod/src/ghost.c con test_ghost (stubs con prólogos y ret reales). Todos los tests OK. Falta la corrida en el juego.

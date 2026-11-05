@@ -16,6 +16,16 @@ int mem_read(uintptr_t addr, void *out, size_t n)
     return got == n;
 }
 
+int mem_write(uintptr_t addr, const void *src, size_t n)
+{
+    SIZE_T put = 0;
+    if (addr < 0x10000 || n == 0)
+        return 0;
+    if (!WriteProcessMemory(GetCurrentProcess(), (LPVOID)addr, src, n, &put))
+        return 0;
+    return put == n;
+}
+
 int mem_u32(uintptr_t addr, uint32_t *out)
 {
     if (!mem_read(addr, out, 4)) {
