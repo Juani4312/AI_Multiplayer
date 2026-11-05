@@ -48,12 +48,13 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Hallazgo 10 (NETZ: red del engine) | 🟡 parte 1 en `findings/10-netz-red-del-engine.md` (capa dormida, sin transporte) |
 | Hallazgo 05 (creación de personajes) | 🟡 parte 1 en `findings/05-creacion-de-personajes.md` (FinishSpawning: `def+0x1C` → vector de jugadores) |
 | Hallazgo 08 (IA y múltiples jugadores) | 🟡 parte 1 en `findings/08-ia-y-multiples-jugadores.md` (IA mixta) |
-| Hallazgo 09 (guardado/checkpoints/carga de nivel) | ⏳ siguiente |
+| Hallazgo 09 (niveles/checkpoints/guardado) | 🟡 parte 1 en `findings/09-niveles-checkpoints-guardado.md` |
+| Hallazgo 06 (scripts/entity manager) | ⏳ siguiente |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
 ## Siguiente paso
-1. Hallazgo 09 (guardado, checkpoints, carga de nivel): nombre del nivel actual (`FUN_0078bbe0` + tabla `FUN_00a2e810`, entradas de 0x46), RTTI `Checkpoint`/`SaveGlobalProgression`/`SwitchLevel`/`LevelLoaded`, estados del `ModeManager`.
-2. Hallazgo 08 parte 2: selección de objetivo del Alien (`FUN_006e3db0`, menace `FUN_006cf080`).
-3. Hallazgo 05 parte 2 (request de `SpawnCharacter`), hallazgo 10 parte 2 (productores/consumidores NETZ), hallazgo 06 (scripts/entity manager), hallazgo 07 (items).
+1. Hallazgo 06 (scripts y entity manager): tareas `ENTITY_MANAGER` (`0x783500`) y `ENTITY_MANAGER_TICK` (`0x783640`), clases RTTI `CATHODE::Door`, `AccessTerminal`, `UI_Keypad`, `Logic_*`, `Trigger*`; cómo se dispara un trigger o un método de entidad; el dispatcher de los comandos de UI del hallazgo 09.
+2. Partes 2 pendientes: 08 (objetivo del Alien), 05 (request de `SpawnCharacter`), 10 (productores/consumidores NETZ), 09 (dispatcher de comandos).
+3. Hallazgo 07 (items e inventario).
 4. Mod fase 1+2: pendiente, para hacer junto con el usuario.

@@ -119,6 +119,24 @@ public class Dump extends GhidraScript {
             ca.retainAll(cb);
             for (Address fa : ca) out.println("  " + fname(fa));
             if (ca.isEmpty()) out.println("  ninguna");
+          } else if (c.startsWith("pairs:")) {
+            // pairs:FUNC -> pares (string empujada con PUSH imm, siguiente MOV [ESP+x],imm) dentro de la función
+            Function f = getFunctionContaining(addr(c.substring(6)));
+            String last = null;
+            int n = 0;
+            for (ghidra.program.model.listing.Instruction x : currentProgram.getListing().getInstructions(f.getBody(), true)) {
+              String s = x.toString();
+              if (s.startsWith("PUSH 0x")) {
+                String sv = stringAt(Long.decode(s.substring(5)));
+                if (sv != null) last = sv;
+              } else if (last != null && s.matches("MOV dword ptr \\[ESP \\+ 0x[0-9a-f]+\\],0x[0-9a-f]+")) {
+                String imm = s.substring(s.lastIndexOf(",") + 1);
+                out.printf("  %s %s %s%n", x.getAddress(), imm, last);
+                last = null;
+                n++;
+              }
+            }
+            out.println("  total=" + n);
           } else if (c.startsWith("seq:")) {
             // seq:REGEX1|REGEX2|N|START|END  (separador '|') -> A seguida de B en <= N instrucciones
             String[] p = c.substring(4).split("\\|");

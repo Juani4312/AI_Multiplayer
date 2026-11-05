@@ -187,3 +187,10 @@ Detalle en `findings/08-ia-y-multiples-jugadores.md`. Evidencia en `work/evidenc
 - IA en `0x6C0000`–`0x740000` (menace `0x6CF080`, alien_attack `0x6E3DB0`, visibility `0x6FCF80`–`0x725330`).
 - 24 call sites de `GetPlayer()` en IA (13 funciones); ~70 `GetPlayer()` inlineados en todo el binario.
 - Loops sobre todos los jugadores: `FUN_00725330` (visibilidad: jugadores + NPCs), `FUN_00734690`, y varios del `CharacterManager` (`update1` `0x7CC080`, `0x7D3DB0`, `0x7D41B0`…).
+
+## 2026-11-05 — Hallazgo 09 (niveles, checkpoints, guardado; parte 1)
+Detalle en `findings/09-niveles-checkpoints-guardado.md`. Evidencia en `work/evidence/h09/`.
+- Lista de niveles: `*(0x1BE1C4C)`; nombre `i` en `+i*0x46`; cantidad `+0x2BC0`; índice actual `+0x2BC8`.
+- Comandos de la UI de menús (`FUN_0084dbe0`): 75 nombres → IDs (de 3 en 3). Ejemplos: `load_level` 0x7E, `cache_level` 0x81, `load_checkpoint` 0x99, `request_load_checkpoint` 0xD5, `back_to_frontend` 0xC3.
+- Guardados en Steam Cloud (`userdata/<id>/214490/remote/`): `CHSV00/01.ais`, `MSSV01-19.ais`, `PROGRESSION.ais`, `input.cfg`; `local/settings.bin`.
+- `SHGetFolderPathW(CSIDL_LOCAL_APPDATA)` es de LibOVR, no del guardado.
