@@ -258,3 +258,27 @@ Código en `mod/` (README con build, instalación, variables y checklist de la p
 - Cruza `aimp.log` con cada chequeo de `RUNTIME_PLAN.md` (bloques 0–3) y marca OK / FALLA / sin datos / info, con la evidencia del log.
 - Probado con el log sintético de `test_probe` (detecta el transporte "inesperado" simulado y la cámara desplazada) y con el log real del proxy en `test_host` (guardas rechazadas, como corresponde a un .exe que no es `AI.exe`).
 - Ruta de log por defecto verificada bajo Wine: `C:\users\<usuario>\AppData\Local\AI_Multiplayer\aimp.log` (en Proton el usuario es `steamuser`).
+
+## 2026-11-05 (tarde) — Primera corrida en el juego: cambios hechos en la instalación (todo reversible)
+Autorizado por el usuario ("corré y modificá lo que necesites, siempre que lo anotes y lo puedas revertir"). Revertir todo: `work/scripts/runtime_setup.sh revert`.
+- Estado previo: sin `winmm.dll` en la carpeta del juego, sin LaunchOptions para 214490 en `localconfig.vdf`, sin overrides propios en el prefix (ReShade/MovieFix cargan por los overrides `d3d11`/`dxgi` = nativa que pone Proton para DXVK). Steam cerrado.
+- 13:18 `runtime_setup.sh install`:
+  - backup `/mnt/1,8TB/SteamLibrary/AlienIsolation_backup_AI_Multiplayer/runtime/user.reg.20261105-131820`;
+  - copia `winmm.dll` (sha256 `35ce4f18…`, commit 926f034) a la carpeta del juego;
+  - agrega `[Software\\Wine\\AppDefaults\\AI.exe\\DllOverrides] "winmm"="native,builtin"` a `pfx/user.reg`.
+- El COMMANDS.PAK modificado (BSP_LV426_PT01) es, según el usuario, un mod que muestra un cartel para saltear la misión 9; no cambia otra cosa. Para el coop, los dos jugadores tienen que tener el mismo.
+
+### Resultados de la primera corrida, en el menú (13:22, `aimp.log` del prefix; evidencia del timer en `work/evidence/mod/t1.txt`…`t3.txt`)
+- **Fase 1 verificada en runtime** (Proton 9.0-203, Wine 9.0; Windows 10.0.19043 reportado):
+  - proxy cargado, 189 exports resueltos;
+  - las 5 guardas de la build OK; hook instalado en `0x7A8460` (base 0x400000 también bajo Wine);
+  - primer frame del hook a los 39,7 s (el primer `Run` tardó 35,7 s, la carga inicial); el menú corre a ~355–366 fps.
+- **Verificado en runtime:**
+  - `g_root` y `ModeManager` (estado 5, modo con vtable `0x12F43E8` = modo de nivel);
+  - la lista de niveles con **doble indirección** (35 niveles; actual 0 = `Production\Frontend`);
+  - el `dt` real (`0x16410D0`);
+  - NETZ transporte = 0 y sesión proveedor = 0 (como predijo el estático);
+  - el global de la cola A `[0x1BE1BC8]` == `g_root+0x50`;
+  - colas A y B vacías en el menú.
+- **Catálogo RPC (experimento 3.5):** la cola A tiene **44 endpoints** y la sesión **47**. El estático había visto 8 en la sesión: Ghidra no desensambla todos los inicializadores. El endpoint del spawn (`0x16361D8`) es el **tipo 0x29** de la cola A (handler RVA `0x14D10`). Lista completa en el log (líneas `RPC`).
+- **Contador de frames `0x16410DC` = 0 en el menú.** No es un offset mal: `FUN_007ddae0` usa `FUN_00773050` (sube el contador, acumula el tiempo de juego `0x16410A8`, `dt` escalado) solo si `([DAT_016f194c+4] & DAT_012f3014) == 0`. Si no, usa `FUN_00773280`, que solo actualiza el `dt` real y los acumuladores de tiempo real (`0x16410B0`/`B8`). Entonces `0x16410DC` cuenta **frames de simulación**, no frames dibujados. Además `FUN_007d9810` (salida del nivel) pone en 0 el tiempo de juego.

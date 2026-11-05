@@ -27,7 +27,7 @@ MARK="AI_Multiplayer"   # texto que está dentro de nuestra DLL
 is_ours() { [ -f "$1" ] && grep -q -a "$MARK" "$1"; }
 
 guard_idle() {
-  if pgrep -f -i 'AI\.exe' >/dev/null || pgrep -x wineserver >/dev/null; then
+  if pgrep -x -i 'AI.exe' >/dev/null || pgrep -x wineserver >/dev/null; then
     echo "ERROR: AI.exe o un wineserver está corriendo; cerrá el juego primero." >&2
     exit 2
   fi
