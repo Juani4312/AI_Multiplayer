@@ -20,7 +20,7 @@
   - media: el significado de los campos del encabezado (`+0x00`, `+0x28`, `+0x30`), que sale de comparar 8 payloads reales;
   - baja: que clonar un pedido produzca un personaje usable. Es lo que mide el experimento.
 - **Cómo verificar en runtime:** `AIMP_TRACE_SPAWN=1` loguea cada pedido entero, decodificado. `AIMP_GHOST=1` hace el experimento de abajo.
-- **Verificado en runtime:** no (código y tests listos: `mod/src/ghost.c`, `mod/test/test_ghost.c`).
+- **Verificado en runtime:** **sí, parcial** (corridas 6 a 8 del 2026-11-05, Proton; detalle en "Parte 2"). El avatar con un NPC existente funciona. Clonar un pedido hace caer el juego.
 
 ## El spawn de autoridad (`FUN_00797490`)
 
@@ -85,3 +85,58 @@ En los 64 bytes capturados no hay floats de posición: el lugar sale del spawner
 - Si el clon aparece: ¿en jugadores o en NPCs? ¿Se ve? (el modelo del jugador puede ser solo de primera persona) ¿La cámara o el input se van al clon?
 - Si no aparece o el juego se cae: la última línea `GHOST:` del log dice en qué paso.
 - Plan B, si el clon del jugador no sirve: clonar un NPC humano (`AIMP_GHOST_FROM=<clave>`, con la clave que dé el log).
+
+---
+
+# Parte 2 - Lo que mostraron las corridas 6 a 8
+
+Evidencia: `work/evidence/runtime/run6-ghost.log`, `run7-ghost-npc.log`, `run8-ghost-npc-ok.log` (gitignored); `work/evidence/h12/f4.txt`–`f8.txt`; resumen en `work/NOTES.md` (corridas 6, 7 y 8).
+
+## Correcciones a la parte 1
+
+| Qué | Antes | En runtime |
+|-----|-------|------------|
+| `+0xA4` | composite o `"CUTSCENE"` | **nombre de la definición** del personaje: `THE_PLAYER`, `INNOCENT`, `ALIEN` (`CHR_INFO/ATTRIBUTES`). `+0x64` (nombre) viene vacío |
+| posición | "no hay floats en los primeros 64 bytes" | **`+0x50…+0x5B` = posición** y **`+0x60` = yaw**. Jugador: (4,55, 13,62, 33,59), −π: el punto de guardado |
+| `+0xF0` | — | repite la clave en el pedido de autoridad (0x130 bytes) |
+| tipos | 0 jugador; 3/6 NPCs | 0 `THE_PLAYER`, 1 `ALIEN`, 6 `INNOCENT` (el 3 apareció en otro nivel) |
+| `this` del spawn de autoridad | interfaz de spawn del `CharacterManager` | **`CM+0x10`** (vtable `0xEF6900`): su `vf[1]` es `ret 4` y su `vf[2]` es `mov al,1; ret 4` |
+
+## Cómo se crea un personaje de verdad
+
+```
+script spawner (FUN_00490e30)
+  └─ FUN_007a7a20/a80 → FUN_00797490(CM+0x10, pedido 0x130)   // vf[1] vacío: solo replica
+        └─ encola A 0x29 → handler FUN_00414d10                 // observadores vacíos, vf[2] vacío
+              └─ encola B 0x2C (0x130)
+… (B → sesión, sin mapear)
+sesión tipo 0x2E (0xF0 bytes) → FUN_00414a70(ctx = CM+0x04)
+  └─ copia el mensaje a un buffer alineado a 16
+  └─ ctx->vf[1](copia) = SpawnCharacter (0x7D3B50)              // crea el personaje
+        └─ RequestCharacter (0x7D0470) → … → FinishSpawning (por frame)
+```
+
+- Las cuatro listas de observadores (`0x16F322C`/`30`, `0x16A6728`/`2C`) están **vacías** en runtime y nadie las escribe en el binario.
+- `SpawnCharacter` recibe un mensaje de **0xF0 bytes**, con las mismas claves, ids, tipos y posiciones que los pedidos de autoridad. Los primeros 0xE4 bytes no son idénticos.
+
+## Teleport: el vector tiene que estar alineado a 16
+
+`SetTransform` copia la posición con `MOVAPS` (`FUN_00401410`). Con un `float[3]` sin alinear el juego se cae, y Windows lo reporta como acceso en `0xffffffff` (#GP; corrida 7). El mod usa un `float[4]` estático alineado a 16 que conserva el cuarto componente del personaje (`+0x7C`). **Regla general: todo vector que se le pase al engine, alineado a 16.**
+
+## Resultados
+
+| Corrida | Qué se probó | Resultado |
+|---------|--------------|-----------|
+| 6 | clon del pedido del jugador por el spawn de autoridad | el juego se cae en el frame siguiente (todavía sin registro de excepciones) |
+| 7 | NPC existente + teleport | crash en el primer teleport: `MOVAPS` desalineado (error del mod) |
+| 8 | NPC existente + teleport alineado | **OK 20 s**: el INNOCENT "CV5" sigue al jugador a 1,5 m, sin errores; el usuario lo vio |
+| 8 | clon por `SpawnCharacter` (clave 64) | crash en `RequestCharacter` → `FUN_006ad740`: el recurso que se busca por la clave nueva es NULL (`FUN_00a2bc70` sin chequeo) |
+
+## Decisión (fase 4 v1)
+
+El avatar del otro jugador es **un NPC humano del nivel** (`AIMP_GHOST=3`). Se lo teletransporta en cada frame a la posición y el yaw recibidos por red, sin límite de tiempo, y si desaparece se elige otro.
+
+Pendiente:
+- prueba por red con la laptop (`instructions.md`, paso 6);
+- después, que no se note la IA del NPC (animación, que no se escape ni ataque);
+- crear un personaje nuevo de verdad: reutilizar la clave de uno liberado, o preparar sus recursos.
