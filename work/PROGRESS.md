@@ -45,11 +45,12 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
 | Mod fase 1+2 (proxy winmm + hook + log de posición) | ⏸️ pendiente, a hacer en una sesión con el usuario |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
-| Hallazgo 10 (NETZ: red del engine) | ⏳ siguiente |
+| Hallazgo 10 (NETZ: red del engine) | 🟡 parte 1 en `findings/10-netz-red-del-engine.md` (capa dormida, sin transporte) |
+| Hallazgo 05 (creación de entidades) | ⏳ siguiente |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
 ## Siguiente paso
-1. **Hallazgo 10 (NETZ, red del engine)**: `NETZ_DISPATCH` → `[g_root+0x04]->FUN_007dde20()`; `NET_AI_UPDATE` → `FUN_007dfd70`/`FUN_007dd970`. Quién crea `g_root+0x04`, qué transporte usa (WS2_32/WSOCK32), si está activo en retail. Puede cambiar el diseño de la red del mod.
-2. Hallazgo 05 (creación de entidades): quién llena `[[g_root+8]+0x80]`, constructor de `Character` `0x7B2390` y su factory.
+1. Hallazgo 05 (creación de entidades): gestor de personajes `g_root+0x08` (ctor `FUN_007d9260`, 0x9FF0 bytes): cómo se llena el array de jugadores `+0x80/+0x84`, constructor de `Character` `0x7B2390` y su factory, y cómo se crea un NPC.
+2. Hallazgo 10 parte 2: quién escribe en los canales NETZ, quién consume mensajes, flag de modo multijugador.
 3. Mod fase 1+2: pendiente, para hacer junto con el usuario.
