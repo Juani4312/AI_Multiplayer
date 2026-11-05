@@ -42,8 +42,9 @@ BOOL WINAPI DllMainCRTStartup(HINSTANCE inst, DWORD reason, LPVOID reserved)
         log_open();
         GetModuleFileNameW(inst, self, MAX_PATH);
         log_printf("AI_Multiplayer %s, commit %s, compilado %s %s", AIMP_VERSION, AIMP_GIT_HASH, __DATE__, __TIME__);
-        log_printf("DLL: %s (0x%08x), pid %u", aimp_utf8(p8, sizeof p8, self), (unsigned)(uintptr_t)inst,
-                   (unsigned)GetCurrentProcessId());
+        const IMAGE_NT_HEADERS32 *nt = (const IMAGE_NT_HEADERS32 *)((uintptr_t)inst + (uint32_t)((const IMAGE_DOS_HEADER *)inst)->e_lfanew);
+        log_printf("DLL: %s (0x%08x), link 0x%08x, pid %u", aimp_utf8(p8, sizeof p8, self), (unsigned)(uintptr_t)inst,
+                   (unsigned)nt->FileHeader.TimeDateStamp, (unsigned)GetCurrentProcessId());
         log_printf("log: %s", log_path_utf8());
         log_printf("config: %d archivo(s) aimp.cfg leídos; aplicadas: %s", ncfg, cfg_applied());
         log_platform();

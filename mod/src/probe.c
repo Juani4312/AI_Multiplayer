@@ -9,6 +9,7 @@
 #include "game.h"
 #include "log.h"
 #include "trace.h"
+#include "net.h"
 #include <tlhelp32.h>
 
 typedef struct {
@@ -54,7 +55,8 @@ static uint32_t g_marks;
 static int g_dump_key, g_key_was_down, g_levels_listed, g_warned_mm, g_warned_sess;
 static int g_dump_requested;
 static uint32_t g_dump_at_frame;
-static uint32_t g_fast_state, g_fast_mode; /* estado/modo del ModeManager en el frame anterior */
+static uint32_t g_fast_state, g_fast_mode;
+static AimpNet g_net; /* estado/modo del ModeManager en el frame anterior */
 static int64_t g_autodump_at; /* 0 = ninguno pendiente */
 static int g_autodumps_done;
 typedef SHORT(WINAPI *GetAsyncKeyStateFn)(int);
@@ -458,6 +460,7 @@ void probe_init(void)
     g_dump_at_frame = (uint32_t)aimp_env_int(L"AIMP_DUMP_AT_FRAME", 0);
     int trace_ms = aimp_env_int(L"AIMP_TRACE_MS", 5000);
     g_trace_ticks = g_freq * (trace_ms < 250 ? 250 : trace_ms) / 1000;
+    net_init(&g_net, g_freq);
     log_printf("sonda: muestra cada %d ms, resumen cada %d ms, tecla de volcado 0x%02x, tecla de marca 0x%02x, primeros %u frames al detalle",
                sample_ms, status_ms, g_dump_key, g_mark_key, g_first_frames);
 }
@@ -577,8 +580,27 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
         log_printf("volcado (%s)", why);
         dump_detail(&g_cur);
     }
+    /* Fase 3: red (si está activada). El paquete se arma solo cuando toca enviar. */
+    net_poll(&g_net, now);
+    if (net_due(&g_net, now)) {
+        AimpPkt lp;
+        aimp_memset(&lp, 0, sizeof lp);
+        lp.level = g_cur.level_cur;
+        lp.sim_frame = *(volatile uint32_t *)(g_aimp_exe + AIMP_RVA_FRAME_COUNTER);
+        if (g_cur.pl && g_cur.pl_ok && mem_read(g_cur.pl + CHR_POS, lp.pos, sizeof lp.pos) &&
+            mem_f32(g_cur.pl + CHR_YAW, &lp.yaw)) {
+            mem_read(g_cur.pl + CHR_ID, lp.char_id, sizeof lp.char_id);
+            lp.flags |= AIMP_FLAG_PLAYER;
+        }
+        if (g_cur.cam) {
+            mem_read(g_cur.cam + CAM_QUAT, lp.cam_q, sizeof lp.cam_q);
+            mem_read(g_cur.cam + CAM_POS, lp.cam_pos, sizeof lp.cam_pos);
+        }
+        net_send(&g_net, now, &lp);
+    }
     if (status_due) {
         status(&g_cur, now - g_last_status);
+        net_status(&g_net, now);
         g_last_status = now;
     }
     if (trace_enabled() && now - g_last_trace >= g_trace_ticks) {
@@ -588,5 +610,6 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
     if ((ret & 0xFF) == 0) {
         log_printf("ModeManager::Run devolvió 0: el juego sale del loop principal (frames vistos %u)", g_frames);
         trace_report_totals("salida");
+        net_close(&g_net);
     }
 }
