@@ -16,12 +16,12 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                OUTPUT_VARIABLE AIMP_GIT_HASH OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-if(NOT AIMP_GIT_HASH)
-  set(AIMP_GIT_HASH "desconocido")
-endif()
+# Commit de git para el log, recalculado en cada build (ver cmake/githash.cmake).
+add_custom_target(aimp_githash
+  COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_CURRENT_SOURCE_DIR} -DOUT=${CMAKE_CURRENT_BINARY_DIR}/githash.h
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/githash.cmake
+  BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/githash.h
+  COMMENT "commit de git -> githash.h")
 
 # Opciones comunes. Sin CRT: el proxy solo importa kernel32.
 set(AIMP_C_FLAGS
@@ -51,7 +51,8 @@ add_library(aimp_winmm SHARED
 )
 set_target_properties(aimp_winmm PROPERTIES OUTPUT_NAME winmm PREFIX "" SUFFIX ".dll")
 target_compile_options(aimp_winmm PRIVATE ${AIMP_C_FLAGS})
-target_compile_definitions(aimp_winmm PRIVATE AIMP_GIT_HASH="${AIMP_GIT_HASH}")
+add_dependencies(aimp_winmm aimp_githash)
+target_include_directories(aimp_winmm PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_options(aimp_winmm PRIVATE
   -nostdlib -nostartfiles -static-libgcc -s
   -Wl,-e,_DllMainCRTStartup@12

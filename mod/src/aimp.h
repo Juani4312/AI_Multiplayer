@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AIMP_VERSION "0.1.0 (fase 1+2: proxy, hook por frame, sonda de estado)"
+#define AIMP_VERSION "0.2.0 (fases 1-3: proxy, hook por frame, sonda de estado, UDP del jugador)"
 #ifndef AIMP_GIT_HASH
 #define AIMP_GIT_HASH "desconocido"
 #endif

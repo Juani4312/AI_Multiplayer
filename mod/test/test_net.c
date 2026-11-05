@@ -92,6 +92,69 @@ int main(void)
     net_poll(&host, now.QuadPart);
     CHECK(!host.have_peer && !host.have_remote, "el host procesa el BYE del cliente");
     net_close(&host);
+
+    printf("[cadencia: 20 Hz con frames de 16,5 ms (tiempo simulado)]\n");
+    {
+        AimpNet r;
+        SetEnvironmentVariableW(L"AIMP_NET", L"join");
+        SetEnvironmentVariableW(L"AIMP_NET_PEER", L"127.0.0.1:47897"); /* nadie escucha: no importa */
+        SetEnvironmentVariableW(L"AIMP_NET_HZ", L"20");
+        CHECK(net_init(&r, f.QuadPart), "cliente abierto");
+        AimpPkt a = state(0.0f, 0.0f, 10);
+        QueryPerformanceCounter(&now);
+        int64_t base = now.QuadPart, frame = f.QuadPart * 165 / 10000;
+        int sends = 0;
+        for (int i = 0; i < 606; i++) { /* ~10 s */
+            int64_t t = base + (int64_t)i * frame;
+            if (net_due(&r, t)) {
+                net_send(&r, t, &a);
+                sends++;
+            }
+        }
+        CHECK(sends >= 199 && sends <= 201, "%d envíos en 10 s (esperado 200; con la cadencia vieja salían ~150)", sends);
+        /* Después de una pausa de 2 s (carga): un envío y sigue la cadencia normal, sin ráfaga. */
+        int64_t t0 = base + 606 * frame + 2 * f.QuadPart;
+        int burst = 0;
+        for (int i = 0; i < 6; i++) {
+            int64_t t = t0 + (int64_t)i * frame;
+            if (net_due(&r, t)) {
+                net_send(&r, t, &a);
+                burst++;
+            }
+        }
+        CHECK(burst == 2, "después de una pausa: %d envíos en 6 frames (esperado 2)", burst);
+        net_close(&r);
+    }
+
+    printf("[paquetes que llegan antes del primer frame]\n");
+    {
+        AimpNet h2, c2;
+        SetEnvironmentVariableW(L"AIMP_NET", L"host");
+        SetEnvironmentVariableW(L"AIMP_NET_PORT", L"47898");
+        CHECK(net_init(&h2, f.QuadPart), "host abierto");
+        SetEnvironmentVariableW(L"AIMP_NET", L"join");
+        SetEnvironmentVariableW(L"AIMP_NET_PEER", L"127.0.0.1:47898");
+        CHECK(net_init(&c2, f.QuadPart), "cliente abierto");
+        QueryPerformanceCounter(&now);
+        int64_t t = now.QuadPart;
+        AimpPkt a = state(7.0f, 0.0f, 10);
+        for (int i = 0; i < 30; i++, t += c2.send_ticks) /* el host todavía no lee */
+            net_send(&c2, t, &a);
+        Sleep(30);
+        net_poll(&h2, t);
+        CHECK(h2.stale_total == 30 && !h2.have_peer && !h2.have_remote, "primer poll: %u descartados, sin par ni estado",
+              h2.stale_total);
+        a.pos[0] = 9.0f;
+        for (int i = 0; i < 5; i++, t += c2.send_ticks)
+            net_send(&c2, t, &a);
+        Sleep(30);
+        net_poll(&h2, t);
+        CHECK(h2.have_peer && h2.have_remote && h2.recv_total == 5 && h2.lost_total == 0 && h2.remote.pos[0] == 9.0f,
+              "después: recibidos %u, perdidos %u (el hueco con los viejos no cuenta), x=%.1f", h2.recv_total,
+              h2.lost_total, (double)h2.remote.pos[0]);
+        net_close(&c2);
+        net_close(&h2);
+    }
     log_close();
     printf("%s (%d fallas)\n", g_fail ? "TEST_NET CON FALLAS" : "TEST_NET OK", g_fail);
     return g_fail ? 1 : 0;

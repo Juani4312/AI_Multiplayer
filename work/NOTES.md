@@ -351,5 +351,5 @@ Dato de la laptop (`work/windows/report.md`, "COMMANDS.PAK en la laptop"):
 |---------|--------|--------|
 | `BSP_LV426_PT01/WORLD/COMMANDS.PAK` | `EB9FDBF197308941F6E43CDE7BD1712024011A16967A4819C71F2FB49076ED77` | `DDA19F70…A47F` (**distinto**) |
 | `TECH_COMMS/WORLD/COMMANDS.PAK` | `42FD34D7…DD3A` | igual |
-- No está confirmado si el usuario verificó la integridad en la laptop. Igual se puede concluir que el de la laptop es el de Steam: si la copia por red hubiera traído el archivo de papito, serían iguales. Ese archivo no vino de papito, así que salió de Steam (de los servidores o de una verificación). **La laptop está limpia** (por lo menos en estos dos).
+- **Confirmado por la laptop** (commit 5264a56): el usuario borró la copia por red, reinstaló desde Steam y verificó la integridad. Salió todo correcto y no se reemplazó nada; los hashes no cambiaron. **El original de `BSP_LV426_PT01` es `EB9FDBF1…ED77`.** La pregunta de si la copia por red trae archivos modificados quedó sin respuesta, porque esa copia se borró.
 - Conclusión: **en papito solo `BSP_LV426_PT01/WORLD/COMMANDS.PAK` está modificado.** `TECH_COMMS` es el original (su mtime 2026-10-05 no indica un mod). El pendiente de PROGRESS pasa de "2 COMMANDS.PAK" a uno.
