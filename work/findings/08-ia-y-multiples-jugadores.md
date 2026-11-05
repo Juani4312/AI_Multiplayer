@@ -47,3 +47,53 @@ Zona aproximada de `behavior_manager`: `0x6C0000`–`0x740000`.
 2. ¿Qué es `Character+0x1100`? Hipótesis: un objeto de "punto de interés" o de predicción del jugador.
 3. Los inlineados de `GetPlayer()` en IA: lista completa a partir de `a2.txt` (los de la zona `0x68`–`0x74`).
 4. ¿La lista `gestor+0x124` es otra categoría de personajes (¿Aliens?)?
+
+---
+
+# Parte 2 - Árboles de comportamiento y `TargetIsPlayer`
+
+- **Evidencia:** `./work/evidence/h08/a5.txt` … `a12.txt`; copias de `DATA/BEHAVIOR/ALIEN_*.XML` en `game/data/BEHAVIOR/` (25 archivos, no se commitean); desensamblado con `objdump` de `0x6EFD00`–`0x6EFD86` (código que Ghidra no definió como función).
+- **Confianza:** media-alta. La función de evaluación se identificó por la vtable pegada a la string `"CONDITION_TARGET_IS_PLAYER"`; no se vio una llamada directa.
+
+## Cómo decide el Alien
+
+- La decisión es **dirigida por datos**: árboles de comportamiento "Legend" (`DATA/BEHAVIOR/*.XML`, 86 archivos; 25 del Alien, como `ALIEN_ATTACK*.XML`, `ALIEN_BACKSTAGE_STALK.XML`, `ALIEN_IN_VENT*.XML`, `ALIEN_TARGET_IS_NPC.XML`).
+- Los árboles trabajan con un **objetivo genérico**:
+  - Condiciones: `ConditionIsEnemyOfTarget` (9 usos), `ConditionHasValidRouteToTarget` (5), `IsAttackingThisTarget` (2), `ConditionLogicCharacterFlags`.
+  - Ramas propias del jugador: `ConditionTargetIsPlayer` (5) y `ConditionHasFlankedVentCloseToPlayer` (2).
+- La fábrica de nodos es `FUN_0072b950`: una cadena de `strcmp(nombre_clase)` → constructor. Por ejemplo, `ConditionTargetIsPlayer` → `FUN_007165f0`, que crea el nodo `FUN_006f7ac0` (vtable `0x012E7CE8`) y parsea los conectores `ConditionTrue`/`ConditionFalse`.
+
+## `CONDITION_TARGET_IS_PLAYER` no compara con `GetPlayer()`
+
+```asm
+; 0x6EFD10 (evaluación; su vtable termina en 0x012E80C8, justo antes de la string "CONDITION_TARGET_IS_PLAYER")
+mov edi, [arg+0x34A8]        ; cerebro de IA del personaje que evalúa
+mov esi, [edi+0x10]          ; objetivo actual
+...valida el objetivo con un handle débil ([esi+0x42C] / [esi+0x430], FUN_00783b00)...
+mov eax, [[edi+0x10]+0x42C]  ; personaje objetivo
+mov eax, [eax+0x31C]         ; componente/controlador de jugador
+cmp byte [eax+0x48], 0       ; ¿activo?
+→ devuelve 1 si existe y está activo
+```
+
+- `Character+0x31C` es el mismo campo que usa `GetAimPosition` (hallazgo 03) para apuntar desde la cámara cuando el personaje es jugador. Hipótesis: es el **controlador de jugador**, que solo tienen los personajes manejados por una persona.
+- **Consecuencia para el coop (fase 6):** si el segundo jugador tiene un `Character` con controlador de jugador activo (`+0x31C`, `+0x48`), los árboles del Alien lo tratan como "jugador" cuando sea su objetivo. Lo que queda centrado en el jugador 0 está en C++: los 24 `GetPlayer()` de IA, `HasFlankedVentCloseToPlayer` y probablemente el menace manager/Director.
+- Composición de la tarea `AI_COMBAT_MANAGER_MAIN` (`FUN_007d4f30`), por clasificar en detalle:
+
+  | Función | Trato de los jugadores |
+  |---------|------------------------|
+  | `FUN_006f5310` | sin clasificar |
+  | `FUN_0071b140` | jugador 0 |
+  | `FUN_0072b1b0(dt)` | sin clasificar |
+  | `FUN_007d3db0` | todos los jugadores |
+  | `FUN_00734690` | todos los jugadores + NPCs |
+  | `FUN_00682d90` | si `jugador0+0x3AD0` |
+  | `FUN_007c2450` | todos los jugadores |
+  | `FUN_00735e50` | jugador 0 |
+  | `FUN_00466530`, `FUN_007aec30` | sin clasificar |
+
+## Preguntas abiertas (parte 3)
+
+1. ¿Cómo se elige el objetivo (`[cerebro+0x10]`)? ¿Desde la percepción de todos los personajes del visibility manager?
+2. ¿Qué es `Character+0x34A8` (cerebro de IA) y quién crea el controlador `+0x31C` (solo para jugadores)?
+3. Menace manager/Director: ¿mide la amenaza solo respecto del jugador 0?
