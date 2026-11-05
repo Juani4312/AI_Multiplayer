@@ -340,3 +340,15 @@ Observación (hipótesis, no verificada en el código):
 
 - **Pasos 1, 2 y 3: OK en Windows 10 nativo.** El proxy, el hook, la sonda de estado y posición y la red UDP join hacia papito por Tailscale funcionan en los dos sentidos, con 0 paquetes perdidos.
 - Hay un solo punto a revisar: la tasa de envío del lado Windows es ~16.4/s contra 20 configurados.
+
+## COMMANDS.PAK: con integridad verificada (2026-11-05)
+
+- Antes de la verificación, el usuario había instalado el juego en la laptop copiándolo desde papito por red local, después lo borró y lo reinstaló desde Steam. Después corrió "Verificar integridad" en Steam y salió todo correcto, sin archivos reemplazados.
+- Hashes después de la verificación (no cambiaron respecto de los de arriba):
+  - LV426 `EB9FDBF197308941F6E43CDE7BD1712024011A16967A4819C71F2FB49076ED77`
+  - TECH_COMMS `42FD34D7FAF7EA9A22B961D7C6A0C12700FA90327CA1F796F445CC958ECBDD3A`
+  - AI.exe `DDE66521…19A90`
+- Conclusión (según la regla de las instrucciones):
+  - **el `COMMANDS.PAK` de `BSP_LV426_PT01` vanilla es `EB9FDBF1…ED77`, y el de papito (`DDA19F70…A47F`) es el modificado**;
+  - el de `TECH_COMMS` de papito ya era vanilla.
+- Según el usuario, el mod de papito sirve para saltear la misión 9.
