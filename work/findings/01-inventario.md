@@ -11,7 +11,7 @@
   - `strings/`: `ascii_n5.txt`, `utf16le_n5.txt` (GNU strings, offsets de archivo), `rtti_names.txt`, `cathode_classes.txt`, `source_files.txt`.
 - **Confianza:** alta para todo lo que sale de cabeceras y tablas del PE, y para los argumentos de las llamadas que recuperó el decompilador. Media para la atribución de funciones a cada librería (por rango de direcciones y por strings). Esas atribuciones están marcadas como hipótesis.
 - **Cómo verificar en runtime:** ver la sección "Verificación en runtime".
-- **Verificado en runtime:** no. El único dato de runtime es `aimoviefix.log`, que reporta que bajo Wine el EXE cargó en `0x400000`.
+- **Verificado en runtime:** **sí**, la huella de build: TimeDateStamp, SizeOfImage y las RVAs de `ovr_Initialize`/`curl_easy_init` coinciden en runtime, y el proxy `winmm.dll` carga bajo Proton (Corridas del 2026-11-05 con el mod de la fase 1+2 (Proton 9.0-203); logs en `work/evidence/runtime/run1-menu.log` y `run2-juego.log`, resumen en el hallazgo 11). No se verificaron KnownDLLs en Windows.
 - **Preguntas abiertas:** al final.
 
 ## 1. Identidad y toolchain

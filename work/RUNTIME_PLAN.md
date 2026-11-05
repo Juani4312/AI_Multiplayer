@@ -1,5 +1,7 @@
 # Plan de verificación en runtime
 
+> **Resultado (2026-11-05):** bloques 0–3 verificados en dos corridas (menú y juego). Resultados en los hallazgos 01–05, 09, 10 y 11. Lo que cambió respecto del plan: el contador de frames es de **simulación** (0 en menú y pausa); las colas se vacían dentro del mismo frame (el 3.4 se mide con el trazado, no con el tamaño después de `Run`). El bloque 4 (IA) sigue pendiente.
+
 > Para la próxima sesión con el usuario, cuando exista la fase 1 del mod (código cargado y callback por frame en el thread principal).
 > **Actualización 2026-11-05:** el mod de la fase 1+2 (`mod/`, ver `mod/README.md`) ya implementa la lectura de los bloques 0 a 3 (solo lectura, todo al log `aimp.log`): guardas de build, loop y estado, nivel, personajes, jugador, cámara, NETZ, sesión y tamaño de la cola A por frame. Falta el 3.5/3.6 (catálogo de handlers y tráfico por tipo) y el bloque 4 (IA). Procedimiento de la primera corrida: `mod/README.md`, sección "Primera prueba".
 > Todas las direcciones son **VA con base `0x400000`**: en runtime usar `base + (VA − 0x400000)`.

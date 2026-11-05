@@ -19,7 +19,7 @@
 - **Evidencia:** `./work/evidence/h02/dump1.txt` … `dump14.txt`. Salidas de `work/scripts/ghidra/Dump.java` (decompilación, asm, xrefs, vtables y argumentos de llamadas), con sus `.log`.
 - **Confianza:** alta para la estructura del loop, los offsets de `g_root`, la máquina de estados y los prólogos (salen de asm y decompilación). Media para los nombres que les puse a las clases (`ModeManager`, `GameFlow`, "modo de nivel"); son interpretación.
 - **Cómo verificar en runtime:** fase 1 del mod (ver abajo): hookear `0x3A8460` y loguear por frame el estado (`+0x4C`) y el modo actual (`+0x40`).
-- **Verificado en runtime:** no.
+- **Verificado en runtime:** **sí** (Corridas del 2026-11-05 con el mod de la fase 1+2 (Proton 9.0-203); logs en `work/evidence/runtime/run1-menu.log` y `run2-juego.log`, resumen en el hallazgo 11). El hook en `ModeManager::Run` (RVA `0x3A8460`, prólogo verificado) corre una vez por frame en el thread principal: ~360 fps en el menú y 144 fps en el juego; las cargas pasan dentro de una sola llamada (35,7 s la inicial, 5,9 s la del nivel). El estado `+0x4C` vale 5 mientras corre y 7 al salir; el modo `+0x40` cambia al cargar un nivel (vtable `0x12F43E8`).
 - **Preguntas abiertas:** al final.
 
 ## Cadena de arranque
