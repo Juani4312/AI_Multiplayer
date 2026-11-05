@@ -94,3 +94,23 @@ Estados de `Character+0x1122`: `0` jugador, `1` NPC, `3` pendiente, `4` liberado
   - (c) moverlo por transform (`SetTransform`, hallazgo 03) sin controlador.
 
   NETZ (hallazgo 10) resolvía esto con personajes "logic" (en el host) y "display" (en los clientes).
+
+## Parte 2 (cont.) - De dónde sale el request
+
+- `SpawnCharacter` (`0x7D3B50`) ya es función en el proyecto (después de `SeedVtables`, hallazgo 10). Decompilado en `work/evidence/h05/e13.txt`. Campos del `request` que usa:
+
+  | Campo | Uso |
+  |-------|-----|
+  | `+0x00` | tipo/clase → `FUN_007b1760` → bloque de 0x1D0 bytes |
+  | `+0x1C` | **definición** (`def`), se copia al bloque `+0x64` |
+  | `+0x28` | se pasa a `FUN_00795bc0` |
+  | `+0x48` | id (se busca en `[root+0xAC0]`, entradas de 0x158) |
+  | `+0x4C` | flag "replicado según tabla" |
+
+- **Spawner de personajes de script** (`FUN_00490e30`, 1.798 bytes; lo llama `FUN_004917a0`; mensaje `"Failed to find some valid components for a character spawner - please check you script."`):
+  - arma el request en el stack con:
+    - el nombre del personaje (0x40, de `obj->vf[+0x138]()`);
+    - el nombre de composite o `"CUTSCENE"` (0x40);
+    - tres vectores (`FUN_00853dd0`), probablemente posición/rotación/escala;
+  - lo encola en el `CharacterManager` con `FUN_007a7a20` o `FUN_007a7a80` (usa `[g_root+8]+0x9D30`).
+- Hipótesis para la fase 4 (ghost): la forma "limpia" de crear el avatar remoto sería reutilizar este camino (spawner de script / cola del `CharacterManager`) con la definición del jugador o la de un NPC humano. Falta saber qué es la cola `+0x9D30` y la firma de `FUN_007a7a20`/`a80`.
