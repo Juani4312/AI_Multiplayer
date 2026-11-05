@@ -102,3 +102,4 @@
 - 18:25 Corrida 11 (fase 5, filtro de usos): host con AIMP_NET=host;AIMP_GHOST=3;AIMP_SYNC_USE=1 (DLL 1c1d558), juego lanzado.
 - 18:31 Corrida 11: filtro OK (locker y terminal no se mandan); botón del transit se replica pero teletransporta al jugador local. Cambio: el uso remoto lo hace el avatar NPC (AIMP_SYNC_USE_ACTOR=1).
 - 18:32 Laptop subió la corrida 11 (126cdfc): botón remoto arrastra a su jugador al anclaje 2-4 s; filtro OK. Agregado al hallazgo 13.
+- 18:32 Fin de la corrida 11 (salida limpia). Instalada la DLL cba2b2e (avatar como actor) en host, lista para la corrida 12.
