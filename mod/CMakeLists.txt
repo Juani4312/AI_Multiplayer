@@ -35,6 +35,7 @@ set(AIMP_C_FLAGS
 
 add_library(aimp_winmm SHARED
   src/dllmain.c
+  src/cfg.c
   src/proxy.c
   src/game.c
   src/hook.c
