@@ -94,3 +94,10 @@ No se localizaron todavía.
 - ¿Qué clase es `[gestor+0x1DC]` y quién la crea?
 - Confirmar en runtime el layout `{quat +0x2C, pos +0x3C}`.
 - NETZ: clase, `FUN_007dde20`, quién crea `g_root+0x04` y qué transporte usa (WS2_32/WSOCK32 por ordinal, hallazgo 01). → **hallazgo 10**.
+
+## Matrices de vista/proyección: pistas (2026-11-05, sin cerrar)
+
+- La `tan` del CRT no está identificada por Function ID: una búsqueda por nombre (`work/evidence/h04/search_tan.json`) no la encuentra.
+- La constante **π/180** (float `0x3C8EFA35`, en `0x011C2A5C`) tiene 37 usos. Los de la zona del renderer son `FUN_009c0b40`, `FUN_009da910`, `FUN_0098f220`, `FUN_00988e30`, `FUN_0097aa00`, `FUN_00a1d2c0`, `FUN_00a1d8e0` y `FUN_00a3b290` (`work/evidence/h04/c8.txt`).
+  - `FUN_009c0b40` (2.776 bytes) aplica parámetros de entidad a un objeto de render (flags en `+0x2C`); no es el armado de la proyección.
+- **Propuesta:** resolverlo en runtime. Alcanza con leer el FOV y la matriz del POV principal (`[0x1766A00]+0x08` → POV 0) o la cámara activa (cuaternión + posición, ya ubicados) y armar la vista/proyección del lado del mod.
