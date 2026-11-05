@@ -1,5 +1,6 @@
 /* Test de la fase 3 (correr con wine): host y cliente del protocolo en el mismo
  * proceso, por UDP en 127.0.0.1. Usa el log real (AIMP_LOG). */
+#include <winsock2.h> /* sendto directo en el test de eventos (net.c resuelve Winsock en runtime) */
 #include <stdio.h>
 #include <string.h>
 #include "aimp.h"
@@ -124,6 +125,83 @@ int main(void)
         }
         CHECK(burst == 2, "después de una pausa: %d envíos en 6 frames (esperado 2)", burst);
         net_close(&r);
+    }
+
+    printf("[eventos: cada uno llega una vez, aunque se mande 3 veces y fuera de orden]\n");
+    {
+        AimpNet h3, c3;
+        SetEnvironmentVariableW(L"AIMP_NET", L"host");
+        SetEnvironmentVariableW(L"AIMP_NET_PORT", L"47896");
+        CHECK(net_init(&h3, f.QuadPart), "host abierto");
+        SetEnvironmentVariableW(L"AIMP_NET", L"join");
+        SetEnvironmentVariableW(L"AIMP_NET_PEER", L"127.0.0.1:47896");
+        CHECK(net_init(&c3, f.QuadPart), "cliente abierto");
+        QueryPerformanceCounter(&now);
+        int64_t t = now.QuadPart;
+        AimpPkt a = state(1.0f, 0.0f, 16);
+        net_poll(&h3, t); /* primer poll: no hay nada viejo */
+        net_send(&c3, t, &a); /* el host aprende la dirección del cliente */
+        Sleep(20);
+        net_poll(&h3, t);
+        CHECK(h3.have_peer, "el host conoce al cliente");
+        static const uint8_t use1[20] = { 0x04, 0x41, 0x06, 0xb1, 0x6f, 0x52, 0x99, 0x59, 0x2f, 0xf7, 0x22, 0xb2, 0x09, 0x9d, 0x5b, 0x9b, 0, 0x7c, 0x58, 0x01 };
+        uint8_t use2[20];
+        memcpy(use2, use1, 20);
+        use2[0] = 0xee;
+        CHECK(net_event(&c3, AIMP_EVT_USE, 16, use1, 20) && net_event(&c3, AIMP_EVT_USE, 16, use2, 20), "dos eventos encolados");
+        for (int i = 0; i < AIMP_EVT_REPEAT + 1; i++) /* uno más: ya no queda nada para mandar */
+            net_send_events(&c3);
+        Sleep(30);
+        net_poll(&h3, t);
+        AimpEvt e1, e2, e3;
+        int got1 = net_take_event(&h3, &e1), got2 = net_take_event(&h3, &e2), got3 = net_take_event(&h3, &e3);
+        CHECK(got1 && got2 && !got3, "llegaron exactamente 2 eventos (%d %d %d)", got1, got2, got3);
+        CHECK(got1 && got2 && e1.kind == AIMP_EVT_USE && e1.size == 20 && e1.level == 16 && memcmp(e1.data, use1, 20) == 0 &&
+                  memcmp(e2.data, use2, 20) == 0,
+              "contenido, tipo y nivel intactos");
+        CHECK(h3.evt_recv == 2 && h3.evt_dup == 4 && c3.evt_sent == 2, "recibidos %u, repetidos descartados %u, enviados %u",
+              h3.evt_recv, h3.evt_dup, c3.evt_sent);
+        /* fuera de orden: llega el 4 y después el 3 */
+        AimpEvt o;
+        memset(&o, 0, sizeof o);
+        o.magic = AIMP_NET_MAGIC;
+        o.version = AIMP_NET_VERSION;
+        o.type = AIMP_PKT_EVENT;
+        o.kind = AIMP_EVT_USE;
+        o.size = 20;
+        o.level = 16;
+        AimpNet *hp = &h3;
+        uint32_t before = hp->evt_recv;
+        /* se los entrega por el socket del cliente, armados a mano */
+        SOCKET cs = (SOCKET)c3.sock;
+        struct sockaddr_in to;
+        memset(&to, 0, sizeof to);
+        to.sin_family = AF_INET;
+        to.sin_addr.s_addr = 0x0100007Fu;
+        to.sin_port = (uint16_t)((47896 >> 8) | ((47896 & 0xFF) << 8));
+        o.seq = 4;
+        sendto(cs, (const char *)&o, sizeof o, 0, (struct sockaddr *)&to, sizeof to);
+        o.seq = 3;
+        sendto(cs, (const char *)&o, sizeof o, 0, (struct sockaddr *)&to, sizeof to);
+        o.seq = 3; /* repetido */
+        sendto(cs, (const char *)&o, sizeof o, 0, (struct sockaddr *)&to, sizeof to);
+        Sleep(30);
+        net_poll(hp, t);
+        CHECK(hp->evt_recv == before + 2, "el 4 y el 3 se aceptan aunque lleguen al revés, y el 3 repetido no (%u)",
+              hp->evt_recv - before);
+        /* el otro reinicia su secuencia (vuelve a 1) mucho más atrás */
+        hp->evt_last_in = 500;
+        hp->evt_window = 1;
+        o.seq = 1;
+        sendto(cs, (const char *)&o, sizeof o, 0, (struct sockaddr *)&to, sizeof to);
+        Sleep(30);
+        net_poll(hp, t);
+        CHECK(hp->evt_recv == before + 3 && hp->evt_last_in == 1, "reinicio de la secuencia aceptado (last %u)", hp->evt_last_in);
+        AimpNet solo;
+        memset(&solo, 0, sizeof solo);
+        CHECK(!net_event(&solo, AIMP_EVT_USE, 16, use1, 20), "sin red o sin par no se encola nada");
+        net_close(&c3);
+        net_close(&h3);
     }
 
     printf("[paquetes que llegan antes del primer frame]\n");

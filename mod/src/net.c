@@ -171,6 +171,8 @@ static void handle_packet(AimpNet *n, const AimpPkt *p, int len, uint32_t ip, ui
         n->peer_port = port;
         n->have_peer = 1;
         n->have_remote = 0;
+        n->evt_last_in = 0;
+        n->evt_window = 0;
         addr_str(n->peer_str, sizeof n->peer_str, ip, port);
         log_printf("NET: cliente conectado desde %s", n->peer_str);
     } else if (n->mode == 2 && (ip != n->peer_ip || port != n->peer_port)) {
@@ -180,8 +182,37 @@ static void handle_packet(AimpNet *n, const AimpPkt *p, int len, uint32_t ip, ui
     if (p->type == AIMP_PKT_BYE) {
         log_printf("NET: el otro extremo se despidió (%s)", n->peer_str);
         n->have_remote = 0;
+        n->evt_last_in = 0; /* si vuelve, su secuencia de eventos empieza de nuevo */
+        n->evt_window = 0;
         if (n->mode == 1)
             n->have_peer = 0;
+        return;
+    }
+    if (p->type == AIMP_PKT_EVENT) {
+        const AimpEvt *e = (const AimpEvt *)p;
+        uint32_t s = e->seq;
+        if (s > n->evt_last_in) {
+            uint32_t sh = s - n->evt_last_in;
+            n->evt_window = sh >= 64 ? 0 : n->evt_window << sh;
+            n->evt_window |= 1;
+            n->evt_last_in = s;
+        } else if (n->evt_last_in - s >= 64) { /* el otro reinició su secuencia */
+            n->evt_last_in = s;
+            n->evt_window = 1;
+        } else if (n->evt_window & (1ull << (n->evt_last_in - s))) {
+            n->evt_dup++; /* repetido (cada evento se manda AIMP_EVT_REPEAT veces) */
+            return;
+        } else {
+            n->evt_window |= 1ull << (n->evt_last_in - s);
+        }
+        uint32_t next = (n->in_tail + 1) % AIMP_EVT_QUEUE;
+        if (next == n->in_head) {
+            n->bad++; /* cola llena: no se aplicaron a tiempo */
+            return;
+        }
+        n->in[n->in_tail] = *e;
+        n->in_tail = next;
+        n->evt_recv++;
         return;
     }
     if (p->type != AIMP_PKT_STATE) {
@@ -272,6 +303,63 @@ void net_send(AimpNet *n, int64_t now, const AimpPkt *local)
         n->last_send = now;
 }
 
+static void peer_addr(const AimpNet *n, struct sockaddr_in *to)
+{
+    aimp_memset(to, 0, sizeof *to);
+    to->sin_family = AF_INET;
+    to->sin_addr.s_addr = n->peer_ip;
+    to->sin_port = n->peer_port;
+}
+
+int net_event(AimpNet *n, uint16_t kind, uint32_t level, const void *data, uint16_t size)
+{
+    if (!n->mode || !n->have_peer || size > AIMP_EVT_DATA)
+        return 0;
+    for (int i = 0; i < AIMP_EVT_QUEUE; i++) {
+        if (n->out_left[i])
+            continue;
+        AimpEvt *e = &n->out[i];
+        aimp_memset(e, 0, sizeof *e);
+        e->magic = AIMP_NET_MAGIC;
+        e->version = AIMP_NET_VERSION;
+        e->type = AIMP_PKT_EVENT;
+        e->seq = ++n->evt_seq;
+        e->time_ms = GetTickCount();
+        e->kind = kind;
+        e->size = size;
+        e->level = level;
+        aimp_memcpy(e->data, data, size);
+        n->out_left[i] = AIMP_EVT_REPEAT;
+        return 1;
+    }
+    return 0;
+}
+
+void net_send_events(AimpNet *n)
+{
+    if (!n->mode || !n->have_peer)
+        return;
+    struct sockaddr_in to;
+    peer_addr(n, &to);
+    for (int i = 0; i < AIMP_EVT_QUEUE; i++) {
+        if (!n->out_left[i])
+            continue;
+        W.sendto((SOCKET)n->sock, (const char *)&n->out[i], sizeof n->out[i], 0, (struct sockaddr *)&to, sizeof to);
+        if (n->out_left[i] == AIMP_EVT_REPEAT)
+            n->evt_sent++;
+        n->out_left[i]--;
+    }
+}
+
+int net_take_event(AimpNet *n, AimpEvt *out)
+{
+    if (n->in_head == n->in_tail)
+        return 0;
+    *out = n->in[n->in_head];
+    n->in_head = (n->in_head + 1) % AIMP_EVT_QUEUE;
+    return 1;
+}
+
 void net_status(AimpNet *n, int64_t now)
 {
     if (!n->mode)
@@ -286,6 +374,9 @@ void net_status(AimpNet *n, int64_t now)
                    n->mode == 1 ? "host" : "join", n->peer_str, n->sent, n->recv, n->lost, n->bad, r->level,
                    (r->flags & AIMP_FLAG_PLAYER) ? "con jugador" : "sin jugador", (double)r->pos[0], (double)r->pos[1],
                    (double)r->pos[2], (double)r->yaw, r->seq, age);
+        if (n->evt_sent || n->evt_recv || n->evt_dup)
+            log_printf("NET eventos: enviados %u, recibidos %u, repetidos descartados %u (totales)", n->evt_sent, n->evt_recv,
+                       n->evt_dup);
     }
     n->sent = n->recv = n->lost = n->bad = 0;
 }

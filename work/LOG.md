@@ -91,3 +91,5 @@
 - 17:48 Corrida 9 (fase 4 por red): Linux host con AIMP_NET=host;AIMP_GHOST=3 (DLL c2f86d1). Esperando a la laptop (join + -Ghost 3, Steam offline).
 - 17:52 Corrida 9: juego Linux lanzado en host (la laptop esperaba al host).
 - 17:59 Corrida 9: avatar por red OK en los dos sentidos (laptop y papito: NPC sigue al otro jugador, media 0,18 m, 0 perdidos, 0 excepciones; usuario: 'nos vemos mutuamente'). Fase 4 v1 cerrada.
+- 18:00 Juego Linux cerrado (fin de la corrida 9). Mod en modo pasivo (DLL 8bc1f7e o posterior).
+- 18:12 Fase 5 v0: sync.c (usar compartido por eventos), eventos en net.c, test_sync con stubs reales. Tests OK.
