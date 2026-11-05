@@ -490,3 +490,18 @@ Evidencia: `work/evidence/runtime/run11-filtro-host.log` (gitignored), DLL `1c1d
 - El avatar quedó en el objetivo exacto: la corrección del desvío (`8bc1f7e`) funciona, con ~50 teleports por segundo mientras su IA lo empuja.
 - El lanzallamas no se replica (no es un "usar"). El avatar civil reacciona al fuego local y quiere huir.
 - 0 excepciones en las dos máquinas. Detalle en el hallazgo 13.
+
+## 2026-11-05 — Apagar la IA del avatar: primera exploración (estática, sin terminar)
+- En el binario hay entidades de script que harían falta para el avatar:
+  - sentidos: `NPC_AllSensesLimiter`, `NPC_SetSenseSet`, `NPC_SenseLimiter`, `NPC_ResetSensesAndMemory`, `NPC_SetTotallyBlindInDark`;
+  - `NPC_SetInvisible`, `CHR_SetInvincibility`, `CHR_SetAlliance`;
+  - `CHR_SetShowInMotionTracker` (mostrar al otro jugador en el detector);
+  - `NPC_ForceNextJob`, `NPC_SetLocomotionTargetSpeed`, `NPC_set_behaviour_tree_flags`.
+- Cómo están armadas (`work/evidence/h12/f13.txt` … `f17.txt`):
+  - las clases RTTI (`.?AV…@CATHODE@@`, vtables `0x132802C`, `0x133484C`, …) **tienen las 40 primeras entradas idénticas**: el comportamiento no está en la vtable (igual que en el hallazgo 06);
+  - los inicializadores estáticos (`0x11597D0`, …) calculan el ShortGuid de cada nombre (`FUN_008bf7f0`) en un global (`0x1750DCC` = `NPC_AllSensesLimiter`, `0x1750DFC` = `NPC_SetSenseSet`, `0x1750BE4` = `CHR_SetInvincibility`);
+  - `FUN_00968460` (25 KB) arma un mapa en `0x1757D80`: GUID del tipo → fábrica (`NPC_AllSensesLimiter` → `0x4D3500` → `FUN_004c9140`, que arma un handle con contador de referencias).
+  - Falta seguir hasta el método que escribe en el personaje (el campo de sentidos o de invisibilidad).
+- Alternativas más baratas para después:
+  - experimento en runtime: poner el flag de autoridad del bloque del avatar (`bloque+0x4F`, hallazgo 10) en 0 y medir si bajan los teleports por segundo (hoy ~50 con la IA empujando, ~2 si se queda quieto);
+  - buscar escrituras a campos de sentidos en `behavior_manager` (`0x6C0000`–`0x740000`).
