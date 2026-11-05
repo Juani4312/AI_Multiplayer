@@ -167,3 +167,10 @@ Detalle en `findings/04-camara-y-frame.md`. Evidencia en `work/evidence/h04/`; c
 - Timer: dt real `0x16410D0` (double), dt escalado `0x16410C0`, tiempo de juego `0x16410A8`, contador de frames `0x16410DC`.
 - Renderer singleton `[0x1766A00]` (array de POVs en `+0x08`). Matrices de vista/proyección: pendiente.
 - **NETZ**: `NETZ_DISPATCH` → `[g_root+0x04]->FUN_007dde20()`; `NET_AI_UPDATE` → `FUN_007dfd70()` + `[0x17073FC].FUN_007dd970()`. Capa de red del engine → hallazgo 10.
+
+## 2026-11-05 — Hallazgo 10 (NETZ, primera parte)
+Detalle en `findings/10-netz-red-del-engine.md`. Evidencia en `work/evidence/h10/`.
+- `Root::Init` = `FUN_007da540`. Campos de `g_root`: `+0x04` NETZ, `+0x08` gestor de personajes/jugadores (`FUN_007da2d0` → ctor `FUN_007d9260`, 0x9FF0 bytes, recibe NETZ), `+0x3C` ModeManager, `+0x48` GameFlow, `+0x4C` `FUN_007e10d0`, `+0x58` cámara, `+0x90` `script_readable_variables.xml`, entre otros.
+- NETZ: ctor `0x7E1CB0`, vtable `0x12F74FC`, 32 canales de 0x30 bytes en `+0x18`, máscara de canales sucios en `+0x10/+0x14`, transporte en `+0x69C` (`vf[1]` = enviar). **Solo el ctor escribe `+0x69C` (en 0)**: no hay transporte en retail.
+- Tabla de nombres de mensajes de red en `0x16413B0` (26 tipos; logic/display character, entity manager de cliente, física, disparos, release npc/player).
+- "Server created … clients" = Havok Visual Debugger (no es multiplayer).
