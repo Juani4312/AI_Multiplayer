@@ -57,3 +57,8 @@ Ver hallazgo 09 (`FUN_0084dbe0`): las entidades de UI usan nombres internados (`
 2. ¿Cómo se enumeran las entidades vivas del manager (estructura de `[0x174EF40]`)?
 3. ¿Qué escribe el valor de `IsMultiplayerMode`, `NumConnectedPlayers`, etc.?
 4. Relación con los mensajes NETZ `client_entity_manager_receive_trigger`/`_message` (hallazgo 10): ¿el entity manager tiene una ruta de "trigger remoto"?
+
+## Parte 2 (adelanto) - Constructor del entity manager
+
+- `FUN_0092e810` es el único que escribe `DAT_0174ef40`. Inicializa el manager y parsea tres strings hexadecimales tipo GUID con `FUN_008bf7f0`: `"00FF00FF00FF00FF00FF00FF00FF00FF"`, `"FFEEDDCCBBAA00AABBCCDDEEFF00FFEE"` y `"00112233445566778899AABBCCDDEEFF"`, probablemente valores centinela.
+- Hipótesis: **los ids de entidad/composite de Cathode son GUIDs de 128 bits**. Hay que tenerlo en cuenta para referenciar entidades entre máquinas en la fase 5. Ver el resto del constructor en `work/evidence/h06/s7.txt`.
