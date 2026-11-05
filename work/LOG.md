@@ -113,3 +113,4 @@
 - 19:00 Corrida 14 (ítems con dos máquinas + NOAUTH corregido): host con AIMP_NET=host;AIMP_GHOST=3;AIMP_GHOST_NOAUTH=1;AIMP_SYNC_USE=1, juego lanzado.
 - 19:07 Corrida 14: NOAUTH apaga la IA del avatar (por defecto en el modo 3); ítems por jugador (no se sincronizan); scripts locales (el evento se repite). Tests OK.
 - 19:09 Fin de la corrida 14: laptop subió su lado (db54960): ítems duplicados, uso de otro nivel descartado. Juego Linux cerrado; mod pasivo.
+- 19:11 sync.c: los usos remotos que no se pueden aplicar quedan pendientes (otro nivel, avatar todavía no apareció, id de RPC sin asignar) hasta AIMP_SYNC_PENDING_MS. Tests OK.

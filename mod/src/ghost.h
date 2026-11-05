@@ -12,5 +12,7 @@ int ghost_install(void);
 void ghost_frame(int64_t now, const AimpNet *net, uint32_t level);
 /* Personaje que hoy hace de avatar del otro jugador (NPC o clon), o 0. Válido hasta el próximo ghost_frame. */
 uint32_t ghost_avatar(void);
+/* 1 si el avatar está activado (AIMP_GHOST > 0), aunque todavía no haya aparecido. */
+int ghost_enabled(void);
 
 #endif

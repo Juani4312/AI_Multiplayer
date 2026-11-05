@@ -507,6 +507,8 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
     }
 }
 
+int ghost_enabled(void) { return g_mode != 0; }
+
 uint32_t ghost_avatar(void) { return g_mode && (g_state == G_NPC || g_state == G_ACTIVE) ? g_chr : 0; }
 
 void ghost_frame(int64_t now, const AimpNet *net, uint32_t level)
