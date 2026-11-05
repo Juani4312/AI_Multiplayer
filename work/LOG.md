@@ -107,3 +107,4 @@
 - 18:38 Corrida 12: uso remoto aplicado con el avatar (1c3460b37e03a5dc); J0 local quieto (sin salto al botón); NPC en el objetivo exacto (corrección del desvío OK). 0 excepciones. Mod en modo pasivo.
 - 18:39 Corrida 12 de los dos lados (laptop 993f166): botones OK sin mover al otro jugador; lanzallamas no replicado; avatar quiere huir del fuego. Hallazgo 13 y PROGRESS actualizados.
 - 18:49 Exploración estática para apagar la IA del avatar (entidades NPC_*/CHR_*, mapa de fábricas 0x1757D80); sin terminar, anotado en NOTES. README y GitHub actualizados.
+- 18:52 AIMP_GHOST_NOAUTH (experimento: avatar no autoritativo, bloque+0x4F=0) con test. Tests OK.
