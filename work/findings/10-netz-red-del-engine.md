@@ -271,3 +271,34 @@ cola->despachando = 0;
   - **identidad de entidades**: los payloads seguramente referencian entidades por id o handle, que tienen que coincidir entre máquinas (mismo nivel, mismo orden de spawn, mismos datos);
   - **determinismo y orden**.
 - Primer experimento (sin red): loguear por frame los tipos y tamaños que pasan por `FUN_00a2a220`, y qué handler (`fn`) atiende cada tipo.
+
+---
+
+# Parte 5 - Registro de endpoints RPC y asignación de ids de tipo
+
+- **Evidencia:** `./work/evidence/h10/n22.txt` … `n26.txt`.
+- **Confianza:** alta para `RegisterAllRPCs`. Media para el layout del endpoint (se infiere de esa función y de los globales del spawn).
+
+## `RegisterAllRPCs()` = `FUN_00a2a620`
+
+Lo llaman `FUN_007ddc30` y `FUN_007e68c0`, en la inicialización de la zona NETZ.
+
+```c
+n = largo(lista DAT_01be1bd0);            // endpoints registrados estáticamente
+redimensionar(sesion->handlers(+0x08), n); // sesion = *DAT_01be1bd4 (g_root+0x54)
+id = 0;
+for (ep = DAT_01be1bd0; ep; ep = ep->next) {
+    ep->tipo(+0x0C, u16) = id;
+    sesion->handlers[id] = &ep->fn(+0x04);   // par {fn, ctx}
+    id++;
+}
+```
+
+- **Layout de un endpoint RPC:** `+0x00` next, `+0x04` fn (handler de recepción), `+0x08` ctx, `+0x0C` tipo (u16).
+  - Ejemplo (spawn): endpoint estático en `0x016361D8`. `ctx` = `0x016361E0`, que lo escribe el constructor del `CharacterManager`. `tipo` = `0x016361E4`, que es lo que `FUN_00797490` pasa a la cola. `0x016361F0`/`0x016361F4` son el callback/ctx alternativo.
+  - Los endpoints son objetos estáticos con vtable propia (`FUN_007795c0`/`FUN_007879d0` son constructor/destructor de uno). El constructor del `CharacterManager` inicializa varios (vtables `0x012F3410`, `0x012F3424`, `0x012F3438`, `0x012F344C`, `0x012F3460`, …).
+- **Los ids de tipo salen del orden de la lista estática**, así que son **iguales en dos máquinas con el mismo `AI.exe`**. Es un requisito para replicar el buffer de la cola entre host y cliente (parte 4), y otra razón para exigir el mismo hash en las dos máquinas.
+
+## Catálogo pendiente
+
+Para mapear id → tipo → handler en runtime: recorrer `DAT_01be1bd0` y loguear `(id, fn, ctx)`. Después correlacionar con el enum de nombres de la parte 1 y con las acciones del juego.
