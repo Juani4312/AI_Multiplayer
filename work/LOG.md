@@ -39,3 +39,4 @@
 - 02:39 Entity manager: ctor `FUN_0092e810` (escribe `DAT_0174ef40`), parsea GUIDs centinela con `FUN_008bf7f0` → los ids de entidad de Cathode serían GUIDs de 128 bits (hipótesis).
 - 02:48 **Hallazgo 06 (parte 2)**: nombre → ShortGuid de Cathode = `FUN_008bf7f0` (GUID de 128 bits a partir de un hash de 20 bytes del nombre, con estructura de SHA-1 RFC 3174; ShortGuid = 4 bytes del hash del GUID en hex). El entity manager busca entidades globales por nombre (`inventory`, `pickup_manager`, `camera_manager`, …).
 - 02:58 **Verificado offline** el algoritmo de ShortGuid (`work/scripts/shortguid_check.py`): 13/21 nombres aparecen en un `COMMANDS.PAK` vanilla y las variantes de control dan 0/21 → SHA-1 y orden de bytes confirmados. Ningún nivel de los 21 usa los nodos MP (0 apariciones).
+- 03:02 `work/DESIGN_OPTIONS.md`: opciones de arquitectura del coop (A manual, B replicar la cola RPC, C revivir el modo cliente/host), con riesgos y el experimento que decide cada una.
