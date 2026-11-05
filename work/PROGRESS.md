@@ -9,7 +9,7 @@ _Última actualización: 2026-11-05_
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
 - Mod: DLL proxy cross-compilada con `i686-w64-mingw32` (CMake). No usar `dinput8` (no está importada). `dxgi`/`d3d11`/`xinput1_3` están ocupadas por ReShade/MovieFix. Candidata principal: `winmm.dll` (a decidir en la fase 1).
 - Compatibilidad con ReShade: deseable, no obligatoria.
-- Los mods de datos del usuario (IA/BEHAVIOR, COMMANDS.PAK) no afectan el análisis estático. Antes de la fase 5, los dos jugadores tienen que tener los mismos datos de gameplay (ver NOTES.md).
+- La IA del usuario es vanilla (verificado). Los restos de Insane AI se movieron a `/mnt/1,8TB/SteamLibrary/AlienIsolation_backup_AI_Multiplayer/` (ver LEEME.txt). Quedan 2 COMMANDS.PAK modificados (skip de misión): antes de la fase 5 hay que restaurarlos o que el amigo use los mismos.
 
 ## Estado por etapa
 | Paso | Estado |
