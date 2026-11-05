@@ -1,0 +1,32 @@
+# Binarios del juego: nunca se commitean
+game/
+*.exe
+*.dll
+*.pak
+*.PAK
+
+# Evidencia de REA/Ghidra (puede contener pseudocódigo/strings del juego)
+work/evidence/*
+!work/evidence/.gitkeep
+
+# Proyectos/DB de Ghidra
+*.gpr
+*.rep/
+*.lock
+*.lock~
+
+# Build del mod
+build/
+mod/build/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.asi
+*.pdb
+*.exp
+
+# Varios
+.DS_Store
+*.swp
