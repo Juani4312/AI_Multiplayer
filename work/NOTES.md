@@ -159,3 +159,11 @@ Detalle en `findings/03-jugador.md`. Evidencia en `work/evidence/h03/`.
 - `Character`: vtable `0x12F4FC8` (sin RTTI), constructor `0x7B2390`. Posición `+0x70/+0x74/+0x78` (Y vertical). Yaw `+0x174` en radianes [-π, π] (normalizado en `SetTransform` `0x7C2710` con 1/2π y 2π). `+0x64` = definición (tipo en `+4`).
 - Vínculo estático: después de `CALL GetPlayer` se lee `[EAX+0x70..0x78]` y `[EAX+0x174]` (ver `d31.txt`).
 - Pendiente (hallazgo 05): quién llena el array de jugadores y asigna `g_root+0x08`.
+
+## 2026-11-05 — Hallazgo 04 (cámara y frame)
+Detalle en `findings/04-camara-y-frame.md`. Evidencia en `work/evidence/h04/`; copia de `DATA/TASKS.TXT` en `game/data/`.
+- `DATA/TASKS.TXT` define el grafo de tareas por frame (thread principal + 3 workers en PC). `FUN_007d6370` registra cada nombre con su callback (`FUN_00a1a220`).
+- Cámara del jugador: `[g_root+0x58]`; cámara activa `[+0x1DC]` con cuaternión en `+0x2C` y posición en `+0x3C` (por uso).
+- Timer: dt real `0x16410D0` (double), dt escalado `0x16410C0`, tiempo de juego `0x16410A8`, contador de frames `0x16410DC`.
+- Renderer singleton `[0x1766A00]` (array de POVs en `+0x08`). Matrices de vista/proyección: pendiente.
+- **NETZ**: `NETZ_DISPATCH` → `[g_root+0x04]->FUN_007dde20()`; `NET_AI_UPDATE` → `FUN_007dfd70()` + `[0x17073FC].FUN_007dd970()`. Capa de red del engine → hallazgo 10.
