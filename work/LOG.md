@@ -97,3 +97,4 @@
 - 18:14 Corrida 10 (fase 5, usar compartido): Linux host con AIMP_NET=host;AIMP_GHOST=3;AIMP_SYNC_USE=1 (DLL 20cf297), juego lanzado.
 - 18:19 Corrida 10: usar compartido OK en los dos sentidos (locker). Hallazgo 13. NET eventos solo cuando cambian.
 - 18:22 Corrida 10 terminada (salida limpia; 6065 enviados, 5524 recibidos, 0 perdidos; 0 excepciones). Mod en modo pasivo (DLL aed44d3).
+- 18:23 Laptop subió el reporte del paso 7 (e1d2502): el uso remoto mueve a su jugador al anclaje del locker (misma posición que el de papito, 3 decimales), cámara fija adentro, 0 excepciones. Agregado al hallazgo 13.
