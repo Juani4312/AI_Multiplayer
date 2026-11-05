@@ -253,3 +253,8 @@ Código en `mod/` (README con build, instalación, variables y checklist de la p
 - Los dos wrappers de encolado (`FUN_00a2a290` → cola A `[0x1BE1BC8]`; `FUN_00a2a810` → sesión `[0x1BE1BD4]`) tienen el prólogo `55 8B EC 8B 45 10 8B 4D 0C 8B 55 08 50 51`, sin relocations (verificado en el archivo). El mod los hookea solo con `AIMP_TRACE_QUEUES=1`.
 - `FUN_00a2a5c0` (update de la sesión): sin proveedor, el buffer B se vacía sin despacharse. Detalle en `findings/10-netz-red-del-engine.md`, parte 6.
 - Tests: `test_probe` hookea dos wrappers falsos con el mismo prólogo; el original se ejecuta 462/462 veces a través del trampolín; el tipo se enmascara a u16; los informes por período y los totales salen bien.
+
+### Analizador del log (`work/scripts/analyze_aimp_log.py`)
+- Cruza `aimp.log` con cada chequeo de `RUNTIME_PLAN.md` (bloques 0–3) y marca OK / FALLA / sin datos / info, con la evidencia del log.
+- Probado con el log sintético de `test_probe` (detecta el transporte "inesperado" simulado y la cámara desplazada) y con el log real del proxy en `test_host` (guardas rechazadas, como corresponde a un .exe que no es `AI.exe`).
+- Ruta de log por defecto verificada bajo Wine: `C:\users\<usuario>\AppData\Local\AI_Multiplayer\aimp.log` (en Proton el usuario es `steamuser`).
