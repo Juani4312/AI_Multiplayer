@@ -84,7 +84,10 @@ _Última actualización: 2026-11-05, tarde (pruebas en la laptop Windows: fases 
    - en el primer `net_poll`, vaciar el backlog sin contar huecos (hoy da 361 "perdidos" falsos y un estado viejo de 35 s).
 
    ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
-2. **Fase 5, filtrar qué se replica** (hallazgo 13, limitaciones): el que recibe hace la misma acción con su jugador. Replicar cajas, botones e ítems (estado del mundo) y no lockers ni terminales, usando el primer dword del id del objetivo. Probar ítems: ¿los levantan los dos? Probar si el avatar NPC puede ser el que usa.
+2. **Fase 5, probar el filtro** (`1c1d558`):
+   - Con `AIMP_SYNC_USE=1`, los lockers (`3e3ec35d`) y la terminal de guardado (`1e38b898`) ya no se mandan. El resto sí.
+   - Prueba: en las dos máquinas, usar una caja o un botón (por ejemplo, el del transit) y ver si se abre o se activa también en la otra. Un locker ya no tiene que arrastrar al otro.
+   - Después, ítems: ¿los levantan los dos? Y si el avatar NPC puede ser el que usa.
    - Fase 4b, pendiente: probar `8bc1f7e`, que vuelve a poner al NPC si su IA lo corre; apagar su IA y su animación.
 3. Investigar qué escribe en los canales NETZ durante el juego: posible camino para el movimiento de personajes.
 4. Estático pendiente: semántica de los RPCs 0x1E/0x20/0x22/0x23/0x28 y del B 0x07; dispatcher de los comandos de UI (hallazgo 09); inventario (07).
