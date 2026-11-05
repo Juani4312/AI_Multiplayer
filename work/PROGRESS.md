@@ -46,11 +46,13 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Mod fase 1+2 (proxy winmm + hook + log de posición) | ⏸️ pendiente, a hacer en una sesión con el usuario |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
 | Hallazgo 10 (NETZ: red del engine) | 🟡 parte 1 en `findings/10-netz-red-del-engine.md` (capa dormida, sin transporte) |
-| Hallazgo 05 (creación de entidades) | ⏳ siguiente |
+| Hallazgo 05 (creación de personajes) | 🟡 parte 1 en `findings/05-creacion-de-personajes.md` (FinishSpawning: `def+0x1C` → vector de jugadores) |
+| Hallazgo 08 (IA del Alien: ¿usa solo `GetPlayer()`?) | ⏳ siguiente |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
 ## Siguiente paso
-1. Hallazgo 05 (creación de entidades): gestor de personajes `g_root+0x08` (ctor `FUN_007d9260`, 0x9FF0 bytes): cómo se llena el array de jugadores `+0x80/+0x84`, constructor de `Character` `0x7B2390` y su factory, y cómo se crea un NPC.
-2. Hallazgo 10 parte 2: quién escribe en los canales NETZ, quién consume mensajes, flag de modo multijugador.
-3. Mod fase 1+2: pendiente, para hacer junto con el usuario.
+1. Hallazgo 08 (parte 1): ¿la IA (selección de objetivo del Alien, sentidos, menace) usa solo `GetPlayer()` (índice 0) o recorre el vector de jugadores `[[g_root+8]+0x80]`? Pistas: `behavior_manager/menace_manager.cpp`, `alien_attack_manager.cpp`, `visibility_manager.cpp`, tareas `AI_*` (hallazgo 04), los 180 callers de `GetPlayer` (`0x78BAF0`).
+2. Hallazgo 05 parte 2: estructura del `request` de `SpawnCharacter` (`0x7D3B50`) y de dónde sale la definición del jugador.
+3. Hallazgo 10 parte 2: productores/consumidores de mensajes NETZ y flag de modo multijugador.
+4. Mod fase 1+2: pendiente, para hacer junto con el usuario.

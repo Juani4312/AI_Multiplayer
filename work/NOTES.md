@@ -174,3 +174,10 @@ Detalle en `findings/10-netz-red-del-engine.md`. Evidencia en `work/evidence/h10
 - NETZ: ctor `0x7E1CB0`, vtable `0x12F74FC`, 32 canales de 0x30 bytes en `+0x18`, máscara de canales sucios en `+0x10/+0x14`, transporte en `+0x69C` (`vf[1]` = enviar). **Solo el ctor escribe `+0x69C` (en 0)**: no hay transporte en retail.
 - Tabla de nombres de mensajes de red en `0x16413B0` (26 tipos; logic/display character, entity manager de cliente, física, disparos, release npc/player).
 - "Server created … clients" = Havok Visual Debugger (no es multiplayer).
+
+## 2026-11-05 — Hallazgo 05 (creación de personajes, parte 1)
+Detalle en `findings/05-creacion-de-personajes.md`. Evidencia en `work/evidence/h05/`.
+- **Corrección al hallazgo 03:** la vtable de un personaje en runtime es `0x12F5D80` (constructor derivado `0x7CEC20`); `0x12F4FC8` es la de la clase base, que se pisa.
+- API del `CharacterManager` (nombres de los `strncpy` a `0x16F17F8`): `request_character` `0x7D0470`, `finish_spawning` `0x7B80C0`, `release_player` `0x7999B0`, `release_npc` `0x7997E0`, `release_dead_npc` `0x799B50`, `cleanup_all_deleted_characters` `0x799CE0`, `update1` `0x7CC080`, `update3` `0x7CC2E0`.
+- `FinishSpawning`: el flag `def+0x1C` decide jugador (vector `+0x80/+0x84`) o NPC (`+0xD0/+0xD4`). No hay límite de 1 jugador.
+- `SpawnCharacter` `0x7D3B50` = slot 1 de la vtable de interfaz `0x12F68E0` (subobjeto `gestor+0x04`). Llama a NETZ (`FUN_007ddc60`) antes de `RequestCharacter`. **Ghidra no desensambló esa zona** (solo se alcanza por vtable): ojo con conclusiones de "sin referencias".
