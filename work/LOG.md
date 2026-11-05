@@ -69,3 +69,4 @@
 - 13:54–13:56 Corrida 4 (red): juego en host + peer en segundo plano; el usuario cargó Tech_Hub, caminó (marcas F8) y guardó en una terminal de guardado. Juego: 2571 enviados, 2979 recibidos, 0 perdidos.
 - 13:57 `aimp_peer.py`: salida sin buffer y manejo de SIGTERM (en segundo plano SIGINT viene ignorado). Tailscale no está instalado: pendiente con el usuario.
 - 14:05 **Fase 3 verificada en local, en los dos sentidos**: el peer recibió el estado real del jugador (Tech_Hub, posición que coincide con las marcas F8, yaw, contador de simulación, id 2ff722b2099d5b9b), 2108 paquetes y 0 perdidos. Falta Tailscale.
+- 14:12 El usuario instaló Tailscale (falta levantar el daemon) y va a probar en su laptop con Windows 10. `work/windows/instructions.md` (para Claude Code en Windows) + `work/windows/aimp_check.ps1` (check/install/collect/revert, escribe `work/windows/report.md`) + `mod/dist/winmm.dll` (sha256 dff8e85f…). CLAUDE.md redirige a las sesiones de Windows.
