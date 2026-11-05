@@ -68,3 +68,4 @@
 - 13:54 **Fase 3 verificada en local (menú)**: el juego en modo host (Proton) y `aimp_peer.py` como cliente intercambian estados a ~20/s sin pérdidas (462 paquetes del juego al peer; el juego recibe la posición falsa del peer con 27–40 ms de antigüedad). Falta ver la posición real del jugador (con la partida cargada) y la prueba por Tailscale.
 - 13:54–13:56 Corrida 4 (red): juego en host + peer en segundo plano; el usuario cargó Tech_Hub, caminó (marcas F8) y guardó en una terminal de guardado. Juego: 2571 enviados, 2979 recibidos, 0 perdidos.
 - 13:57 `aimp_peer.py`: salida sin buffer y manejo de SIGTERM (en segundo plano SIGINT viene ignorado). Tailscale no está instalado: pendiente con el usuario.
+- 14:05 **Fase 3 verificada en local, en los dos sentidos**: el peer recibió el estado real del jugador (Tech_Hub, posición que coincide con las marcas F8, yaw, contador de simulación, id 2ff722b2099d5b9b), 2108 paquetes y 0 perdidos. Falta Tailscale.

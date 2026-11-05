@@ -295,5 +295,11 @@ Autorizado por el usuario ("corré y modificá lo que necesites, siempre que lo 
   - en el menú, el peer recibió 462 paquetes del juego ("nivel 0, sin jugador"), ~19/s, sin pérdidas; el juego recibió el estado del peer a 20/s, con 27–40 ms de antigüedad;
   - después el usuario cargó la partida (`Tech_Hub`), caminó (marcas F8 en t = 158,8 y 191,6) y guardó en una terminal de guardado (marca 3, t = 203,3); esa corrida fue sin trazado, así que el mensaje de la interacción no quedó registrado;
   - totales del juego: 2571 paquetes enviados, 2979 recibidos, **0 perdidos**.
+  - del lado del peer (`work/evidence/runtime/run4-peer.log`): 2108 paquetes del juego, 0 perdidos. Con la partida cargada llega **el estado real del jugador**:
+    - nivel 16, "con jugador";
+    - la posición sigue la caminata y coincide con las marcas F8 (p. ej. (4,49, 13,28, 33,09) = marca 3);
+    - el yaw cambia al girar y el contador de simulación avanza;
+    - id `2ff722b2099d5b9b`, el mismo de los RPC 0x26 en Tech_Hub.
+  - **Fase 3 verificada en local, en los dos sentidos.**
 - Aprendido: un proceso lanzado en segundo plano desde un shell no interactivo ignora SIGINT, y Python con la salida redirigida guarda todo en buffer. `aimp_peer.py` ahora imprime con flush y maneja SIGTERM.
 - **Pendiente para cerrar la fase 3:** prueba por Tailscale con el amigo. Tailscale no está instalado en la máquina del usuario: instalarlo requiere su confirmación.
