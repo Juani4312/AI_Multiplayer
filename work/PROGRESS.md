@@ -45,7 +45,7 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
 | Mod fase 1+2 (proxy winmm + hook + log de posición) | ⏸️ pendiente, a hacer en una sesión con el usuario |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
-| Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–2 en `findings/10-netz-red-del-engine.md` (dormida: sin transporte ni proveedor; canal por personaje) |
+| Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–3 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; colas de mensajes con 70+ productores) |
 | Hallazgo 05 (creación de personajes) | 🟡 partes 1–2 en `findings/05-creacion-de-personajes.md` (FinishSpawning, controlador de jugador, request y spawner de script) |
 | Hallazgo 08 (IA y múltiples jugadores) | 🟡 parte 1 en `findings/08-ia-y-multiples-jugadores.md` (IA mixta) |
 | Hallazgo 09 (niveles/checkpoints/guardado) | 🟡 parte 1 en `findings/09-niveles-checkpoints-guardado.md` |
@@ -61,6 +61,7 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
   1. El engine tiene una **capa de red propia (NETZ)**, dormida: no tiene transporte (hallazgo 10).
   2. Hay un **vector de jugadores** (`[[g_root+8]+0x80]`, contador `+0x84`). Cualquier personaje con la definición de jugador entra ahí y recibe un **controlador de jugador** (hallazgos 03 y 05).
   3. La condición del Alien **`TargetIsPlayer` no depende de `GetPlayer()`** (hallazgo 08).
+  4. **Más de 70 productores de mensajes de replicación** (patrón RPC "ejecutar local + encolar") escriben en dos colas aunque no haya red (hallazgo 10, parte 3). Interceptar esas colas podría dar la sincronización de eventos casi "gratis". Es el experimento de runtime prioritario.
 - Herramienta clave: `work/scripts/ghidra/dump.sh` + `Dump.java` (4 s por consulta sobre el proyecto persistente).
 
 ## Siguiente paso
