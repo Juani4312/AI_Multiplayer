@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir hasta agotar los tokens diarios)_
+_Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió seguir hasta usar ~70 % de los tokens)_
 
 ## Decisiones vigentes
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
@@ -43,7 +43,7 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Hallazgo 01 (inventario) | ✅ `findings/01-inventario.md` |
 | Hallazgo 02 (game loop) | ✅ `findings/02-game-loop.md` (hook: `ModeManager::Run` RVA 0x3A8460) |
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
-| Mod fase 1+2 (proxy winmm + hook + log de posición) | ⏸️ pendiente, a hacer en una sesión con el usuario |
+| Mod fase 1+2 (proxy winmm + hook + log de posición) | 🟡 **implementado y probado fuera del juego** (`mod/`, tests con wine OK). Falta la corrida en el juego (requiere al usuario) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
 | Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–3 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; colas de mensajes con 70+ productores) |
 | Hallazgo 05 (creación de personajes) | 🟡 partes 1–2 en `findings/05-creacion-de-personajes.md` (FinishSpawning, controlador de jugador, request y spawner de script) |
@@ -65,17 +65,21 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 - **Verificado offline:** el algoritmo de ShortGuid de Cathode (`work/scripts/shortguid_check.py`, contra `COMMANDS.PAK`) y que ningún nivel usa los nodos MP.
 - Herramienta clave: `work/scripts/ghidra/dump.sh` + `Dump.java` (4 s por consulta sobre el proyecto persistente).
 
+## Pendientes que requieren al usuario (en orden)
+1. **Montar el disco de 1,8 TB** (`sda1`): no se montó en el arranque porque el NTFS quedó "dirty" (detalle en `NOTES.md`, sección "Mod fase 1+2"). Opción segura: chkdsk desde Windows; opción rápida: `sudo ntfsfix -d /dev/sda1 && sudo mount /mnt/1,8TB`.
+2. **Primera corrida del mod**: copiar `mod/build/winmm.dll` al lado de `AI.exe`, poner `WINEDLLOVERRIDES="winmm=n,b" %command%` en Steam y seguir el checklist de `mod/README.md` ("Primera prueba"). Después revisar `aimp.log` contra `work/RUNTIME_PLAN.md`.
+3. Aprobar (o no) que el MCP de REA use el proyecto de Ghidra (ver arriba).
+4. KnownDLLs en el Windows del amigo; hash de su `AI.exe` cuando reinstale.
+5. Comparar el `COMMANDS.PAK` suelto del disco raíz (`/mnt/1,8TB/COMMANDS.PAK` con el disco desmontado; SHA-256 `dda19f70…8a47f`) con los del backup.
+
 ## Siguiente paso
-0. Leer `work/RUNTIME_PLAN.md` (plan de verificación en runtime) y `work/DESIGN_OPTIONS.md` (opciones de arquitectura del coop A/B/C, para decidir con el usuario).
-1. **Con el usuario:** fase 1+2 del mod (proxy `winmm`, hook en `ModeManager::Run`, log de estado y posición). Es la forma de verificar en runtime todo lo anterior. Requiere su confirmación para compilar, colocar la DLL y ejecutar el juego.
-2. Experimentos de runtime prioritarios (cuando haya mod):
-   - `GetPlayer`, la posición `+0x70`, el yaw `+0x174`, la cámara `[[g_root+0x58]+0x1DC]`;
-   - los contadores del `CharacterManager` (`+0x84`, `+0xD4`, `+0x174`);
-   - el transporte NETZ `[[g_root+4]+0x69C]` y su máscara `+0x10/+0x14`.
+0. Leer `mod/README.md`, `work/RUNTIME_PLAN.md` y `work/DESIGN_OPTIONS.md`.
+1. **Con el usuario:** primera corrida del mod (pendiente 2). El log responde los bloques 0–3 del plan de runtime: offsets base, jugador, cámara, NETZ y crecimiento de la cola A. Con eso se cierra la fase 2 y se decide la arquitectura (A/B/C de `DESIGN_OPTIONS.md`).
+2. Después de esa corrida:
+   - si la cola A crece por frame, hacer el experimento 3.5/3.6: hook del despacho `FUN_00a2a220` para registrar tipo, handler y bytes de cada mensaje;
+   - fase 3: UDP mínimo con la posición.
 3. Estático pendiente:
-   - 05 parte 2: estructura del request de `SpawnCharacter` `0x7D3B50` y de dónde sale la definición del jugador.
-   - 10 parte 2: productores/consumidores de NETZ.
-   - 06 parte 2: comportamiento por tipo de entidad.
-   - 09 parte 2: dispatcher de los comandos de UI.
-   - 07 parte 2: inventario.
-   - 04: matrices de vista/proyección.
+   - 05 parte 2: definición del jugador para el spawn de un segundo personaje;
+   - 10: quién llena la tabla de handlers de la cola A;
+   - 06 parte 2, 09 parte 2 (dispatcher de comandos de UI), 07 parte 2 (inventario);
+   - 04: matrices de vista/proyección (mejor en runtime).
