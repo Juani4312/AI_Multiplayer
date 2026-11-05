@@ -115,3 +115,4 @@
 - 19:09 Fin de la corrida 14: laptop subió su lado (db54960): ítems duplicados, uso de otro nivel descartado. Juego Linux cerrado; mod pasivo.
 - 19:11 sync.c: los usos remotos que no se pueden aplicar quedan pendientes (otro nivel, avatar todavía no apareció, id de RPC sin asignar) hasta AIMP_SYNC_PENDING_MS. Tests OK.
 - 19:13 Fase 6 (estático): handlers A de scripts (0x48A250-0x48BF90), productores 0x491C00/0x494B30/0x494BD0/0x491CB0, nodos MP sin usar. Diseño en work/DESIGN_PHASE6.md.
+- 19:14 Cierre de la sesión (límite diario): fase 6 paso 1 en curso (slots de TriggerSimple anotados en DESIGN_PHASE6.md). Todo subido.
