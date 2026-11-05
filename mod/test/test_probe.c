@@ -253,6 +253,8 @@ int main(void)
     expect(log, "TR   A 0x0003 n=420 b=3360 max=8 p sitios 0x", 1);
     expect(log, "TR   B 0x0011 n=42 b=168 max=4 p sitios 0x", 1);
     expect(log, "TR   cola B: 1 tipos distintos", 1);
+    expect(log, "TR   payload A 0x0003 #1 (8 bytes): 01020304 05060708", 1);
+    expect(log, "TR   payload A 0x0003 #9", 0);
     printf("  %s trace_install_at=%d, original ejecutado %u veces (esperado 462), último tipo 0x%x tamaño %u\n",
            tr_ok && g_enq_count == 462 && g_enq_last_type == 0x11 && g_enq_last_size == 4 ? "ok   " : "FALLA", tr_ok,
            g_enq_count, g_enq_last_type, g_enq_last_size);

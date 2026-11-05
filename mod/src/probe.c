@@ -49,6 +49,8 @@ static int g_warned_qa, g_rpc_listed;
 static uint32_t g_status_frame_game;
 static float g_status_pos[3];
 static int g_status_pos_ok;
+static int g_mark_key, g_mark_was_down;
+static uint32_t g_marks;
 static int g_dump_key, g_key_was_down, g_levels_listed, g_warned_mm, g_warned_sess;
 static int g_dump_requested;
 static uint32_t g_dump_at_frame;
@@ -451,12 +453,13 @@ void probe_init(void)
     g_sample_ticks = g_freq * sample_ms / 1000;
     g_status_ticks = g_freq * status_ms / 1000;
     g_dump_key = aimp_env_int(L"AIMP_DUMP_KEY", VK_F9);
+    g_mark_key = aimp_env_int(L"AIMP_MARK_KEY", VK_F8);
     g_first_frames = (uint32_t)aimp_env_int(L"AIMP_FIRST_FRAMES", 3);
     g_dump_at_frame = (uint32_t)aimp_env_int(L"AIMP_DUMP_AT_FRAME", 0);
     int trace_ms = aimp_env_int(L"AIMP_TRACE_MS", 5000);
     g_trace_ticks = g_freq * (trace_ms < 250 ? 250 : trace_ms) / 1000;
-    log_printf("sonda: muestra cada %d ms, resumen cada %d ms, tecla de volcado 0x%02x, primeros %u frames al detalle",
-               sample_ms, status_ms, g_dump_key, g_first_frames);
+    log_printf("sonda: muestra cada %d ms, resumen cada %d ms, tecla de volcado 0x%02x, tecla de marca 0x%02x, primeros %u frames al detalle",
+               sample_ms, status_ms, g_dump_key, g_mark_key, g_first_frames);
 }
 
 void probe_request_dump(void) { g_dump_requested = 1; }
@@ -529,6 +532,21 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
             why = "tecla";
         }
         g_key_was_down = down;
+    }
+    if (g_GetAsyncKeyState && g_mark_key > 0) {
+        int down = (g_GetAsyncKeyState(g_mark_key) & 0x8000) != 0;
+        if (down && !g_mark_was_down) {
+            /* Marca liviana para cruzar acciones del usuario con el log. */
+            float pos[3] = { 0 }, yaw = 0;
+            if (g_cur.pl) {
+                mem_read(g_cur.pl + CHR_POS, pos, sizeof pos);
+                mem_f32(g_cur.pl + CHR_YAW, &yaw);
+            }
+            log_printf("MARCA %u (frame %u, contador del juego %u) J0 pos=(%.2f, %.2f, %.2f) yaw=%.3f", ++g_marks, g_frames,
+                       *(volatile uint32_t *)(g_aimp_exe + AIMP_RVA_FRAME_COUNTER), (double)pos[0], (double)pos[1],
+                       (double)pos[2], (double)yaw);
+        }
+        g_mark_was_down = down;
     }
     if (g_autodump_at && now >= g_autodump_at) {
         dump = 1;
