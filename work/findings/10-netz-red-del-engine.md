@@ -210,3 +210,64 @@ Los tipos de mensaje son globales (`DAT_01637d24`, `DAT_016361e4`, …), probabl
 - ¿Quién vacía las colas (flush/descartar)? Candidatos: `FUN_00a2a620` (recorre `DAT_01be1bd0`) y el dispatch de NETZ.
 - Mapa tipo → nombre: los globales `DAT_016*`/`DAT_0163*` contra el enum de la parte 1.
 - ¿Qué es `flag_2D` y cuándo se usa el callback global (`PTR_FUN_016361f0`/`PTR_FUN_01637d30`) en lugar de la cola?
+
+---
+
+# Parte 4 - Flush por frame y despacho en *loopback*
+
+- **Evidencia:** `./work/evidence/h10/n19.txt` … `n21.txt`.
+- **Confianza:** alta para la mecánica (decompilación directa). La semántica de cada handler no se investigó.
+
+## Objetos
+
+- La **cola A** es `g_root+0x50` (objeto de 0x40 bytes; constructor `FUN_00a2a340`, el único que escribe `+0x34`):
+
+  | Campo | Contenido |
+  |-------|-----------|
+  | `+0x00` | **sumidero** (interfaz; NULL en retail) |
+  | `+0x08` | **tabla de handlers por tipo** (`{fn, ctx}`, indexada por el `u16` del mensaje) |
+  | `+0x14` | sección crítica |
+  | `+0x2C`… | buffer (`+0x30` datos, `+0x34` tamaño) |
+  | `+0x3C` | byte "despachando" |
+
+- La sesión de red de la parte 2 es `g_root+0x54` (otro objeto).
+
+## Flush (`FUN_00a2a3f0`, lo llama `FUN_007ddae0` una vez por frame)
+
+```c
+if (cola->tamaño != 0) {
+    if (cola->sumidero == NULL)  Dispatch(&buffer);            // retail
+    else if (cola->sumidero->vf[1](&buffer)) Dispatch(&buffer); // con red: primero lo entrega el sumidero
+    cola->tamaño = 0;
+}
+```
+
+`FUN_007ddae0` es parte del arranque del frame: llama al timer (`FUN_00773050`, `FUN_00773280`) y a `QueryPerformanceCounter` (hallazgo 04).
+
+## Despacho (`FUN_00a2a220`)
+
+```c
+cola->despachando = 1;
+for (off = 0; off < n; ) {
+    tipo = *(u16*)(buf + off); off += 2;
+    h = cola->handlers[tipo];                 // {fn, ctx}
+    off += h.fn(h.ctx, buf + off);            // el handler devuelve cuántos bytes consumió
+}
+cola->despachando = 0;
+```
+
+## Lectura del diseño
+
+1. Un sistema produce una acción y la encola: `[u16 tipo][payload]` (parte 3).
+2. Al inicio del frame siguiente, el flush entrega el buffer al **sumidero** (en el diseño original, la red) y lo **despacha a los handlers registrados**.
+3. En retail no hay sumidero, así que el despacho es local (*loopback*). **El camino de "recepción" se ejecuta en cada partida.**
+
+## Plan de coop que esto habilita (hipótesis a verificar)
+
+- **Host:** hook en el flush (`FUN_00a2a3f0`) o un sumidero propio en `g_root+0x50 → +0x00`, que es la interfaz prevista por el engine (`vf[1](&buffer) → bool`). Se copia el buffer de cada frame y se manda al cliente.
+- **Cliente:** inyectar los buffers recibidos en su cola (con `FUN_00a2a160` o escribiendo el buffer antes del flush) para que sus handlers apliquen los eventos del host.
+- **Problemas a resolver:**
+  - **duplicados**: el cliente también produce sus propios eventos locales; habría que filtrarlos por tipo o, en el cliente, entrar en modo `IsClient()`;
+  - **identidad de entidades**: los payloads seguramente referencian entidades por id o handle, que tienen que coincidir entre máquinas (mismo nivel, mismo orden de spawn, mismos datos);
+  - **determinismo y orden**.
+- Primer experimento (sin red): loguear por frame los tipos y tamaños que pasan por `FUN_00a2a220`, y qué handler (`fn`) atiende cada tipo.

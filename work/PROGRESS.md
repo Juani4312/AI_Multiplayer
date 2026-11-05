@@ -61,7 +61,7 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
   1. El engine tiene una **capa de red propia (NETZ)**, dormida: no tiene transporte (hallazgo 10).
   2. Hay un **vector de jugadores** (`[[g_root+8]+0x80]`, contador `+0x84`). Cualquier personaje con la definición de jugador entra ahí y recibe un **controlador de jugador** (hallazgos 03 y 05).
   3. La condición del Alien **`TargetIsPlayer` no depende de `GetPlayer()`** (hallazgo 08).
-  4. **Más de 70 productores de mensajes de replicación** (patrón RPC "ejecutar local + encolar") escriben en dos colas aunque no haya red (hallazgo 10, parte 3). Interceptar esas colas podría dar la sincronización de eventos casi "gratis". Es el experimento de runtime prioritario.
+  4. **Más de 70 productores de mensajes de replicación** (patrón RPC "ejecutar local + encolar") escriben en dos colas aunque no haya red (hallazgo 10, parte 3). Interceptar esas colas podría dar la sincronización de eventos casi "gratis". Es el experimento de runtime prioritario. Además, la cola A (`g_root+0x50`) se **despacha en loopback** cada frame (`FUN_00a2a3f0` → `FUN_00a2a220`): el camino de "recepción" corre en retail. Ver la parte 4 del hallazgo 10 para el plan de coop que habilita.
 - Herramienta clave: `work/scripts/ghidra/dump.sh` + `Dump.java` (4 s por consulta sobre el proyecto persistente).
 
 ## Siguiente paso
