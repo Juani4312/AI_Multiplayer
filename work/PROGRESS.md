@@ -50,11 +50,12 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Hallazgo 08 (IA y múltiples jugadores) | 🟡 parte 1 en `findings/08-ia-y-multiples-jugadores.md` (IA mixta) |
 | Hallazgo 09 (niveles/checkpoints/guardado) | 🟡 parte 1 en `findings/09-niveles-checkpoints-guardado.md` |
 | Hallazgo 06 (scripts/entidades) | 🟡 parte 1 en `findings/06-scripts-y-entidades.md` |
-| Hallazgo 07 (items/inventario) | ⏳ siguiente |
+| Hallazgo 07 (items/inventario) | 🟡 parte 1 en `findings/07-items-e-inventario.md` |
+| Hallazgo 08 parte 2 (objetivo del Alien) | ⏳ siguiente |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
 ## Siguiente paso
-1. Hallazgo 07 (items e inventario): `pickup_manager.cpp`, tarea `PICKUP_MANAGER_TICK` (`FUN_007ca0b0`), vftables `PickupSpawner`/`AddToInventory`/`InventoryItem` (hallazgo 06).
-2. Partes 2 pendientes: 08 (objetivo del Alien), 06 (comportamiento por tipo, enumerar entidades), 05 (request de `SpawnCharacter`), 10 (productores/consumidores NETZ, flag MP), 09 (dispatcher de comandos UI).
+1. Hallazgo 08 parte 2: selección de objetivo del Alien. Empezar por `alien_attack_manager.cpp` (`FUN_006e3db0`), el menace manager (`FUN_006cf080`), las tareas `AI_*` (callbacks en el hallazgo 04) y el estado de IA de cada personaje.
+2. Partes 2 pendientes: 06, 05, 10, 09, 07 (ver cada hallazgo).
 3. Mod fase 1+2: pendiente, para hacer junto con el usuario.
