@@ -41,3 +41,11 @@
 - 02:58 **Verificado offline** el algoritmo de ShortGuid (`work/scripts/shortguid_check.py`): 13/21 nombres aparecen en un `COMMANDS.PAK` vanilla y las variantes de control dan 0/21 → SHA-1 y orden de bytes confirmados. Ningún nivel de los 21 usa los nodos MP (0 apariciones).
 - 03:02 `work/DESIGN_OPTIONS.md`: opciones de arquitectura del coop (A manual, B replicar la cola RPC, C revivir el modo cliente/host), con riesgos y el experimento que decide cada una.
 - 03:07 Hallazgo 04: pistas para las matrices de vista/proyección (π/180 en `0x11C2A5C`, 37 usos); se propone resolverlo en runtime.
+- 12:27 Sesión nueva ("continuá"). Leídos PROGRESS, prompt, NOTES, RUNTIME_PLAN, DESIGN_OPTIONS y LOG. Siguiente paso: fase 1+2 del mod.
+- 12:30 Verificado en Ghidra y en el archivo: `ModeManager::Run` tiene un solo caller, `RET` sin argumentos, nadie salta a los bytes 1–6, no hay relocations en el prólogo. **Corrección:** la lista de niveles es `**(0x1BE1C4C)` (doble indirección).
+- 12:32 **El disco de 1,8 TB no está montado** (NTFS "dirty"; ntfs3 no lo monta sin `force`). Bloquea la corrida del juego, no el desarrollo. Debajo del punto de montaje hay un `COMMANDS.PAK` suelto del 2026-01-11 (hash anotado).
+- 12:47 El usuario pidió seguir en forma autónoma hasta ~70 % de los tokens (iba 13 %).
+- 12:48 Mod fase 1+2 compilado: `winmm.dll` sin CRT (solo kernel32), 205 exports (unión Proton + mingw/Windows), guardas de build, hook por frame en `ModeManager::Run`, sonda de estado de solo lectura y log en `%LOCALAPPDATA%`.
+- 12:49 Tests con wine (prefix descartable): hook sobre una función con el mismo prólogo (registros/ESP preservados con stack desalineado), formateador, y proxy cargado como lo carga `AI.exe` → OK.
+- 12:53 `test_probe` (imagen de `AI.exe` simulada) encontró 2 problemas reales de la sonda: resumen con datos viejos y estados transitorios perdidos. Corregidos; los 3 tests OK.
+- 12:56 README del mod con instalación (Proton/Windows) y checklist de la primera prueba; correcciones en el hallazgo 09 y RUNTIME_PLAN; NOTES y PROGRESS actualizados.

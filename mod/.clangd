@@ -1,0 +1,5 @@
+# Para el clangd del editor: el código se cross-compila con mingw (i686).
+CompileFlags:
+  CompilationDatabase: build
+  Add: [--target=i686-w64-mingw32]
+  Remove: [-mincoming-stack-boundary=*, -fno-tree-loop-distribute-patterns]

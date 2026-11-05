@@ -212,3 +212,39 @@ Detalle en `findings/07-items-e-inventario.md`. Evidencia en `work/evidence/h07/
 - `work/scripts/ghidra/SeedVtables.java` creó 22.608 funciones (destinos de vtables no analizados). Backup del proyecto anterior en `game/ghidra_backup/`. El proyecto cambió: REA en modo proyecto va a ver otro fingerprint (es normal).
 - `NETZ::AllocateChannel` = `0x7DDC60` (32 canales; id incremental `+0x698`; máscara de replicados `+0x10/+0x14`). Lo llama `SpawnCharacter` por cada personaje y asocia canal ↔ personaje.
 - "Sesión de red" = `g_root+0x54` = `*DAT_01be1bd4` (ctor `0xA2A6B0`): `+0x00` proveedor (NULL en retail), `+0x2C`/`+0x2D` flags, `+0x28` int. `IsAuthority()` `0xA2A4F0`/`0xA2A4A0` (1 sin proveedor), `IsClient()` `0xA2A4C0` (0 en retail).
+
+## 2026-11-05 (tarde) — Mod fase 1+2 implementado y probado fuera del juego
+Código en `mod/` (README con build, instalación, variables y checklist de la primera prueba). Commit de este bloque.
+
+### Verificaciones estáticas antes de escribir el hook (evidencia en `work/evidence/mod/hook1.txt`…`hook3.txt`)
+- `ModeManager::Run` (`0x7A8460`, 564 bytes): **un solo caller** (`0x7DB240`, seguido de `MOV BL,AL`). Epílogos `MOV AL,1`/`XOR AL,AL` + `RET` simple (`0x7A868B`, `0x7A8693`): **sin argumentos de stack**. El `RET 0x4` de `0x7A86FF` es de la función siguiente.
+- Nadie salta a `0x7A8461`…`0x7A8466` (xrefs vacías); el loop interno vuelve a `0x7A8471`. Los 6 bytes robados (`51 53 55 56 8B F1`) son 5 instrucciones completas sin direccionamiento relativo.
+- En el archivo (`game/AI.exe`, parser propio `pecheck.py` en el scratchpad): bytes en RVA `0x3A8460` = `51 53 55 56 8b f1 83 7e 4c ff`; **ninguna relocation** toca el prólogo; TimeDateStamp `0x54E3199D`; exports `ovr_Initialize` RVA `0xBA83B0`, `curl_easy_init` RVA `0xCEAB20`; `AI.exe` importa de WINMM **solo por nombre** (`timeGetTime`, `timeEndPeriod`, `timeBeginPeriod`).
+- **Corrección (hallazgo 09 y RUNTIME_PLAN):** la lista de niveles es `L = **(0x1BE1C4C)`. `FUN_00a2e800`/`FUN_00a2e810` = `MOV EAX,[0x1BE1C4C]; MOV EAX,[EAX]; RET`; `GetCurrentLevelName` (`0x78BBE0`) = `FUN_00a2e810() + modo->m_4·0x46`.
+- El flush de la cola A (`FUN_007ddae0` vía el thunk `0x7DDC00`) lo llama `0x774FA0`, un callback de tarea: corre **dentro** de `ModeManager::Run`. Entonces el tamaño de la cola leído después de `Run` es lo producido en ese frame después del flush.
+
+### Diseño del mod
+- Proxy `winmm.dll` **sin CRT** (`-nostdlib`; único import `KERNEL32.dll`, 32 funciones). 205 exports: 202 por nombre (unión de la winmm de Proton 9 y de `libwinmm.a` de mingw-w64, que sale de la de Windows; 16 son solo de Windows) + ordinales 2–4. Cada export es `jmp [puntero]`; el puntero arranca en un thunk que, si se llama a algo que la real no tiene, loguea `FATAL` con el nombre, muestra un MessageBox y termina el proceso.
+- La real se carga desde `GetSystemDirectoryW()\winmm.dll` en `DllMain` (como hacen los proxies habituales).
+- Guardas: TimeDateStamp, SizeOfImage, RVAs de `ovr_Initialize`/`curl_easy_init` y los 10 bytes del prólogo. Si algo no coincide: proxy puro, sin hooks.
+- Hook: JMP rel32 + NOP sobre los 6 bytes del prólogo; trampolín propio (sin MinHook). El detour (`fastcall`, `force_align_arg_pointer`) llama al original (`thiscall`) y después a la sonda, y devuelve el EAX completo del original.
+- Sonda (`probe.c`, solo lectura con `ReadProcessMemory` sobre el propio proceso; los globales de `.data` se leen directo):
+  - por frame: estado/modo del `ModeManager`, tamaño de la cola A, tecla F9;
+  - cada 250 ms: foto completa y eventos `EV`;
+  - cada 1 s: resumen `ST`;
+  - volcados en crudo automáticos al aparecer el jugador y 5 s después, y con F9.
+- Log: `%LOCALAPPDATA%\AI_Multiplayer\aimp.log` (o `AIMP_LOG`). No escribe nada en la carpeta del juego.
+
+### Tests (con `wine` 11.20 del sistema, prefix descartable en el scratchpad; `mod/test/run_tests.sh`)
+- `test_core`: hook sobre una función con el mismo prólogo que `ModeManager::Run` → instala, rechaza bytes distintos sin tocar nada, preserva EBX/ESI/EDI/EBP y ESP llamando con el stack desalineado, rama AL=0, remove. Formateador contra el CRT: OK. Nota: el `ucrtbase` de Wine imprime `%hhu` de 300 como "300"; C99 (y el mod) dan "44".
+- `test_probe`: imagen de `AI.exe` simulada (32 MB, objetos en los offsets de `game.h`) → 36 verificaciones del log OK (posición/yaw, cámara−jugador = (0, 1,6, 0), lista y cambio de nivel, transiciones de estado por frame, volcados, cola A, transporte "INESPERADO").
+- `test_host`: un .exe que importa `winmm.dll` por nombre carga el proxy y la real (`C:\windows\system32\winmm.dll`); `timeGetTime`, `timeBeginPeriod`/`timeEndPeriod` y `waveOutGetNumDevs` se reenvían; 189 exports resueltos, ausentes solo los 16 de Windows. La guarda rechaza el .exe de prueba ("build NO reconocida").
+- Bugs encontrados por los tests y corregidos antes del commit: el resumen usaba una foto de hasta 15 frames de antigüedad (ahora fuerza una foto nueva) y los estados transitorios entre fotos se perdían (ahora el estado se lee por frame).
+
+### Pendiente para la primera corrida (requiere al usuario)
+- **El disco de 1,8 TB no está montado**: en el arranque de las 12:08, `ntfs3` rechazó `sda1` con "volume is dirty and force flag is not set" (lo mismo pasó con `nvme0n1p3`, la partición de Windows). Opciones del usuario (root):
+  - (a) arrancar Windows y correr `chkdsk /f`, y desactivar el inicio rápido;
+  - (b) `sudo ntfsfix -d /dev/sda1` y después `sudo mount /mnt/1,8TB`.
+  Sin el disco no hay juego ni Steam library.
+- Debajo del punto de montaje (en el disco raíz) hay un `COMMANDS.PAK` suelto: 3.572.520 bytes, mtime 2026-01-11 17:48, SHA-256 `dda19f70ab8abe5194fa7a372a680ed8c5aae6a30842101547da8f724f48a47f`. La fecha coincide con el `COMMANDS.PAK` modificado de `BSP_LV426_PT01`. Hay que compararlo con las copias del backup cuando el disco esté montado.
+- Colocar `winmm.dll` en la carpeta del juego y la opción de lanzamiento (`WINEDLLOVERRIDES="winmm=n,b" %command%`): confirmación del usuario.

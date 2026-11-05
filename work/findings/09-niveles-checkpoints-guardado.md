@@ -15,13 +15,15 @@
   | Enumeración de `*.ais` (capa de plataforma/Steam) | `0x00A599F0`, `0x00A623A0`, `0x00A62630` | |
 - **Evidencia:** `./work/evidence/h09/s1.txt` … `s6.txt`; `./work/evidence/h02/dump14.txt` (máquina de estados). El listado de la carpeta de Steam Cloud se hizo solo leyendo.
 - **Confianza:** alta para la lista de niveles y el registro de comandos. Media para el uso de los comandos (no se vio el dispatcher).
-- **Cómo verificar en runtime:** leer `[[0x1BE1C4C]+0x2BC8]` (índice) y el nombre en `[0x1BE1C4C] + índice·0x46` al cargar distintos niveles.
+- **Cómo verificar en runtime:** con `L = [[0x1BE1C4C]]` (doble indirección, ver la corrección), leer `[L+0x2BC8]` (índice) y el nombre en `L + índice·0x46` al cargar distintos niveles. El mod de la fase 1+2 lo hace solo (`mod/src/probe.c`).
 - **Verificado en runtime:** no.
 
 ## Lista de niveles
 
+> **Corrección (2026-11-05, verificada en asm, `work/evidence/mod/hook2.txt` y `hook3.txt`):** hay **doble** indirección. `FUN_00a2e800` y `FUN_00a2e810` son `MOV EAX,[0x1BE1C4C]` + `MOV EAX,[EAX]` + `RET`, y `GetCurrentLevelName` (`0x78BBE0`) suma `modo->m_4 · 0x46` al resultado de `FUN_00a2e810`. O sea: `0x1BE1C4C` guarda un `LevelList**`. La versión anterior de este hallazgo tenía una desreferencia de menos.
+
 ```
-LevelList* L = *(LevelList**)0x01BE1C4C;
+LevelList* L = **(LevelList***)0x01BE1C4C;   // doble indirección
   L + i*0x46      : nombre del nivel i (char[0x46]; p. ej. rutas tipo "Production\DLC\…")
   L + 0x2BC0      : cantidad de niveles
   L + 0x2BC8      : índice del nivel actual (lo escribe ModeManager::Run en el estado 0: modo->m_4)
