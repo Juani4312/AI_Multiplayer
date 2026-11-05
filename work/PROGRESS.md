@@ -45,8 +45,8 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
 | Mod fase 1+2 (proxy winmm + hook + log de posición) | ⏸️ pendiente, a hacer en una sesión con el usuario |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
-| Hallazgo 10 (NETZ: red del engine) | 🟡 parte 1 en `findings/10-netz-red-del-engine.md` (capa dormida, sin transporte) |
-| Hallazgo 05 (creación de personajes) | 🟡 parte 1 en `findings/05-creacion-de-personajes.md` (FinishSpawning: `def+0x1C` → vector de jugadores) |
+| Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–2 en `findings/10-netz-red-del-engine.md` (dormida: sin transporte ni proveedor; canal por personaje) |
+| Hallazgo 05 (creación de personajes) | 🟡 partes 1–2 en `findings/05-creacion-de-personajes.md` (FinishSpawning, controlador de jugador, request y spawner de script) |
 | Hallazgo 08 (IA y múltiples jugadores) | 🟡 parte 1 en `findings/08-ia-y-multiples-jugadores.md` (IA mixta) |
 | Hallazgo 09 (niveles/checkpoints/guardado) | 🟡 parte 1 en `findings/09-niveles-checkpoints-guardado.md` |
 | Hallazgo 06 (scripts/entidades) | 🟡 parte 1 en `findings/06-scripts-y-entidades.md` |
