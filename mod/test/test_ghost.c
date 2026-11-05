@@ -48,7 +48,7 @@ static float getf(const void *base, uint32_t off)
 
 /* CharacterManager falso */
 static void *g_cm, *g_parr, *g_narr, *g_this, *g_sc_this;
-static uint32_t g_auths, g_spawns, g_bad_this, g_teleports, g_last_tp_chr;
+static uint32_t g_auths, g_spawns, g_bad_this, g_teleports, g_last_tp_chr, g_misaligned;
 static uint8_t g_last_sc_req[SPAWN_REQ_SIZE];
 
 static void append(uint32_t f_arr, uint32_t f_n, void *c)
@@ -73,11 +73,15 @@ static uint32_t __attribute__((cdecl)) fake_spawnchar(uint32_t self, const uint8
     g_spawns++;
     if (self != (uint32_t)(uintptr_t)g_sc_this)
         g_bad_this++;
+    if ((uintptr_t)req & 15) /* el handler de sesión 0x2E lo pasa alineado a 16 */
+        g_misaligned++;
     memcpy(g_last_sc_req, req, SPAWN_REQ_SIZE);
     uint8_t *c = obj(0x400), *d = obj(0x40);
     put32(c, 0, (uint32_t)g_aimp_exe + AIMP_RVA_VT_CHARACTER);
     memcpy(c + CHR_ID, req + SREQ_ID, 8);
     memcpy(c + CHR_POS, req + SREQ_POS, 12);
+    float w = 1.0f; /* cuarto componente de la posición: el teleport tiene que conservarlo */
+    memcpy(c + CHR_POS + 12, &w, 4);
     strcpy((char *)c + 0x10, (const char *)req + SREQ_COMPOSITE);
     uint32_t type = get32(req, SREQ_TYPE);
     put32(d, DEF_TYPE, type);
@@ -94,11 +98,14 @@ static uint32_t __attribute__((cdecl)) fake_spawnchar(uint32_t self, const uint8
     return (uint32_t)(uintptr_t)c;
 }
 
+/* Como SetTransform: copia 16 bytes con MOVAPS, así que exige pos alineado a 16. */
 static void __attribute__((cdecl)) fake_teleport(uint32_t pj, const float *pos, float yaw)
 {
     g_teleports++;
     g_last_tp_chr = pj;
-    memcpy((uint8_t *)(uintptr_t)pj + CHR_POS, pos, 12);
+    if ((uintptr_t)pos & 15)
+        g_misaligned++;
+    memcpy((uint8_t *)(uintptr_t)pj + CHR_POS, pos, 16);
     memcpy((uint8_t *)(uintptr_t)pj + CHR_YAW, &yaw, 4);
 }
 
@@ -233,7 +240,7 @@ int main(void)
     CHECK(ghost_install() == 1, "ghost_install");
 
     printf("[carga del nivel: 3 pedidos por los dos hooks]\n");
-    uint8_t r[SPAWN_REQ_SIZE];
+    uint8_t r[SPAWN_REQ_SIZE] __attribute__((aligned(16)));
     uint32_t esp0, esp1;
     make_req(r, 1, 0, "\x2f\xf7\x22\xb2\x09\x9d\x5b\x9b", "THE_PLAYER", 4.5f);
     __asm__ volatile("mov %%esp, %0" : "=r"(esp0));
@@ -269,15 +276,18 @@ int main(void)
         ghost_frame(now, &net, 16);
     CHECK(g_spawns == 4 && g_auths == 3, "el clon pasó por SpawnCharacter y no por la autoridad (SC %u, autoridad %u)", g_spawns,
           g_auths);
-    CHECK(get32(g_last_sc_req, SREQ_KEY) == 64 && get32(g_last_sc_req, SREQ_KEY2) == 64, "clave nueva en +0x00 y +0xF0 (%u/%u)",
-          get32(g_last_sc_req, SREQ_KEY), get32(g_last_sc_req, SREQ_KEY2));
+    CHECK(get32(g_last_sc_req, SREQ_KEY) == 64 && get32(g_last_sc_req, SREQ_KEY2) == 0,
+          "clave nueva en +0x00; nada más allá de los 0xF0 bytes del mensaje (%u / +0xF0 = %u)", get32(g_last_sc_req, SREQ_KEY),
+          get32(g_last_sc_req, SREQ_KEY2));
     CHECK(get32(g_cm, CM_NPLAYERS) == 2, "el clon es el jugador 1 (%u jugadores)", get32(g_cm, CM_NPLAYERS));
     uint8_t *clone = (uint8_t *)(uintptr_t)get32(g_parr, 4);
     uint8_t *cctrl = clone ? (uint8_t *)(uintptr_t)get32(clone, CHR_CTRL) : NULL;
     CHECK(clone && memcmp(clone + CHR_ID, "\x2f\xf7\x22\xb2\x41\x49\x4d\x50", 8) == 0, "id del clon: el del jugador con 'AIMP'");
     CHECK(cctrl && cctrl[CTRL_ACTIVE] == 0, "controlador del clon desactivado");
     CHECK(((uint8_t *)(uintptr_t)get32(local, CHR_CTRL))[CTRL_ACTIVE] == 1, "el controlador del jugador local sigue activo");
-    CHECK(clone && getf(clone, CHR_POS) == 2.5f, "el clon a 1,5 m en x (x=%.2f)", clone ? (double)getf(clone, CHR_POS) : 0.0);
+    CHECK(clone && getf(clone, CHR_POS) == 2.5f && getf(clone, CHR_POS + 12) == 1.0f, "el clon a 1,5 m en x, con w conservado (x=%.2f w=%.2f)",
+          clone ? (double)getf(clone, CHR_POS) : 0.0, clone ? (double)getf(clone, CHR_POS + 12) : 0.0);
+    CHECK(getf(innocent, CHR_POS + 12) == 1.0f, "el INNOCENT también conserva w (%.2f)", (double)getf(innocent, CHR_POS + 12));
     float inn_x = getf(innocent, CHR_POS);
     memcpy(local + CHR_POS, (float[]){ 5.0f, 2.0f, 3.0f }, 12); /* el jugador se mueve: el INNOCENT ya no lo sigue */
     for (int i = 0; i < 3; i++, now += step)
@@ -310,6 +320,8 @@ int main(void)
     CHECK(g_spawns == 6 && get32(g_cm, CM_NPLAYERS) == 2, "en el nivel nuevo se clona otra vez (SC %u, jugadores %u)", g_spawns,
           get32(g_cm, CM_NPLAYERS));
 
+    CHECK(g_misaligned == 0, "posiciones y pedidos alineados a 16 en todas las llamadas (%u desalineados)", g_misaligned);
+
     printf("[registro de excepciones]\n");
     crash_install();
     AddVectoredExceptionHandler(0, fixer); /* después del nuestro: salta la instrucción que falla */
@@ -336,7 +348,7 @@ int main(void)
     expect(log, "\"INNOCENT\"", 1);
     expect(log, "GHOST: primer teletransporte de 0x", 1);
     expect(log, "GHOST: fin del modo NPC; se intenta el clon", 1);
-    expect(log, "GHOST: clonando el pedido (clave 1 -> 64 en +0x00 y +0xF0, id 2ff722b2099d5b9b -> 2ff722b241494d50) por SpawnCharacter", 1);
+    expect(log, "GHOST: clonando el pedido de SpawnCharacter (clave 1 -> 64, id 2ff722b2099d5b9b -> 2ff722b241494d50)", 1);
     expect(log, "GHOST: SpawnCharacter devolvió 0x", 1);
     expect(log, "ahora 2 jugadores, 2 NPCs", 1);
     expect(log, "GHOST: apareció el clon: jugadores[1]", 1);
@@ -344,7 +356,7 @@ int main(void)
     expect(log, "objetivo (50.00, 1.00, -20.00) [red]", 1);
     expect(log, "GHOST: cambió el jugador local", 1);
     expect(log, "GHOST: no hay NPC de tipo 6 en el nivel (0 NPCs); se pasa al clon", 1);
-    expect(log, "GHOST: clonando el pedido (clave 1 -> 65 en +0x00 y +0xF0, id 2ff722b201020304 -> 2ff722b242494d50)", 1);
+    expect(log, "GHOST: clonando el pedido de SpawnCharacter (clave 1 -> 65, id 2ff722b201020304 -> 2ff722b242494d50)", 1);
     expect(log, "registro de excepciones (VEH) instalado", 1);
     expect(log, "EXCEPCIÓN 0xc0000005 en ", 1);
     expect(log, "thread ", 1);
