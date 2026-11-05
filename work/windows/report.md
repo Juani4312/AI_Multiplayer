@@ -166,3 +166,177 @@ Hechos (salen del log `logs/aimp-partida-20261105-110343.log`):
 Pendiente:
 - **Paso 3 (red): no se hizo.** Tailscale no está instalado en la laptop y hace falta que el juego Linux esté abierto en modo host.
 - `git pull` falló desde esta sesión porque no había credenciales de GitHub (`could not read Username`). Las pruebas se hicieron con el commit local `31fe898` (la DLL dice `commit 8f288e9`, que es el que la compiló).
+
+## Instalación (2026-11-05 11:09:50)
+- Copiado `winmm.dll` (SHA-256 `DFF8E85FAE325BA1257DD3AFBB2A82C03E24F35DCFFE5E388FC2D30CACCEC671`) a `c:\program files (x86)\steam\steamapps\common\Alien Isolation`.
+- `aimp.cfg`: AIMP_NET=join; AIMP_NET_PEER=100.126.161.126:47811
+- Para deshacer: `-Action revert`.
+
+## Resultado: red (2026-11-05 11:41:32)
+- Log copiado a `.\work\windows\logs\aimp-red-20261105-114132.log` (450605 bytes, modificado 11/05/2026 11:41:21).
+```text
+[    0.001] AI_Multiplayer 0.1.0 (fase 1+2: proxy, hook por frame, sonda de estado), commit 8f288e9, compilado Nov  5 2026 14:10:11
+[    0.001] DLL: C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation\WINMM.dll (0x73fb0000), link 0x6aecb874, pid 4116
+[    0.001] config: 1 archivo(s) aimp.cfg leídos; aplicadas: AIMP_NET=join AIMP_NET_PEER=100.126.161.126:47811
+[    0.002] plataforma: Windows 10.0.19045
+[    0.002] proxy: winmm real = C:\Windows\system32\winmm.dll (0x73f80000)
+[    0.002] proxy: 195 exports resueltos, 10 ausentes en la winmm real (2 de ellos son solo de Windows)
+[    0.002] proxy: ausentes: DrvClose DrvDefDriverProc DrvOpen DrvOpenA DrvSendMessage GetDriverFlags OpenDriverA mmioInstallIOProc16 winmmDbgOut winmmSetDebugLevel
+[    0.003] build: TimeDateStamp 0x54e3199d OK | SizeOfImage 0x01f81000 OK
+[    0.003] build: RVA ovr_Initialize 0xba83b0 OK | RVA curl_easy_init 0xceab20 OK
+[    0.003] build: prólogo de ModeManager::Run (RVA 0x3a8460) OK
+[    0.003] build reconocida (AI.exe dde66521...19a90, buildid 4940658)
+[    0.005] NET: join hacia 100.126.161.126:47811, 20 paquetes/s
+[    0.005] sonda: muestra cada 250 ms, resumen cada 1000 ms, tecla de volcado 0x78, tecla de marca 0x77, primeros 3 frames al detalle
+[    0.005] hook ModeManager::Run: instalado en 0x00d08460 (bytes robados [51 53 55 56 8b f1], trampolín 0x02b70000, detour 0x73fb28a0)
+[   34.517] FASE 1: primer frame dentro de ModeManager::Run (this=0x08c62fb4)
+[   34.519] Run tardó 32.82 s (¿carga?)
+[   34.519]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   34.519] NET join: enviados 1, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   35.523]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   35.524] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   36.541]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   36.541] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   37.556]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   37.556] NET join: enviados 18, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   38.572]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   38.572] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   39.588]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   39.588] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   40.605]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   40.605] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   41.620]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   41.620] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   42.637]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   42.637] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   43.653]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   43.653] NET join: enviados 18, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   44.671]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   44.671] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   45.685]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   45.685] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   46.701]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   46.701] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   47.701]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   47.701] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   48.717]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   48.717] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   49.733]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   49.733] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   50.734]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   50.734] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   51.749]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   51.749] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   52.765]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   52.765] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   53.765]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   53.765] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   54.780]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   54.780] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   55.781]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   55.781] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   56.796]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   56.796] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   57.813]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   57.813] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   58.829]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   58.829] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   59.845]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   59.845] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   60.861]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   60.861] NET join: enviados 18, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   61.877]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   61.877] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   62.893]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   62.893] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   63.909]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   63.909] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   64.925]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   64.925] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   65.925]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   65.926] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   66.941]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   66.941] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   67.942]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   67.942] NET join: enviados 18, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   68.957]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   68.957] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   69.957]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   69.957] NET join: enviados 18, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   70.973]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   70.973] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   71.973]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   71.973] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   72.988]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   72.988] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   74.004]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   74.004] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   75.020]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   75.020] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   76.036]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   76.036] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   77.053]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   77.053] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   78.053]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   78.053] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   79.053]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   79.053] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   80.069]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   80.069] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   81.084]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   81.084] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   82.100]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   82.100] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   83.101]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   83.101] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   84.117]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   84.117] NET join: enviados 17, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   85.133]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   85.133] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   86.148]    red: NETZ 0x08c632e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x08c5eef8 proveedor 0x00000000 +2C=0 +2D=0
+[   86.148] NET join: enviados 16, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+```
+Últimas posiciones del jugador:
+```text
+[  380.703]    J0 pos=(6.617, 13.277, 34.610) yaw=-2.1945 rad (-125.7 grados) | se movió 0.000 desde el ST anterior
+[  381.718]    J0 pos=(6.617, 13.277, 34.610) yaw=-2.1945 rad (-125.7 grados) | se movió 0.000 desde el ST anterior
+[  382.734]    J0 pos=(6.617, 13.277, 34.610) yaw=-2.1945 rad (-125.7 grados) | se movió 0.000 desde el ST anterior
+```
+- Sin eventos de error de AI.exe en el Visor de eventos (últimas 3 h).
+
+## Paso 3: red con papito (2026-11-05)
+
+Setup:
+- Tailscale 1.104.5 instalado con winget en la laptop. La laptop es `papulaptop` (100.126.159.45) y papito es 100.126.161.126.
+- `tailscale ping papito`: pong vía 192.168.1.6:41641 (directo por LAN) en 141 ms.
+- La interfaz Tailscale está como red Private y el Wi-Fi como Public. No se tocó el firewall y Windows no preguntó por AI.exe.
+- Hay una sola cuenta de Steam con el juego. La laptop corrió en **modo sin conexión de Steam** y papito online, con el juego en host.
+- Mod de la laptop: `AIMP_NET=join`, `AIMP_NET_PEER=100.126.161.126:47811`.
+
+Hechos (salen de `logs/aimp-red-20261105-114132.log`):
+- `NET: join hacia 100.126.161.126:47811, 20 paquetes/s`.
+- Hasta los ~94 s: `enviados ~17, recibidos 0`. El host todavía no estaba levantado.
+- `[94.694] NET: primer estado del otro jugador: nivel 0, sin jugador`. papito estaba en el menú.
+- `[306.072] EV nivel actual 0 -> 16 "Production\Tech_Hub"`. En el mismo segundo el remoto ya figura como `nivel 16 con jugador`.
+- La posición remota cambia mientras se mueve el jugador de papito: (4.499, 13.279, 32.986) → (3.163, …, 33.198) → (2.431, …) → (-0.186, …, 33.331) → (2.277, …, 38.238) → (-0.146, …, 34.038). `hace` va de 0 a 67 ms.
+- La posición local J0 entre MARCA 1 (334.3 s) y MARCA 2 (363.3 s) va de (7.59, 13.28, 33.34) a (6.62, 13.28, 34.61), con pasos de hasta 2.3 por segundo. Hay una MARCA 3 a los 367.5 s (un F8 de más).
+- Totales en 276 resúmenes NET: **enviados 4518 (~16.4/s), recibidos 5141 (~18.6/s), perdidos 0, inválidos 0**.
+- fps en partida: 60.0. Salida limpia: `ModeManager::Run devolvió 0` (20203 frames) y `DLL_PROCESS_DETACH`.
+
+Observación (hipótesis, no verificada en el código):
+- La laptop manda ~16-17 paquetes por segundo en lugar de 20, con el juego estable a 60 fps. Puede ser que el envío esté cuantizado a frames: 3 frames dan 49.8 ms, que es menos que 50 ms, así que saldría cada 4 frames (~15/s) con alguno intercalado. Del lado Linux llegan ~18/s. Lo puede revisar la sesión Linux en `mod/src/net.c`.
+
+## COMMANDS.PAK en la laptop (dato para la sesión Linux)
+
+| Archivo | SHA-256 en la laptop | ¿Igual que en papito? |
+|---------|----------------------|-----------------------|
+| `BSP_LV426_PT01\WORLD\COMMANDS.PAK` | `EB9FDBF197308941F6E43CDE7BD1712024011A16967A4819C71F2FB49076ED77` | **no** (papito `DDA19F70…A47F`) |
+| `TECH_COMMS\WORLD\COMMANDS.PAK` | `42FD34D7FAF7EA9A22B961D7C6A0C12700FA90327CA1F796F445CC958ECBDD3A` | sí |
+
+- Sin confirmar con el usuario: si el juego de la laptop se copió desde papito y si se verificó la integridad en Steam.
+- En la carpeta del juego de la laptop no hay `dxgi.dll`, `d3d11.dll`, `xinput1_3.dll` ni un `winmm.dll` viejo. Las DLLs que hay son AMD_AGS, ATIAGS, CRASHREPORTER32, STEAM_API y el `winmm.dll` del mod instalado acá.
+
+## Resumen final
+
+- **Pasos 1, 2 y 3: OK en Windows 10 nativo.** El proxy, el hook, la sonda de estado y posición y la red UDP join hacia papito por Tailscale funcionan en los dos sentidos, con 0 paquetes perdidos.
+- Hay un solo punto a revisar: la tasa de envío del lado Windows es ~16.4/s contra 20 configurados.
