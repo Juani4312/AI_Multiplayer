@@ -26,7 +26,7 @@ _Última actualización: 2026-11-05_
 | Skill de REA | ⚠️ no instalada (el scope local no la instala). Es opcional |
 | Checklist 4.4 | falta: abrir `game/AI.exe` en Ghidra vía REA |
 | Hallazgo 01 (inventario del binario) | ⏳ no empezado |
-| Hash del AI.exe del amigo | ⏳ pendiente, lo tiene que pasar el usuario |
+| Hash del AI.exe del amigo | ⏳ el amigo desinstaló el juego; pedir el hash cuando reinstale (no bloquea hasta la fase 3) |
 
 ## Siguiente paso
 1. (Sesión nueva, después de reiniciar Claude Code) Verificar que están las tools MCP de REA: llamar `binary_session` con `{}` y leer `result.tool_availability`.
