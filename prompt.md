@@ -3,6 +3,8 @@
 > Para Claude Code. Leé este archivo completo antes de ejecutar nada.
 > Modelo recomendado: **Claude Opus 5.5 con esfuerzo alto** (elegilo con `/model`).
 > Este archivo reemplaza a `ALIEN_COOP_MOD_BRIEF.md` si ambos están presentes.
+>
+> **Si existe `./work/PROGRESS.md`, esta no es la primera sesión.** Leé `PROGRESS.md` (estado y siguiente paso) y `./work/NOTES.md` (bitácora con evidencia), y retomá desde ahí. No repitas la sección 3 ni las decisiones ya tomadas.
 
 ---
 
@@ -56,6 +58,8 @@ Se avanza por etapas, y cada una debe dejar algo jugable:
 
 ## 3. Primer paso obligatorio: identificar qué build es
 
+> **RESUELTO (2026-11-05).** Build de Windows `AI.exe`, PE32 **i386 (32 bits)**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`, Steam buildid 4940658. El usuario la corre con Proton 9.0-203; el amigo, en Windows nativo. **Decisión:** un solo set de offsets para la build de Windows. Detalle en `./work/NOTES.md`. Lo que sigue en esta sección queda como referencia.
+
 La ruta de `AlienDir` está en Linux. Alien: Isolation tiene (a) una **build nativa para Linux** (portada por Feral) y (b) la **build de Windows** (`AI.exe`) que corre con Proton. Son **binarios distintos**: formato (ELF vs PE), offsets y forma de inyección cambian. No asumas cuál es.
 
 1. Listá `"$AlienDir"` (solo lectura) y buscá el ejecutable principal. Corré `file` y `sha256sum` sobre los candidatos.
@@ -67,7 +71,9 @@ Consecuencias que tenés que explicarle al usuario antes de seguir:
 | Caso | Análisis | Carga del mod |
 |------|----------|---------------|
 | Build nativa Linux (ELF) | REA con ELF; mitigaciones y símbolos según la herramienta | Objeto compartido `.so` por `LD_PRELOAD` (opción de lanzamiento de Steam) |
-| Build Windows vía Proton (PE) | REA con PE (`AI.exe`) | DLL cross-compilada (mingw-w64) cargada como proxy (`dinput8.dll` o similar), con override de DLL de Wine en las opciones de lanzamiento |
+| Build Windows vía Proton (PE) | REA con PE (`AI.exe`) | DLL cross-compilada (mingw-w64, **i686**) cargada como proxy, con override de DLL de Wine en las opciones de lanzamiento |
+
+> **Corrección verificada:** `AI.exe` **no** importa `dinput8.dll`. En la instalación del usuario, `dxgi.dll` (ReShade), `d3d11.dll` y `xinput1_3.dll` (MovieFix) ya están ocupados. Los candidatos que importa estáticamente y están libres son `WINMM.dll`, `PSAPI.DLL`, `imagehlp.dll`, `WSOCK32.dll`, `SETUPAPI.dll` y `WLDAP32.dll`. La DLL se elige en la fase 1 del mod.
 
 **Punto crítico:** los dos jugadores deben usar **la misma build y el mismo hash**. Si el usuario juega en Linux nativo y el amigo en Windows, los binarios son distintos y habría que mantener offsets para ambos, o que los dos usen la build de Windows (el usuario vía Proton). Planteale esto como decisión de diseño y esperá su respuesta antes de invertir en un solo lado.
 
@@ -93,6 +99,7 @@ No inventes comandos de build ni de ejecución: leé `"$READir/package.json"` y 
 ### 4.2 Requisitos (según el README)
 
 - Node.js 22.x (>=22.23.4), 24.x (>=24.22.1) o 26.12.1+, más npm. Verificá con `node --version`.
+  - **Verificado:** compilar desde el repo local (`npm ci && npm run build:cached`) **falla con Node 26.12.1** (`ERR_INVALID_ARG_VALUE` en `stripTypeScriptTypes` mode `transform`, `scripts/lib/verifier-source-loader.mjs`). El toolchain de desarrollo de REA está fijado en Node **24.22.1** (`.nvmrc`). Ver `./work/PROGRESS.md` para el estado.
 - Un motor de análisis nativo: Hopper, Ghidra, IDA o Kuna. Para este proyecto lo razonable es **Ghidra** (gratis). REA no lo instala: pedile al usuario la ruta o confirmá antes de instalarlo (Ghidra requiere un JDK).
 - En **Linux**, para Ghidra, JADX, firmware y análisis JS/Electron, REA necesita un `ps` compatible con procps en el `PATH` (chequeo de ownership de procesos). Verificalo; hay recuperación en `docs/installation.md`, sección "Linux owned-process prerequisite".
 - Para binarios grandes, subí el timeout de arranque del proveedor: `REA_GHIDRA_STARTUP_TIMEOUT_MS` con un valor alto.
@@ -145,7 +152,7 @@ Para ubicar dónde mirar podés apoyarte en las herramientas de la comunidad (Op
 
 ### 5.2 Cuándo parar
 
-Pará y resumile al usuario el estado al terminar cada hallazgo, cuando REA devuelva resultados contradictorios o con límites importantes, o cuando una decisión de diseño cambie el alcance (por ejemplo, si el Alien resulta inseparable de un único objetivo).
+Al terminar cada hallazgo, actualizá `./work/PROGRESS.md` (estado y siguiente paso) y commiteá. Pará y resumile al usuario el estado al terminar cada hallazgo, cuando REA devuelva resultados contradictorios o con límites importantes, o cuando una decisión de diseño cambie el alcance (por ejemplo, si el Alien resulta inseparable de un único objetivo).
 
 ---
 
@@ -175,7 +182,9 @@ Higiene: `.gitignore` para `game/`, `work/evidence/` (si contiene material del j
 
 ## 7. Arranque
 
-Cuando termines de leer este archivo:
+**Sesiones siguientes:** si existe `./work/PROGRESS.md`, seguí desde su "Siguiente paso". Al cerrar cada bloque de trabajo, actualizá `PROGRESS.md` y `NOTES.md`, y hacé commit y push (el repo es privado: `github.com/Juani4312/AI_Multiplayer`).
+
+**Primera sesión** (ya hecha). Cuando termines de leer este archivo:
 
 1. Ejecutá la sección 3 (identificar la build) y hacele al usuario las preguntas pendientes.
 2. Leé la documentación de REA según 4.1 y proponé los comandos de setup.
