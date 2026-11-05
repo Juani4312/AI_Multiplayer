@@ -37,3 +37,4 @@
 - 02:36 Solo 8 endpoints RPC registrados estáticamente (`0x1636534`…`0x163661C`); el tipo del spawn no está entre ellos → el modelo de colas/endpoints está incompleto (¿cola B?). Anotado para runtime.
 - 02:37 Corrección (verificada en asm): `RegisterAllRPCs` llena la tabla de la **sesión** (`g_root+0x54`); la cola A (`g_root+0x50`) tiene su propia tabla en `+0x08`, de registro todavía no ubicado. Corregidos el hallazgo 10 (parte 5) y `RUNTIME_PLAN.md`.
 - 02:39 Entity manager: ctor `FUN_0092e810` (escribe `DAT_0174ef40`), parsea GUIDs centinela con `FUN_008bf7f0` → los ids de entidad de Cathode serían GUIDs de 128 bits (hipótesis).
+- 02:48 **Hallazgo 06 (parte 2)**: nombre → ShortGuid de Cathode = `FUN_008bf7f0` (GUID de 128 bits a partir de un hash de 20 bytes del nombre, con estructura de SHA-1 RFC 3174; ShortGuid = 4 bytes del hash del GUID en hex). El entity manager busca entidades globales por nombre (`inventory`, `pickup_manager`, `camera_manager`, …).
