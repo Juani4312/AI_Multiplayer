@@ -39,6 +39,7 @@ Sos una sesión de Claude Code en la **laptop de pruebas del usuario (Windows 10
    ```
    `Bypass` vale solo para ese proceso: no cambia la política del sistema.
 3. Cada acción agrega su resultado al final de `work/windows/report.md`.
+4. **Si Steam instaló el juego copiándolo desde `papito`** (transferencia por red local): `papito` tiene mods. Son ReShade, MovieFix, una versión vieja del `winmm.dll` del mod y dos `COMMANDS.PAK` modificados. Antes del paso 1, preguntale al usuario si ya hizo "Verificar integridad de los archivos del juego" en la laptop con Steam cerrado en `papito`. Si no, que lo haga y avise.
 
 ## 1. Chequeo del entorno (no modifica nada)
 
@@ -56,6 +57,21 @@ Revisá el resultado con el usuario:
 | winmm en KnownDLLs | **no** está | Parar: el proxy no puede cargar en esta máquina. Anotarlo (dato clave para la sesión Linux). |
 | Ya hay un `winmm.dll` ajeno en el juego | no hay | No pisarlo. Anotarlo y preguntar. |
 | Tailscale | instalado y logueado; `papito` con IP 100.x.y.z | Solo hace falta para el paso 3. |
+| `dxgi.dll`, `d3d11.dll`, `xinput1_3.dll` en el juego | no hay | Vinieron de `papito` (ReShade y MovieFix). No bloquean. Avisale al usuario y anotalo. |
+
+Anotá también en el reporte el SHA-256 de los dos `COMMANDS.PAK` que en `papito` están modificados. No bloquea: es un dato para la sesión Linux. Corré esto desde la carpeta del juego que dio el chequeo:
+```
+Get-FileHash -LiteralPath 'DATA\ENV\PRODUCTION\BSP_LV426_PT01\WORLD\COMMANDS.PAK','DATA\ENV\PRODUCTION\TECH_COMMS\WORLD\COMMANDS.PAK' | Format-List
+```
+
+| Archivo | SHA-256 en `papito` |
+|---------|---------------------|
+| `BSP_LV426_PT01\WORLD\COMMANDS.PAK` | `DDA19F70AB8ABE5194FA7A372A680ED8C5AAE6A30842101547DA8F724F48A47F` |
+| `TECH_COMMS\WORLD\COMMANDS.PAK` | `42FD34D7FAF7EA9A22B961D7C6A0C12700FA90327CA1F796F445CC958ECBDD3A` |
+
+Con la integridad ya verificada:
+- si el hash de la laptop **difiere**, el de la laptop es el vanilla y el de `papito` es el del mod;
+- si es **igual**, el de `papito` ya era vanilla.
 
 ## 2. Primera corrida: ¿carga el mod en Windows?
 
