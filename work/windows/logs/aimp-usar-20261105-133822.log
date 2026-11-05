@@ -1,0 +1,1728 @@
+[    0.002] AI_Multiplayer 0.2.0 (fases 1-3: proxy, hook por frame, sonda de estado, UDP del jugador), commit cba2b2e, compilado Nov  5 2026 18:31:19
+[    0.002] DLL: C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation\WINMM.dll (0x73fa0000), link 0x6aecf5a7, pid 13072
+[    0.002] log: C:\Users\papu\AppData\Local\AI_Multiplayer\aimp.log
+[    0.002] config: 1 archivo(s) aimp.cfg leídos; aplicadas: AIMP_NET=join AIMP_NET_PEER=100.126.161.126:47811 AIMP_GHOST=3 AIMP_SYNC_USE=1
+[    0.002] plataforma: Windows 10.0.19045
+[    0.003] proxy: winmm real = C:\Windows\system32\winmm.dll (0x73f70000)
+[    0.003] proxy: 195 exports resueltos, 10 ausentes en la winmm real (2 de ellos son solo de Windows)
+[    0.003] proxy: ausentes: DrvClose DrvDefDriverProc DrvOpen DrvOpenA DrvSendMessage GetDriverFlags OpenDriverA mmioInstallIOProc16 winmmDbgOut winmmSetDebugLevel
+[    0.004] EXE: C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation\AI.exe, base 0x00fe0000
+[    0.005] build: TimeDateStamp 0x54e3199d OK | SizeOfImage 0x01f81000 OK
+[    0.005] build: RVA ovr_Initialize 0xba83b0 OK | RVA curl_easy_init 0xceab20 OK
+[    0.005] build: prólogo de ModeManager::Run (RVA 0x3a8460) OK
+[    0.005] build reconocida (AI.exe dde66521...19a90, buildid 4940658)
+[    0.005] registro de excepciones (VEH) instalado: si el juego se cae, la causa queda en este log
+[    0.007] NET: join hacia 100.126.161.126:47811, 20 paquetes/s
+[    0.008] sonda: muestra cada 250 ms, resumen cada 1000 ms, tecla de volcado 0x78, tecla de marca 0x77, primeros 3 frames al detalle
+[    0.008] hook ModeManager::Run: instalado en 0x01388460 (bytes robados [51 53 55 56 8b f1], trampolín 0x00f80000, detour 0x73fa28a0)
+[    0.008] hook spawn de autoridad (FUN_00797490): instalado en 0x01377490 (bytes robados [55 8b ec 53 56 57], trampolín 0x00f90000, detour 0x73fa8f00)
+[    0.008] hook SpawnCharacter (FUN_007d3b50): instalado en 0x013b3b50 (bytes robados [51 53 55 56 57], trampolín 0x00fa0000, detour 0x73fa8870)
+[    0.008] AIMP_GHOST=3 (fase 4, experimental: solo NPC existente): empieza 8000 ms después de que aparece el jugador; NPC de tipo 6 sin límite
+[    0.008] hook usar (FUN_00795d00): instalado en 0x01375d00 (bytes robados [55 8b ec 56 57], trampolín 0x00fb0000, detour 0x73faa3b0)
+[    0.008] hook handler A del uso (FUN_00418a10): instalado en 0x00ff8a10 (bytes robados [55 8b ec 53 56 57], trampolín 0x00fc0000, detour 0x73faa290)
+[    0.008] hook handler de sesión del uso (FUN_00418980): instalado en 0x00ff8980 (bytes robados [55 8b ec 56 57], trampolín 0x00fd0000, detour 0x73faa240)
+[    0.008] AIMP_SYNC_USE=1 (fase 5, experimental): los usos del jugador local se mandan al otro y los del otro se aplican acá; no se mandan los objetivos con prefijo [3e3ec35d,1e38b898]
+[   34.341] FASE 1: primer frame dentro de ModeManager::Run (this=0x090bffb4)
+[   34.342] módulos cargados:
+[   34.342]     0x00fe0000  1f81000 C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation\AI.exe
+[   34.342]     0x77130000   1a4000 C:\Windows\SYSTEM32\ntdll.dll
+[   34.342]     0x75cd0000    f0000 C:\Windows\System32\KERNEL32.DLL
+[   34.342]     0x761b0000   23a000 C:\Windows\System32\KERNELBASE.dll
+[   34.342]     0x742c0000    a0000 C:\Windows\SYSTEM32\apphelp.dll
+[   34.342]     0x76010000   19c000 C:\Windows\System32\USER32.dll
+[   34.342]     0x766c0000    18000 C:\Windows\System32\win32u.dll
+[   34.342]     0x742a0000    1e000 C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation\steam_api.dll
+[   34.342]     0x758b0000    24000 C:\Windows\System32\GDI32.dll
+[   34.342]     0x757b0000    7c000 C:\Windows\System32\ADVAPI32.dll
+[   34.342]     0x75ed0000    e5000 C:\Windows\System32\gdi32full.dll
+[   34.342]     0x74fd0000    bf000 C:\Windows\System32\msvcrt.dll
+[   34.342]     0x764c0000    7b000 C:\Windows\System32\msvcp_win.dll
+[   34.342]     0x756c0000    76000 C:\Windows\System32\sechost.dll
+[   34.342]     0x75590000   120000 C:\Windows\System32\ucrtbase.dll
+[   34.342]     0x75090000    bf000 C:\Windows\System32\RPCRT4.dll
+[   34.342]     0x75740000    63000 C:\Windows\System32\WS2_32.dll
+[   34.342]     0x76920000   5b6000 C:\Windows\System32\SHELL32.dll
+[   34.342]     0x75ec0000     6000 C:\Windows\System32\PSAPI.DLL
+[   34.342]     0x75ff0000    19000 C:\Windows\System32\imagehlp.dll
+[   34.342]     0x75150000   434000 C:\Windows\System32\SETUPAPI.dll
+[   34.342]     0x767f0000    3b000 C:\Windows\System32\cfgmgr32.dll
+[   34.342]     0x74290000     8000 C:\Windows\SYSTEM32\WSOCK32.dll
+[   34.342]     0x75830000    19000 C:\Windows\System32\bcrypt.dll
+[   34.342]     0x765d0000    e3000 C:\Windows\System32\ole32.dll
+[   34.342]     0x758e0000   280000 C:\Windows\System32\combase.dll
+[   34.342]     0x00400000    16000 C:\Windows\SYSTEM32\XINPUT1_3.dll
+[   34.342]     0x76790000    57000 C:\Windows\System32\WLDAP32.dll
+[   34.342]     0x741c0000    c2000 C:\Windows\SYSTEM32\dxgi.dll
+[   34.342]     0x73fe0000   1e0000 C:\Windows\SYSTEM32\d3d11.dll
+[   34.342]     0x73fa0000    35000 C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation\WINMM.dll
+[   34.342]     0x75fc0000    25000 C:\Windows\System32\IMM32.DLL
+[   34.342]     0x73f70000    28000 C:\Windows\system32\winmm.dll
+[   34.342]     0x74950000    52000 C:\Windows\system32\mswsock.dll
+[   34.342]     0x73de0000   18c000 C:\Program Files (x86)\Steam\gameoverlayrenderer.dll
+[   34.342]     0x76ee0000    96000 C:\Windows\System32\OLEAUT32.dll
+[   34.342]     0x73c50000   188000 C:\Windows\System32\dbghelp.dll
+[   34.342]     0x768c0000    5f000 C:\Windows\System32\bcryptPrimitives.dll
+[   34.342]     0x72770000  14da000 C:\Program Files (x86)\Steam\steamclient.dll
+[   34.342]     0x76470000    45000 C:\Windows\System32\SHLWAPI.dll
+[   34.342]     0x75dc0000   100000 C:\Windows\System32\CRYPT32.dll
+[   34.342]     0x74a90000     8000 C:\Windows\SYSTEM32\VERSION.dll
+[   34.342]     0x749b0000    33000 C:\Windows\SYSTEM32\IPHLPAPI.DLL
+[   34.342]     0x726d0000    9e000 C:\Program Files (x86)\Steam\tier0_s.dll
+[   34.342]     0x72630000    98000 C:\Program Files (x86)\Steam\vstdlib_s.dll
+[   34.342]     0x72620000     a000 C:\Windows\SYSTEM32\Secur32.dll
+[   34.342]     0x725f0000    21000 C:\Windows\SYSTEM32\SSPICLI.DLL
+[   34.342]     0x76830000    87000 C:\Windows\System32\shcore.dll
+[   34.342]     0x724e0000   109000 C:\Program Files (x86)\Steam\steam.dll
+[   34.342]     0x724b0000    2b000 C:\Windows\SYSTEM32\dbgcore.DLL
+[   34.342]     0x72480000    21000 C:\Program Files (x86)\Steam\CSERHelper.dll
+[   34.342]     0x72400000    74000 C:\Windows\system32\uxtheme.dll
+[   34.342]     0x74360000     f000 C:\Windows\SYSTEM32\kernel.appcore.dll
+[   34.342]     0x3e580000    43000 C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation\amd_ags.dll
+[   34.342]     0x721b0000    c2000 C:\Windows\SYSTEM32\PROPSYS.dll
+[   34.342]     0x72180000    24000 C:\Windows\SYSTEM32\DEVOBJ.dll
+[   34.342]     0x76f80000    4c000 C:\Windows\System32\WINTRUST.dll
+[   34.343]     0x74fc0000     e000 C:\Windows\SYSTEM32\MSASN1.dll
+[   34.343]     0x723f0000     a000 C:\Windows\SYSTEM32\hid.dll
+[   34.343]     0x3e710000    7e000 C:\Windows\System32\clbcatq.dll
+[   34.343]     0x72390000    51000 C:\Windows\system32\WinSATAPI.dll
+[   34.343]     0x72010000   167000 C:\Windows\WinSxS\x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.19041.2251_none_d9513b1fe1046fc7\gdiplus.dll
+[   34.343]     0x71a00000   60d000 C:\Windows\SYSTEM32\windows.storage.dll
+[   34.343]     0x72360000    25000 C:\Windows\SYSTEM32\Wldp.dll
+[   34.343]     0x76fd0000    d4000 C:\Windows\System32\MSCTF.dll
+[   34.343]     0x722a0000    ba000 C:\Windows\SYSTEM32\textinputframework.dll
+[   34.343]     0x716e0000    9b000 C:\Windows\System32\CoreMessaging.dll
+[   34.343]     0x71780000   27e000 C:\Windows\System32\CoreUIComponents.dll
+[   34.343]     0x74a60000    29000 C:\Windows\SYSTEM32\ntmarta.dll
+[   34.343]     0x71600000    db000 C:\Windows\SYSTEM32\wintypes.dll
+[   34.343]     0x71490000   167000 C:\Windows\System32\DriverStore\FileRepository\u0390451.inf_amd64_39377efdd62734d1\B390182\aticfx32.dll
+[   34.343]     0x71460000    2e000 C:\Windows\System32\DriverStore\FileRepository\u0390451.inf_amd64_39377efdd62734d1\B390182\atiuxpag.dll
+[   34.343]     0x6f9d0000  1a8c000 C:\Windows\System32\DriverStore\FileRepository\u0390451.inf_amd64_39377efdd62734d1\B390182\atidxx32.dll
+[   34.343]     0x6f9a0000    28000 C:\Windows\SYSTEM32\amdihk32.dll
+[   34.343]     0x6f970000    2c000 C:\Windows\SYSTEM32\dxcore.dll
+[   34.343]     0x72280000    20000 C:\Windows\SYSTEM32\D3DSCache.dll
+[   34.343]     0x6f940000    25000 C:\Windows\SYSTEM32\USERENV.dll
+[   34.343]     0x6f7b0000   18f000 C:\Windows\SYSTEM32\twinapi.appcore.dll
+[   34.343]     0x6f720000    8e000 C:\Windows\System32\XAudio2_7.dll
+[   34.343]     0x6f6b0000    6b000 C:\Windows\System32\MMDevApi.dll
+[   34.343]     0x6f6a0000     f000 C:\Windows\SYSTEM32\resourcepolicyclient.dll
+[   34.343]     0x6f560000   136000 C:\Windows\SYSTEM32\AUDIOSES.DLL
+[   34.343]     0x6f510000    44000 C:\Windows\SYSTEM32\powrprof.dll
+[   34.343]     0x6f500000     d000 C:\Windows\SYSTEM32\UMPDC.dll
+[   34.343]     0x6f400000    f3000 C:\Windows\System32\Windows.UI.dll
+[   34.343]     0x6f380000    73000 C:\Windows\System32\WindowManagementAPI.dll
+[   34.343]     0x6f290000    ed000 C:\Windows\System32\InputHost.dll
+[   34.343]     0x6f280000     8000 C:\Windows\SYSTEM32\avrt.dll
+[   34.343]     0x6f250000    26000 C:\Windows\SYSTEM32\dwmapi.dll
+[   34.343]     0x74a40000    11000 C:\Windows\system32\napinsp.dll
+[   34.343]     0x74a20000    16000 C:\Windows\system32\pnrpnsp.dll
+[   34.343]     0x74a10000    10000 C:\Windows\system32\wshbth.dll
+[   34.343]     0x749f0000    16000 C:\Windows\system32\NLAapi.dll
+[   34.343]     0x748b0000    91000 C:\Windows\SYSTEM32\DNSAPI.dll
+[   34.343]     0x756b0000     7000 C:\Windows\System32\NSI.dll
+[   34.343]     0x748a0000     e000 C:\Windows\System32\winrnr.dll
+[   34.343] frame 1: Run=32853.105 ms ret=1 contador del juego 0
+[   34.343] Run tardó 32.85 s (¿carga?)
+[   34.343] EV primera foto: g_root 0x090b7df0 ModeManager 0x090bffb4 estado 5
+[   34.343] SP observadores autoridad antes (rva 0x12f322c): vacía
+[   34.343] SP observadores autoridad después (rva 0x12f3230): vacía
+[   34.343] SP observadores RPC 0x29 antes (rva 0x12a6728): vacía
+[   34.343] SP observadores RPC 0x29 después (rva 0x12a672c): vacía
+[   34.343] ST frames +1 (contador del juego 0, +0) fps=1.0 Run prom=32853.11 ms max=32853.11 ms dt=0.0190 dts=0.0190 t_juego=0.0
+[   34.343]    modo: estado 5 (corriendo) idx 0 modo 0x0910cc38 (modo-de-nivel, nivel 0) | nivel 0/35 "Production\Frontend"
+[   34.343]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   34.343]    cam 0x0629a7c0 pos=(0.500, 1.500, -3.500) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   34.343]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   34.343]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/1, suma 0 bytes
+[   34.343]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/1, suma 0 bytes
+[   34.343] NET join: enviados 1, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   34.350] frame 2: Run=6.631 ms ret=1 contador del juego 0
+[   34.367] frame 3: Run=15.183 ms ret=1 contador del juego 0
+[   34.467] NET: primer estado del otro jugador: nivel 16, con jugador, pos=(0.88, 13.28, 35.61) yaw=-2.159
+[   34.600] EV tablas de handlers: cola A 44, sesión 47
+[   34.600] RPC lista A (global rva 0x17e1bcc): cabeza 0x02217f9c
+[   34.600] RPC   A tipo 0x0000 handler rva 0x8c4d0 ctx 0x090d09ac endpoint rva 0x1237f9c
+[   34.600] RPC   A tipo 0x0001 handler rva 0x8c350 ctx 0x090d1200 endpoint rva 0x1237f68
+[   34.600] RPC   A tipo 0x0002 handler rva 0x8c1c0 ctx 0x090d0bc0 endpoint rva 0x1237f34
+[   34.600] RPC   A tipo 0x0003 handler rva 0x8c0b0 ctx 0x090d0ae8 endpoint rva 0x1237f10
+[   34.600] RPC   A tipo 0x0004 handler rva 0x8bf90 ctx 0x090d0a94 endpoint rva 0x1237eec
+[   34.600] RPC   A tipo 0x0005 handler rva 0x8be80 ctx 0x090d0a8c endpoint rva 0x1237ec8
+[   34.600] RPC   A tipo 0x0006 handler rva 0x8bd70 ctx 0x090d0a84 endpoint rva 0x1237ea4
+[   34.600] RPC   A tipo 0x0007 handler rva 0x8bc40 ctx 0x090d0ac0 endpoint rva 0x1237e80
+[   34.601] RPC   A tipo 0x0008 handler rva 0x8bb20 ctx 0x090d0a58 endpoint rva 0x1237e5c
+[   34.601] RPC   A tipo 0x0009 handler rva 0x8ba10 ctx 0x090d0a40 endpoint rva 0x1237e38
+[   34.601] RPC   A tipo 0x000a handler rva 0x8b8e0 ctx 0x090d0a38 endpoint rva 0x1237e14
+[   34.601] RPC   A tipo 0x000b handler rva 0x8b7c0 ctx 0x090d0a30 endpoint rva 0x1237df0
+[   34.601] RPC   A tipo 0x000c handler rva 0x8b590 ctx 0x090c3d10 endpoint rva 0x1237dcc
+[   34.601] RPC   A tipo 0x000d handler rva 0x8b480 ctx 0x090c3d08 endpoint rva 0x1237da8
+[   34.601] RPC   A tipo 0x000e handler rva 0x8b370 ctx 0x090c3d00 endpoint rva 0x1237d84
+[   34.601] RPC   A tipo 0x000f handler rva 0x8b260 ctx 0x090c3cf8 endpoint rva 0x1237d60
+[   34.601] RPC   A tipo 0x0010 handler rva 0x8b150 ctx 0x090c3cf0 endpoint rva 0x1237d3c
+[   34.601] RPC   A tipo 0x0011 handler rva 0x8afa0 ctx 0x090c3ce8 endpoint rva 0x1237d18
+[   34.601] RPC   A tipo 0x0012 handler rva 0x8aef0 ctx 0x090c3ce0 endpoint rva 0x1237cf4
+[   34.601] RPC   A tipo 0x0013 handler rva 0x8adb0 ctx 0x090c3cd8 endpoint rva 0x1237cd0
+[   34.601] RPC   A tipo 0x0014 handler rva 0x8ac70 ctx 0x090c3cd0 endpoint rva 0x1237cac
+[   34.601] RPC   A tipo 0x0015 handler rva 0x8ab50 ctx 0x090c3cc8 endpoint rva 0x1237c88
+[   34.601] RPC   A tipo 0x0016 handler rva 0x8aa40 ctx 0x090c3cc0 endpoint rva 0x1237c64
+[   34.601] RPC   A tipo 0x0017 handler rva 0x8a8b0 ctx 0x090c3cb8 endpoint rva 0x1237c40
+[   34.601] RPC   A tipo 0x0018 handler rva 0x8a780 ctx 0x090c3cb0 endpoint rva 0x1237c1c
+[   34.601] RPC   A tipo 0x0019 handler rva 0x8a6e0 ctx 0x090c3ca8 endpoint rva 0x1237bf8
+[   34.601] RPC   A tipo 0x001a handler rva 0x8a5b0 ctx 0x090c3ca0 endpoint rva 0x1237bd4
+[   34.601] RPC   A tipo 0x001b handler rva 0x8a490 ctx 0x090c3c98 endpoint rva 0x1237bb0
+[   34.601] RPC   A tipo 0x001c handler rva 0x8a370 ctx 0x090c3c90 endpoint rva 0x1237b8c
+[   34.601] RPC   A tipo 0x001d handler rva 0x8a250 ctx 0x090c3c88 endpoint rva 0x1237b68
+[   34.601] RPC   A tipo 0x001e handler rva 0x389d0 ctx 0x090dad40 endpoint rva 0x1236718
+[   34.601] RPC   A tipo 0x001f handler rva 0x38870 ctx 0x090dad28 endpoint rva 0x12366f4
+[   34.601] RPC   A tipo 0x0020 handler rva 0x190c0 ctx 0x21e4aac4 endpoint rva 0x12365f8
+[   34.601] RPC   A tipo 0x0021 handler rva 0x18fa0 ctx 0x21e4aabc endpoint rva 0x12365d4
+[   34.601] RPC   A tipo 0x0022 handler rva 0x18e70 ctx 0x21e4aab4 endpoint rva 0x12365b0
+[   34.601] RPC   A tipo 0x0023 handler rva 0x18d60 ctx 0x21e4aaac endpoint rva 0x123658c
+[   34.601] RPC   A tipo 0x0024 handler rva 0x18c50 ctx 0x21e4aaa4 endpoint rva 0x1236568
+[   34.601] RPC   A tipo 0x0025 handler rva 0x18b40 ctx 0x21e4aa9c endpoint rva 0x1236544
+[   34.601] RPC   A tipo 0x0026 handler rva 0x18a10 ctx 0x21e4aa94 endpoint rva 0x1236520
+[   34.601] RPC   A tipo 0x0027 handler rva 0x14f50 ctx 0x090c4f20 endpoint rva 0x1236220
+[   34.601] RPC   A tipo 0x0028 handler rva 0x14e30 ctx 0x090c4f18 endpoint rva 0x12361fc
+[   34.601] RPC   A tipo 0x0029 handler rva 0x14d10 ctx 0x090c4f10 endpoint rva 0x12361d8
+[   34.601] RPC   A tipo 0x002a handler rva 0x14c00 ctx 0x090c4f08 endpoint rva 0x12361b4
+[   34.601] RPC   A tipo 0x002b handler rva 0x14af0 ctx 0x090c4f00 endpoint rva 0x1236190
+[   34.601] RPC lista A: 44 endpoints
+[   34.601] RPC lista sesión (global rva 0x17e1bd0): cabeza 0x02217fb0
+[   34.601] RPC   sesión tipo 0x0000 handler rva 0x8c460 ctx 0x090d09b0 endpoint rva 0x1237fb0
+[   34.601] RPC   sesión tipo 0x0001 handler rva 0x8c3e0 ctx 0x090d09a8 endpoint rva 0x1237f8c
+[   34.601] RPC   sesión tipo 0x0002 handler rva 0x8c2d0 ctx 0x090d1204 endpoint rva 0x1237f7c
+[   34.601] RPC   sesión tipo 0x0003 handler rva 0x8c250 ctx 0x090d0bc8 endpoint rva 0x1237f58
+[   34.601] RPC   sesión tipo 0x0004 handler rva 0x8c140 ctx 0x090d0bc4 endpoint rva 0x1237f48
+[   34.601] RPC   sesión tipo 0x0005 handler rva 0x8c030 ctx 0x090d0aec endpoint rva 0x1237f24
+[   34.601] RPC   sesión tipo 0x0006 handler rva 0x8bf10 ctx 0x090d0a98 endpoint rva 0x1237f00
+[   34.601] RPC   sesión tipo 0x0007 handler rva 0x8be00 ctx 0x090d0a90 endpoint rva 0x1237edc
+[   34.601] RPC   sesión tipo 0x0008 handler rva 0x8bcf0 ctx 0x090d0a88 endpoint rva 0x1237eb8
+[   34.601] RPC   sesión tipo 0x0009 handler rva 0x8bbb0 ctx 0x090d0ac4 endpoint rva 0x1237e94
+[   34.601] RPC   sesión tipo 0x000a handler rva 0x8baa0 ctx 0x090d0a5c endpoint rva 0x1237e70
+[   34.601] RPC   sesión tipo 0x000b handler rva 0x8b990 ctx 0x090d0a44 endpoint rva 0x1237e4c
+[   34.601] RPC   sesión tipo 0x000c handler rva 0x8b850 ctx 0x090d0a3c endpoint rva 0x1237e28
+[   34.601] RPC   sesión tipo 0x000d handler rva 0x8b740 ctx 0x090d0a34 endpoint rva 0x1237e04
+[   34.601] RPC   sesión tipo 0x000e handler rva 0x8b510 ctx 0x090c3d14 endpoint rva 0x1237de0
+[   34.601] RPC   sesión tipo 0x000f handler rva 0x8b400 ctx 0x090c3d0c endpoint rva 0x1237dbc
+[   34.601] RPC   sesión tipo 0x0010 handler rva 0x8b2f0 ctx 0x090c3d04 endpoint rva 0x1237d98
+[   34.601] RPC   sesión tipo 0x0011 handler rva 0x8b1e0 ctx 0x090c3cfc endpoint rva 0x1237d74
+[   34.601] RPC   sesión tipo 0x0012 handler rva 0x8b0d0 ctx 0x090c3cf4 endpoint rva 0x1237d50
+[   34.601] RPC   sesión tipo 0x0013 handler rva 0x8b040 ctx 0x090c3cec endpoint rva 0x1237d2c
+[   34.601] RPC   sesión tipo 0x0014 handler rva 0x8ae60 ctx 0x090c3ce4 endpoint rva 0x1237d08
+[   34.601] RPC   sesión tipo 0x0015 handler rva 0x8ad20 ctx 0x090c3cdc endpoint rva 0x1237ce4
+[   34.601] RPC   sesión tipo 0x0016 handler rva 0x8abe0 ctx 0x090c3cd4 endpoint rva 0x1237cc0
+[   34.601] RPC   sesión tipo 0x0017 handler rva 0x8aad0 ctx 0x090c3ccc endpoint rva 0x1237c9c
+[   34.601] RPC   sesión tipo 0x0018 handler rva 0x8a9c0 ctx 0x090c3cc4 endpoint rva 0x1237c78
+[   34.601] RPC   sesión tipo 0x0019 handler rva 0x8a940 ctx 0x090c3cbc endpoint rva 0x1237c54
+[   34.601] RPC   sesión tipo 0x001a handler rva 0x8a820 ctx 0x090c3cb4 endpoint rva 0x1237c30
+[   34.601] RPC   sesión tipo 0x001b handler rva 0x8a660 ctx 0x090c3cac endpoint rva 0x1237c0c
+[   34.601] RPC   sesión tipo 0x001c handler rva 0x8a520 ctx 0x090c3ca4 endpoint rva 0x1237be8
+[   34.601] RPC   sesión tipo 0x001d handler rva 0x8a410 ctx 0x090c3c9c endpoint rva 0x1237bc4
+[   34.601] RPC   sesión tipo 0x001e handler rva 0x8a2e0 ctx 0x090c3c94 endpoint rva 0x1237ba0
+[   34.601] RPC   sesión tipo 0x001f handler rva 0x8a1d0 ctx 0x090c3c8c endpoint rva 0x1237b7c
+[   34.601] RPC   sesión tipo 0x0020 handler rva 0x38940 ctx 0x090dad44 endpoint rva 0x123672c
+[   34.601] RPC   sesión tipo 0x0021 handler rva 0x388e0 ctx 0x090dad2c endpoint rva 0x1236708
+[   34.601] RPC   sesión tipo 0x0022 handler rva 0x19150 ctx 0x21e4aacc endpoint rva 0x123661c
+[   34.601] RPC   sesión tipo 0x0023 handler rva 0x19040 ctx 0x21e4aac8 endpoint rva 0x123660c
+[   34.601] RPC   sesión tipo 0x0024 handler rva 0x18f10 ctx 0x21e4aac0 endpoint rva 0x12365e8
+[   34.601] RPC   sesión tipo 0x0025 handler rva 0x18df0 ctx 0x21e4aab8 endpoint rva 0x12365c4
+[   34.601] RPC   sesión tipo 0x0026 handler rva 0x18ce0 ctx 0x21e4aab0 endpoint rva 0x12365a0
+[   34.601] RPC   sesión tipo 0x0027 handler rva 0x18bd0 ctx 0x21e4aaa8 endpoint rva 0x123657c
+[   34.601] RPC   sesión tipo 0x0028 handler rva 0x18ac0 ctx 0x21e4aaa0 endpoint rva 0x1236558
+[   34.601] RPC   sesión tipo 0x0029 handler rva 0x18980 ctx 0x21e4aa98 endpoint rva 0x1236534
+[   34.601] RPC   sesión tipo 0x002a handler rva 0x14ec0 ctx 0x090c4f24 endpoint rva 0x1236234
+[   34.601] RPC   sesión tipo 0x002b handler rva 0x14db0 ctx 0x090c4f1c endpoint rva 0x1236210
+[   34.601] RPC   sesión tipo 0x002c handler rva 0x14c90 ctx 0x090c4f14 endpoint rva 0x12361ec
+[   34.601] RPC   sesión tipo 0x002d handler rva 0x14b90 ctx 0x090c4f0c endpoint rva 0x12361c8
+[   34.601] RPC   sesión tipo 0x002e handler rva 0x14a70 ctx 0x090c4f04 endpoint rva 0x12361a4
+[   34.601] RPC lista sesión: 47 endpoints
+[   34.601] EV lista de niveles en 0x0910a03c: 35 entradas (actual 0)
+[   34.601]     nivel   0: Production\Frontend
+[   34.601]     nivel   1: Production\BSP_LV426_Pt01
+[   34.601]     nivel   2: Production\BSP_LV426_Pt02
+[   34.601]     nivel   3: Production\Solace
+[   34.601]     nivel   4: Production\BSP_Torrens
+[   34.601]     nivel   5: Production\ENG_ReactorCore
+[   34.601]     nivel   6: Production\ENG_Alien_Nest
+[   34.601]     nivel   7: Production\ENG_TowPlatform
+[   34.601]     nivel   8: Production\HAB_Airport
+[   34.601]     nivel   9: Production\HAB_CorporatePent
+[   34.601]     nivel  10: Production\HAB_ShoppingCentre
+[   34.601]     nivel  11: Production\SCI_AndroidLab
+[   34.601]     nivel  12: Production\SCI_HospitalLower
+[   34.601]     nivel  13: Production\SCI_HospitalUpper
+[   34.601]     nivel  14: Production\SCI_Hub
+[   34.601]     nivel  15: Production\Tech_Comms
+[   34.601]     nivel  16: Production\Tech_Hub
+[   34.601]     nivel  17: Production\Tech_MuthrCore
+[   34.601]     nivel  18: Production\Tech_RnD
+[   34.601]     nivel  19: Production\Tech_RnD_HzdLab
+[   34.601]     nivel  20: Production\DLC\ChallengeMap16
+[   34.601]     nivel  21: Production\BSP_Torens
+[   34.601]     nivel  22: Production\DLC\BSPNostromo_Ripley
+[   34.601]     nivel  23: Production\DLC\BSPNostromo_TwoTeams
+[   34.601]     nivel  24: Production\DLC\ChallengeMap4
+[   34.601]     nivel  25: Production\DLC\ChallengeMap5
+[   34.601]     nivel  26: Production\DLC\ChallengeMap11
+[   34.601]     nivel  27: Production\DLC\ChallengeMap7
+[   34.601]     nivel  28: Production\DLC\ChallengeMap9
+[   34.601]     nivel  29: Production\DLC\ChallengeMap3
+[   34.601]     nivel  30: Production\DLC\SalvageMode1
+[   34.601]     nivel  31: Production\DLC\SalvageMode2
+[   34.601]     nivel  32: Production\DLC\ChallengeMap12
+[   34.601]     nivel  33: Production\DLC\ChallengeMap14
+[   34.601]     nivel  34: Production\DLC\ChallengeMap1
+[   35.350] ST frames +61 (contador del juego 0, +0) fps=60.5 Run prom=16.14 ms max=17.95 ms dt=0.0166 dts=0.0166 t_juego=0.0
+[   35.350]    modo: estado 5 (corriendo) idx 0 modo 0x0910cc38 (modo-de-nivel, nivel 0) | nivel 0/35 "Production\Frontend"
+[   35.350]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   35.350]    cam 0x0629a7c0 pos=(0.500, 1.500, -3.500) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   35.350]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   35.350]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   35.350]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   35.350] NET join 100.126.161.126:47811: enviados 20, recibidos 18, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 18, hace 17 ms
+[   36.366] ST frames +61 (contador del juego 0, +0) fps=60.0 Run prom=16.58 ms max=17.78 ms dt=0.0167 dts=0.0167 t_juego=0.0
+[   36.366]    modo: estado 5 (corriendo) idx 0 modo 0x0910cc38 (modo-de-nivel, nivel 0) | nivel 0/35 "Production\Frontend"
+[   36.366]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   36.366]    cam 0x0629a7c0 pos=(0.500, 1.500, -3.500) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   36.366]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   36.366]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   36.366]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   36.366] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 38, hace 34 ms
+[   37.382] ST frames +61 (contador del juego 0, +0) fps=60.0 Run prom=16.57 ms max=18.06 ms dt=0.0169 dts=0.0169 t_juego=0.0
+[   37.382]    modo: estado 5 (corriendo) idx 0 modo 0x0910cc38 (modo-de-nivel, nivel 0) | nivel 0/35 "Production\Frontend"
+[   37.382]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   37.382]    cam 0x0629a7c0 pos=(0.500, 1.500, -3.500) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   37.382]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   37.382]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   37.382]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   37.382] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 58, hace 50 ms
+[   38.399] ST frames +61 (contador del juego 0, +0) fps=60.0 Run prom=16.58 ms max=17.75 ms dt=0.0173 dts=0.0173 t_juego=0.0
+[   38.399]    modo: estado 5 (corriendo) idx 0 modo 0x0910cc38 (modo-de-nivel, nivel 0) | nivel 0/35 "Production\Frontend"
+[   38.399]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   38.399]    cam 0x0629a7c0 pos=(0.500, 1.500, -3.500) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   38.399]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   38.399]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   38.399]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   38.399] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 78, hace 67 ms
+[   39.414] ST frames +55 (contador del juego 0, +0) fps=54.2 Run prom=18.37 ms max=70.33 ms dt=0.0161 dts=0.0161 t_juego=0.0
+[   39.414]    modo: estado 5 (corriendo) idx 0 modo 0x0910cc38 (modo-de-nivel, nivel 0) | nivel 0/35 "Production\Frontend"
+[   39.414]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   39.414]    cam 0x0629a7c0 pos=(0.500, 1.500, -3.500) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   39.414]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   39.414]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/55, suma 0 bytes
+[   39.414]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/55, suma 0 bytes
+[   39.414] NET join 100.126.161.126:47811: enviados 19, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 99, hace 34 ms
+[   40.431] ST frames +61 (contador del juego 0, +0) fps=60.0 Run prom=16.59 ms max=18.04 ms dt=0.0177 dts=0.0177 t_juego=0.0
+[   40.431]    modo: estado 5 (corriendo) idx 0 modo 0x0910cc38 (modo-de-nivel, nivel 0) | nivel 0/35 "Production\Frontend"
+[   40.431]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   40.431]    cam 0x0629a7c0 pos=(0.500, 1.500, -3.500) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   40.431]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   40.431]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   40.431]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   40.431] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 120, hace 0 ms
+[   41.446] ST frames +61 (contador del juego 0, +0) fps=60.1 Run prom=16.55 ms max=18.19 ms dt=0.0152 dts=0.0152 t_juego=0.0
+[   41.446]    modo: estado 5 (corriendo) idx 0 modo 0x0910cc38 (modo-de-nivel, nivel 0) | nivel 0/35 "Production\Frontend"
+[   41.446]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   41.446]    cam 0x0629a7c0 pos=(0.500, 1.500, -3.500) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   41.446]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   41.446]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   41.446]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   41.446] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 140, hace 0 ms
+[   42.463] ST frames +61 (contador del juego 0, +0) fps=60.0 Run prom=16.60 ms max=17.77 ms dt=0.0168 dts=0.0168 t_juego=0.0
+[   42.463]    modo: estado 5 (corriendo) idx 0 modo 0x0910cc38 (modo-de-nivel, nivel 0) | nivel 0/35 "Production\Frontend"
+[   42.463]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   42.463]    cam 0x0629a7c0 pos=(0.500, 1.500, -3.500) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   42.463]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   42.463]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   42.463]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   42.463] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 160, hace 32 ms
+[   43.479] ST frames +61 (contador del juego 0, +0) fps=60.0 Run prom=16.58 ms max=17.49 ms dt=0.0162 dts=0.0162 t_juego=0.0
+[   43.479]    modo: estado 5 (corriendo) idx 0 modo 0x0910cc38 (modo-de-nivel, nivel 0) | nivel 0/35 "Production\Frontend"
+[   43.479]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   43.479]    cam 0x0629a7c0 pos=(0.500, 1.500, -3.500) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   43.479]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   43.479]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   43.479]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   43.479] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 180, hace 49 ms
+[   51.398] Run tardó 7.37 s (¿carga?)
+[   51.398] EV frame 578: ModeManager estado 5 (corriendo) -> 5 (corriendo), modo 0x0910cc38 -> 0x0910ddb8
+[   51.398] EV modo 0x0910cc38 (idx 0) -> 0x0910ddb8 (idx 1, vtable rva 0xef43e8 = modo-de-nivel, nivel del modo 16)
+[   51.398] EV nivel actual 0 "Production\Frontend" -> 16 "Production\Tech_Hub"
+[   51.398] ST frames +34 (contador del juego 1, +1) fps=4.3 Run prom=232.83 ms max=7368.95 ms dt=0.0333 dts=0.0333 t_juego=0.0
+[   51.398]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   51.398]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   51.398]    cam 0x0629a7c0 pos=(0.000, 1.600, 0.000) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   51.398]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   51.398]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/34, suma 0 bytes
+[   51.398]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/34, suma 0 bytes
+[   51.398] NET join 100.126.161.126:47811: enviados 12, recibidos 158, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 338, hace 0 ms
+[   52.422] SP pedido 1: this 0x090c4f10 (vtable rva 0xef6900, vf[1] rva 0x74d3f0), desde rva 0x3a7a76 | clave 1/1 tipo 0 id 2ff722b2099d5b9b | "" / "THE_PLAYER" | pos=(4.55, 13.62, 33.59) yaw=-3.142
+[   52.422] SP   volcado @ 0x73fcc3a0 (0x130 bytes)
+[   52.422]     +000: 01 00 00 00 ef 9c 37 22 f0 9c 37 22 ee 9c 37 22  |......7"..7"..7"|
+[   52.422]     +010: 01 00 00 02 89 e9 59 f8 82 fc 64 f8 00 00 00 00  |......Y...d.....|
+[   52.422]     +020: a7 d6 16 b1 a7 d6 16 b1 2f f7 22 b2 09 9d 5b 9b  |......../."...[.|
+[   52.422]     +030: 00 00 00 00 01 00 00 00 00 00 00 00 0b 4e 1d a2  |.............N..|
+[   52.422]     +040: ea 39 57 5e cf 83 cb a6 00 00 00 00 01 00 00 33  |.9W^...........3|
+[   52.422]     +050: 98 97 91 40 6f e4 59 41 7a 5e 06 42 00 00 00 00  |...@o.YAz^.B....|
+[   52.422]     +060: d3 0f 49 c0 00 0d 56 3e 00 00 00 00 00 00 00 00  |..I...V>........|
+[   52.422]     +070: 5c f7 7a 00 78 4e d1 01 ff ff ff ff 40 f7 7a 00  |\.z.xN......@.z.|
+[   52.422]     +080: a5 d2 49 01 28 91 8f 17 e8 91 8f 00 ac 2b 33 02  |..I.(........+3.|
+[   52.422]     +090: 10 69 54 01 00 00 00 00 ac 2b 33 02 a8 b3 dc 0b  |.iT......+3.....|
+[   52.422]     +0a0: 68 f7 7a 00 54 48 45 5f 50 4c 41 59 45 52 00 f7  |h.z.THE_PLAYER..|
+[   52.422]     +0b0: 64 c9 dc 0b a8 b3 dc 0b 00 00 00 00 94 f7 7a 00  |d.............z.|
+[   52.422]     +0c0: 68 9f d1 01 84 f7 7a 00 50 4e d1 01 ff ff ff ff  |h.....z.PN......|
+[   52.422]     +0d0: a4 f7 7a 00 e4 05 21 01 94 b3 dc 0b 64 c9 dc 0b  |..z...!.....d...|
+[   52.422]     +0e0: 00 00 00 00 b4 ba 00 f7 20 f6 7a 00 00 00 00 00  |........ .z.....|
+[   52.422]     +0f0: 01 00 00 00 00 f5 7a 00 00 00 00 00 d9 ba b8 a9  |......z.........|
+[   52.422]     +100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  |................|
+[   52.422]     +110: 00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff  |................|
+[   52.422]     +120: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff  |................|
+[   52.423] SP pedido 2: this 0x090c4f10 (vtable rva 0xef6900, vf[1] rva 0x74d3f0), desde rva 0x3a7b52 | clave 2/2 tipo 6 id 1c3460b37e03a5dc | "" / "INNOCENT" | pos=(29.41, 20.64, 20.14) yaw=-0.077
+[   52.423] SP   volcado @ 0x73fcc4d0 (0x130 bytes)
+[   52.423]     +000: 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  |................|
+[   52.423]     +010: 01 00 00 00 10 b8 32 cd 82 fc 64 f8 00 00 00 00  |......2...d.....|
+[   52.423]     +020: 8d 63 6b 13 74 cc ab 74 1c 34 60 b3 7e 03 a5 dc  |.ck.t..t.4`.~...|
+[   52.423]     +030: 06 00 00 00 05 00 00 00 06 00 00 00 3d 52 d3 f9  |............=R..|
+[   52.423]     +040: 3d 52 d3 f9 3d 52 d3 f9 00 00 00 00 00 00 00 1a  |=R..=R..........|
+[   52.423]     +050: 3c 4e eb 41 bf 27 a5 41 56 1f a1 41 00 00 00 00  |<N.A.'.AV..A....|
+[   52.423]     +060: e5 96 9e bd 00 0d 56 3e 00 00 00 00 00 00 00 00  |......V>........|
+[   52.423]     +070: bc f6 7a 00 78 4e d1 01 ff ff ff ff a0 f6 7a 00  |..z.xN........z.|
+[   52.423]     +080: a5 d2 49 01 70 e1 e3 15 c0 e2 e3 00 ac 2b 33 02  |..I.p........+3.|
+[   52.423]     +090: 10 69 54 01 00 00 00 00 ac 2b 33 02 a8 df dc 0b  |.iT......+3.....|
+[   52.423]     +0a0: c8 f6 7a 00 49 4e 4e 4f 43 45 4e 54 00 b9 00 f7  |..z.INNOCENT....|
+[   52.423]     +0b0: 94 59 e6 10 a8 df dc 0b 00 00 00 00 f4 f6 7a 00  |.Y............z.|
+[   52.423]     +0c0: 68 9f d1 01 e4 f6 7a 00 50 4e d1 01 ff ff ff ff  |h.....z.PN......|
+[   52.423]     +0d0: 04 f7 7a 00 e4 05 21 01 94 df dc 0b 94 59 e6 10  |..z...!......Y..|
+[   52.423]     +0e0: 00 00 00 00 92 cc 49 01 10 ba 00 f7 80 f5 7a 00  |......I.......z.|
+[   52.423]     +0f0: 02 00 00 00 01 e1 e3 15 5e c2 63 eb 00 00 00 00  |........^.c.....|
+[   52.423]     +100: 74 f0 94 8f 99 d6 7f 18 23 9b 3c 62 1d e4 39 af  |t.......#.<b..9.|
+[   52.423]     +110: 4f 80 d1 bc a4 ab 0b 46 00 00 00 00 01 00 00 00  |O......F........|
+[   52.423]     +120: 02 00 00 00 03 00 00 00 04 00 00 00 05 00 00 00  |................|
+[   52.423] SP pedido 3: this 0x090c4f10 (vtable rva 0xef6900, vf[1] rva 0x74d3f0), desde rva 0x3a7b52 | clave 3/3 tipo 6 id 1c3460b31ce1c947 | "" / "INNOCENT" | pos=(33.65, 19.25, -1.20) yaw=-1.571
+[   52.423] SP   volcado @ 0x73fcc600 (0x130 bytes)
+[   52.423]     +000: 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  |................|
+[   52.423]     +010: 01 00 00 00 10 b8 32 cd 82 fc 64 f8 00 00 00 00  |......2...d.....|
+[   52.423]     +020: e9 cb 64 4f 10 b8 32 cd 1c 34 60 b3 1c e1 c9 47  |..dO..2..4`....G|
+[   52.423]     +030: 06 00 00 00 05 00 00 00 01 00 00 00 3d 52 d3 f9  |............=R..|
+[   52.424]     +040: 3d 52 d3 f9 3d 52 d3 f9 00 00 00 00 00 00 00 1a  |=R..=R..........|
+[   52.424]     +050: 7f 9a 06 42 e2 f5 99 41 d0 21 9a bf 00 00 00 00  |...B...A.!......|
+[   52.424]     +060: db 0f c9 bf 00 0d 56 3e 00 00 00 00 00 00 00 00  |......V>........|
+[   52.424]     +070: bc f6 7a 00 78 4e d1 01 ff ff ff ff a0 f6 7a 00  |..z.xN........z.|
+[   52.424]     +080: a5 d2 49 01 50 ba e5 15 a0 bb e5 00 ac 2b 33 02  |..I.P........+3.|
+[   52.424]     +090: 10 69 54 01 00 00 00 00 ac 2b 33 02 a8 e3 dc 0b  |.iT......+3.....|
+[   52.424]     +0a0: c8 f6 7a 00 49 4e 4e 4f 43 45 4e 54 00 b9 00 f7  |..z.INNOCENT....|
+[   52.424]     +0b0: 14 5c e6 10 a8 e3 dc 0b 00 00 00 00 f4 f6 7a 00  |.\............z.|
+[   52.424]     +0c0: 68 9f d1 01 e4 f6 7a 00 50 4e d1 01 ff ff ff ff  |h.....z.PN......|
+[   52.424]     +0d0: 04 f7 7a 00 e4 05 21 01 94 e3 dc 0b 14 5c e6 10  |..z...!......\..|
+[   52.424]     +0e0: 00 00 00 00 92 cc 49 01 10 ba 00 f7 80 f5 7a 00  |......I.......z.|
+[   52.424]     +0f0: 03 00 00 00 01 ba e5 15 5f c6 d5 2d 00 00 00 00  |........_..-....|
+[   52.424]     +100: 3c 06 ab 52 d0 67 73 d9 c3 e0 64 76 c5 ca 21 b8  |<..R.gs...dv..!.|
+[   52.424]     +110: c5 f9 8b d3 0d b4 a6 28 00 00 00 00 01 00 00 00  |.......(........|
+[   52.424]     +120: 02 00 00 00 03 00 00 00 04 00 00 00 05 00 00 00  |................|
+[   52.424] SP pedido 4: this 0x090c4f10 (vtable rva 0xef6900, vf[1] rva 0x74d3f0), desde rva 0x3a7b52 | clave 4/4 tipo 6 id 1c3460b3cce61c76 | "" / "INNOCENT" | pos=(32.06, 19.34, 0.18) yaw=1.571
+[   52.424] SP   volcado @ 0x73fcc730 (0x130 bytes)
+[   52.424]     +000: 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  |................|
+[   52.424]     +010: 01 00 00 00 10 b8 32 cd 82 fc 64 f8 00 00 00 00  |......2...d.....|
+[   52.424]     +020: 5c 69 94 5f 10 b8 32 cd 1c 34 60 b3 cc e6 1c 76  |\i._..2..4`....v|
+[   52.424]     +030: 06 00 00 00 05 00 00 00 02 00 00 00 3d 52 d3 f9  |............=R..|
+[   52.424]     +040: 3d 52 d3 f9 3d 52 d3 f9 00 00 00 00 00 00 00 1a  |=R..=R..........|
+[   52.424]     +050: 50 3c 00 42 89 c1 9a 41 3b c2 39 3e 00 00 00 00  |P<.B...A;.9>....|
+[   52.424]     +060: db 0f c9 3f 00 0d 56 3e 00 00 00 00 00 00 00 00  |...?..V>........|
+[   52.424]     +070: bc f6 7a 00 78 4e d1 01 ff ff ff ff a0 f6 7a 00  |..z.xN........z.|
+[   52.424]     +080: a5 d2 49 01 b0 fd e6 15 00 ff e6 00 ac 2b 33 02  |..I..........+3.|
+[   52.424]     +090: 10 69 54 01 00 00 00 00 ac 2b 33 02 a8 e2 dc 0b  |.iT......+3.....|
+[   52.424]     +0a0: c8 f6 7a 00 49 4e 4e 4f 43 45 4e 54 00 b9 00 f7  |..z.INNOCENT....|
+[   52.424]     +0b0: 94 5e e6 10 a8 e2 dc 0b 00 00 00 00 f4 f6 7a 00  |.^............z.|
+[   52.424]     +0c0: 68 9f d1 01 e4 f6 7a 00 50 4e d1 01 ff ff ff ff  |h.....z.PN......|
+[   52.424]     +0d0: 04 f7 7a 00 e4 05 21 01 94 e2 dc 0b 94 5e e6 10  |..z...!......^..|
+[   52.424]     +0e0: 00 00 00 00 92 cc 49 01 10 ba 00 f7 80 f5 7a 00  |......I.......z.|
+[   52.424]     +0f0: 04 00 00 00 01 fd e6 15 07 a9 63 52 00 00 00 00  |..........cR....|
+[   52.424]     +100: 3c 06 ab 52 d0 67 73 d9 c3 e0 64 76 a4 da 2f 8d  |<..R.gs...dv../.|
+[   52.424]     +110: c5 f9 8b d3 0d b4 a6 28 00 00 00 00 01 00 00 00  |.......(........|
+[   52.424]     +120: 02 00 00 00 03 00 00 00 04 00 00 00 05 00 00 00  |................|
+[   52.424] SP pedido 5: this 0x090c4f10 (vtable rva 0xef6900, vf[1] rva 0x74d3f0), desde rva 0x3a7b52 | clave 5/5 tipo 6 id 1c3460b3e1244f30 | "" / "INNOCENT" | pos=(50.97, 15.73, -59.77) yaw=-1.615
+[   52.424] SP   volcado @ 0x73fcc860 (0x130 bytes)
+[   52.424]     +000: 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  |................|
+[   52.424]     +010: 01 00 00 00 10 b8 32 cd 82 fc 64 f8 00 00 00 00  |......2...d.....|
+[   52.424]     +020: f0 b7 ba 56 74 cc ab 74 1c 34 60 b3 e1 24 4f 30  |...Vt..t.4`..$O0|
+[   52.424]     +030: 06 00 00 00 05 00 00 00 05 00 00 00 3d 52 d3 f9  |............=R..|
+[   52.424]     +040: 3d 52 d3 f9 3d 52 d3 f9 00 00 00 00 00 00 00 1a  |=R..=R..........|
+[   52.424]     +050: 07 df 4b 42 f4 9d 7b 41 94 10 6f c2 00 00 00 00  |..KB..{A..o.....|
+[   52.424]     +060: 09 bf ce bf 00 0d 56 3e 00 00 00 00 00 00 00 00  |......V>........|
+[   52.424]     +070: bc f6 7a 00 78 4e d1 01 ff ff ff ff a0 f6 7a 00  |..z.xN........z.|
+[   52.424]     +080: a5 d2 49 01 50 e0 e8 15 a0 e1 e8 00 ac 2b 33 02  |..I.P........+3.|
+[   52.424]     +090: 10 69 54 01 00 00 00 00 ac 2b 33 02 a8 e6 dc 0b  |.iT......+3.....|
+[   52.424]     +0a0: c8 f6 7a 00 49 4e 4e 4f 43 45 4e 54 00 b9 00 f7  |..z.INNOCENT....|
+[   52.424]     +0b0: 94 63 e6 10 a8 e6 dc 0b 00 00 00 00 f4 f6 7a 00  |.c............z.|
+[   52.424]     +0c0: 68 9f d1 01 e4 f6 7a 00 50 4e d1 01 ff ff ff ff  |h.....z.PN......|
+[   52.424]     +0d0: 04 f7 7a 00 e4 05 21 01 94 e6 dc 0b 94 63 e6 10  |..z...!......c..|
+[   52.424]     +0e0: 00 00 00 00 92 cc 49 01 10 ba 00 f7 80 f5 7a 00  |......I.......z.|
+[   52.424]     +0f0: 05 00 00 00 01 e0 e8 15 e4 ff 5a fa 00 00 00 00  |..........Z.....|
+[   52.424]     +100: 74 f0 94 8f 99 d6 7f 18 23 9b 3c 62 d3 78 2b 68  |t.......#.<b.x+h|
+[   52.424]     +110: 4f 80 d1 bc a4 ab 0b 46 00 00 00 00 01 00 00 00  |O......F........|
+[   52.424]     +120: 02 00 00 00 03 00 00 00 04 00 00 00 05 00 00 00  |................|
+[   52.425] SP pedido 6: this 0x090c4f10 (vtable rva 0xef6900, vf[1] rva 0x74d3f0), desde rva 0x3a7a76 | clave 6/6 tipo 1 id 1c3460b32130693e | "" / "ALIEN" | pos=(4.96, 18.33, 46.20) yaw=0.000
+[   52.425] SP   volcado @ 0x73fcc990 (0x130 bytes)
+[   52.425]     +000: 06 00 00 00 00 00 00 00 00 00 00 00 07 9d 37 22  |..............7"|
+[   52.425]     +010: 01 00 00 00 ac 65 a6 ef ac 65 a6 ef 00 00 00 00  |.....e...e......|
+[   52.425]     +020: ac 65 a6 ef ac 65 a6 ef 1c 34 60 b3 21 30 69 3e  |.e...e...4`.!0i>|
+[   52.425]     +030: 01 00 00 00 03 00 00 00 00 00 00 00 ff 6e 2b 61  |.............n+a|
+[   52.425]     +040: ea 39 57 5e 20 f3 6f 89 00 00 00 00 00 01 01 33  |.9W^ .o........3|
+[   52.425]     +050: 2f af 9e 40 54 ad 92 41 dd c7 38 42 00 00 00 00  |/..@T..A..8B....|
+[   52.425]     +060: 00 00 00 00 00 0d 56 3e 00 00 00 00 00 00 00 00  |......V>........|
+[   52.425]     +070: 7c f6 7a 00 78 4e d1 01 ff ff ff ff 60 f6 7a 00  ||.z.xN......`.z.|
+[   52.425]     +080: a5 d2 49 01 f0 99 e3 15 40 9b e3 00 ac 2b 33 02  |..I.....@....+3.|
+[   52.425]     +090: 10 69 54 01 00 00 00 00 ac 2b 33 02 a8 0f dd 0b  |.iT......+3.....|
+[   52.425]     +0a0: 88 f6 7a 00 41 4c 49 45 4e 00 49 01 9c b9 00 f7  |..z.ALIEN.I.....|
+[   52.425]     +0b0: 94 86 e6 10 a8 0f dd 0b 00 00 00 00 b4 f6 7a 00  |..............z.|
+[   52.425]     +0c0: 68 9f d1 01 a4 f6 7a 00 50 4e d1 01 ff ff ff ff  |h.....z.PN......|
+[   52.425]     +0d0: c4 f6 7a 00 e4 05 21 01 94 0f dd 0b 94 86 e6 10  |..z...!.........|
+[   52.425]     +0e0: 00 00 00 00 d4 bb 00 f7 40 f5 7a 00 00 00 00 00  |........@.z.....|
+[   52.425]     +0f0: 06 00 00 00 00 f4 7a 00 00 00 00 00 f6 f6 f8 19  |......z.........|
+[   52.425]     +100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  |................|
+[   52.425]     +110: 00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff  |................|
+[   52.425]     +120: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff  |................|
+[   55.043] ST frames +3 (contador del juego 3, +2) fps=0.8 Run prom=86.63 ms max=219.35 ms dt=0.0333 dts=0.0333 t_juego=0.1
+[   55.043]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   55.043]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[   55.043]    cam 0x0629a7c0 pos=(0.000, 1.600, 0.000) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[   55.043]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   55.043]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/3, suma 0 bytes
+[   55.043]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/3, suma 0 bytes
+[   55.043] NET join 100.126.161.126:47811: enviados 1, recibidos 74, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 412, hace 0 ms
+[   55.059] SC SpawnCharacter 1: this 0x090c4f04 (vtable rva 0xef68e0, vf[1] rva 0x3d3b50), desde rva 0x14ac0 | clave 1/0 tipo 0 id 2ff722b2099d5b9b | "" / "THE_PLAYER" | pos=(4.55, 13.62, 33.59) yaw=-3.142
+[   55.059] SC   pedido en 0x007afa70; distinto del último del spawn de autoridad
+[   55.061] SC   devolvió 0x00000000
+[   55.061] SC SpawnCharacter 2: this 0x090c4f04 (vtable rva 0xef68e0, vf[1] rva 0x3d3b50), desde rva 0x14ac0 | clave 6/0 tipo 1 id 1c3460b32130693e | "" / "ALIEN" | pos=(4.96, 18.33, 46.20) yaw=0.000
+[   55.061] SC   pedido en 0x007afa70; distinto del último del spawn de autoridad
+[   55.062] SC   devolvió 0x00000000
+[   55.112] SC SpawnCharacter 3: this 0x090c4f04 (vtable rva 0xef68e0, vf[1] rva 0x3d3b50), desde rva 0x14ac0 | clave 2/0 tipo 6 id 1c3460b37e03a5dc | "" / "INNOCENT" | pos=(29.41, 20.64, 20.14) yaw=-0.077
+[   55.112] SC   pedido en 0x007afa70; distinto del último del spawn de autoridad
+[   55.114] SC   devolvió 0x00000000
+[   55.114] SC SpawnCharacter 4: this 0x090c4f04 (vtable rva 0xef68e0, vf[1] rva 0x3d3b50), desde rva 0x14ac0 | clave 3/0 tipo 6 id 1c3460b31ce1c947 | "" / "INNOCENT" | pos=(33.65, 19.25, -1.20) yaw=-1.571
+[   55.114] SC   pedido en 0x007afa70; distinto del último del spawn de autoridad
+[   55.114] SC   devolvió 0x00000000
+[   55.114] SC SpawnCharacter 5: this 0x090c4f04 (vtable rva 0xef68e0, vf[1] rva 0x3d3b50), desde rva 0x14ac0 | clave 4/0 tipo 6 id 1c3460b3cce61c76 | "" / "INNOCENT" | pos=(32.06, 19.34, 0.18) yaw=1.571
+[   55.114] SC   pedido en 0x007afa70; distinto del último del spawn de autoridad
+[   55.115] SC   devolvió 0x00000000
+[   55.115] SC SpawnCharacter 6: this 0x090c4f04 (vtable rva 0xef68e0, vf[1] rva 0x3d3b50), desde rva 0x14ac0 | clave 5/0 tipo 6 id 1c3460b3e1244f30 | "" / "INNOCENT" | pos=(50.97, 15.73, -59.77) yaw=-1.615
+[   55.115] SC   pedido en 0x007afa70; distinto del último del spawn de autoridad
+[   55.115] SC   devolvió 0x00000000
+[   55.307] EV personajes: jugadores 0 -> 1, NPCs 0 -> 5, pendientes 0 -> 0
+[   55.307] EV jugador 0: 0x00000000 -> 0x2b2497d0 (vtable rva 0xef5d80 = Character(ok); def 0x090c5160 tipo 0 flags 1c=1 1f=1)
+[   55.307] EV controlador de jugador 0x00000000 (activo 0) -> 0x3bfb5918 (activo 1)
+[   55.307] volcado (automático, apareció el jugador 0)
+[   55.307] ==== volcado: frame del juego 3 ====
+[   55.307] g_root @ 0x090b7df0 (0xc0 bytes)
+[   55.307]     +000: 090c3c88 090c02e0 090c4f00 090c43d0  |          .          .          .          .
+[   55.307]     +010: 090d0000 090d08b8 090d0960 2afac888  |          .          .          .          .
+[   55.307]     +020: 2afacc08 2afaf010 2afaf080 2afaf0dc  |          .          .          .          .
+[   55.307]     +030: 2afac628 090b7dc4 090d09a8 090bffb4  |          .          .          .          .
+[   55.307]     +040: 090d1240 090d1318 090dad28 090675b8  |          .          .          .          .
+[   55.307]     +050: 090b7ea8 090bbef8 0629a038 2afac928  |          .          .          .          .
+[   55.307]     +060: 2afacbc0 2afac6c8 090bff38 090cffd8  |          .          .          .          .
+[   55.307]     +070: 090daf30 00000000 09105650 090dea68  |          .     0.0000          .          .
+[   55.307]     +080: 091096b0 090dede8 09109d0c 3beae9ac  |          .          .          .     0.0072
+[   55.307]     +090: 090cff48 090cfd08 09087858 09077708  |          .          .          .          .
+[   55.307]     +0a0: 090d5044 090979a8 0910a00c 3beae9dc  |          .          .          .     0.0072
+[   55.307]     +0b0: 000000b0 00000040 00000000 031d1c3c  |          .          .     0.0000          .
+[   55.307] ModeManager @ 0x090bffb4 (0x60 bytes)
+[   55.307]     +000: 0910cc38 0910ddb8 00000000 00000000  |          .          .     0.0000     0.0000
+[   55.307]     +010: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +020: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +030: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +040: 0910ddb8 00000001 00000002 00000005  |          .          .          .          .
+[   55.307]     +050: 0910cc38 0910cd50 0910ce68 0910cf80  |          .          .          .          .
+[   55.307] modo actual @ 0x0910ddb8 (0x20 bytes)
+[   55.307]     +000: 01ed43e8 00000010 00000000 00000000  |          .          .     0.0000     0.0000
+[   55.307]     +010: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307] CharacterManager @ 0x090c4f00 (0x180 bytes)
+[   55.307]     +000: 01ed68e8 01ed68e0 01ed690c 01ed68d8  |          .          .          .          .
+[   55.307]     +010: 01ed6900 01ed68d0 01ed68f4 01ed68c8  |          .          .          .          .
+[   55.307]     +020: 01ed68bc 01ed68b4 090675b8 090c02e0  |          .          .          .          .
+[   55.307]     +030: 090c3c88 090c43d0 2b2497d0 cdcdcdcd  |          .          .          .          .
+[   55.307]     +040: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +050: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +060: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +070: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +080: 090c4f38 00000001 2b24daa0 2b251d70  |          .          .          .          .
+[   55.307]     +090: 2b256040 2b25a310 2b25e5e0 cdcdcdcd  |          .          .          .          .
+[   55.307]     +0a0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +0b0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +0c0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +0d0: 090c4f88 00000005 cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +0e0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +0f0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +100: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +110: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +120: 090c4fd8 00000000 00000000 00000000  |          .     0.0000     0.0000     0.0000
+[   55.307]     +130: 00000000 00000000 cdcdcdcd cdcdcdcd  |     0.0000     0.0000          .          .
+[   55.307]     +140: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +150: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +160: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.307]     +170: 090c5028 00000000 0b9593a0 cdcdcdcd  |          .     0.0000          .          .
+[   55.307]   jugadores (1):
+[   55.307]     J[0] 0x2b2497d0 vt rva 0xef5d80 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 pos=(4.55, 13.62, 33.59) yaw=-3.142 "Character: 0"
+[   55.307]   NPCs (5):
+[   55.307]     N[0] 0x2b24daa0 vt rva 0xef5d80 Character(ok) def 0x090c5a70 tipo 1 1c=0 1f=1 ctrl 0x00000000 pos=(4.96, 18.33, 46.20) yaw=0.000 "Character: 1"
+[   55.307]     N[1] 0x2b251d70 vt rva 0xef5d80 Character(ok) def 0x090c5330 tipo 6 1c=0 1f=1 ctrl 0x00000000 pos=(29.41, 20.64, 20.14) yaw=-0.077 "Character: 2"
+[   55.307]     N[2] 0x2b256040 vt rva 0xef5d80 Character(ok) def 0x090c5500 tipo 6 1c=0 1f=1 ctrl 0x00000000 pos=(33.65, 19.25, -1.20) yaw=-1.571 "Character: 3"
+[   55.307]     N[3] 0x2b25a310 vt rva 0xef5d80 Character(ok) def 0x090c56d0 tipo 6 1c=0 1f=1 ctrl 0x00000000 pos=(32.06, 19.34, 0.18) yaw=1.571 "Character: 4"
+[   55.307]     N[4] 0x2b25e5e0 vt rva 0xef5d80 Character(ok) def 0x090c58a0 tipo 6 1c=0 1f=1 ctrl 0x00000000 pos=(50.97, 15.73, -59.77) yaw=-1.615 "Character: 5"
+[   55.307] jugador 0 (Character) @ 0x2b2497d0 (0x380 bytes)
+[   55.307]     +000: 01ed5d80 00000000 00000dc4 0000004e  |          .     0.0000          .          .
+[   55.307]     +010: 72616843 65746361 30203a72 00000d00  |          .          .          .          .
+[   55.307]     +020: 3f000000 3ea00000 3ea00000 c1800000  |     0.5000     0.3125     0.3125   -16.0000
+[   55.307]     +030: be400000 c2ae2000 42d10000 420f4000  |    -0.1875   -87.0625   104.5000    35.8125
+[   55.307]     +040: 42b8e000 41800000 42014000 007b0000  |    92.4375    16.0000    32.3125          .
+[   55.307]     +050: 00000001 b222f72f 9b5b9d09 00000000  |          .          .          .     0.0000
+[   55.307]     +060: 00000000 090c5160 c2a92000 42048000  |     0.0000          .   -84.5625    33.1250
+[   55.307]     +070: 40919798 4159e46f 42065e7a 00000000  |     4.5498    13.6183    33.5923     0.0000
+[   55.307]     +080: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +090: 00000000 c1f00000 00000000 00000000  |     0.0000   -30.0000     0.0000     0.0000
+[   55.307]     +0a0: 417b0001 c2a32000 420b0000 417b0000  |    15.6875   -81.5625    34.7500    15.6875
+[   55.307]     +0b0: 40919798 4159e46f 42065e7a 00000000  |     4.5498    13.6183    33.5923     0.0000
+[   55.307]     +0c0: 40919798 4159e46f 42065e7a 00000000  |     4.5498    13.6183    33.5923     0.0000
+[   55.307]     +0d0: 4479c000 4479c000 4479f99a 00000000  |   999.0000   999.0000   999.9000     0.0000
+[   55.307]     +0e0: 40919798 4159e46f 42065e7a 00000000  |     4.5498    13.6183    33.5923     0.0000
+[   55.307]     +0f0: 40919798 4159e46f 42065e7a 00000000  |     4.5498    13.6183    33.5923     0.0000
+[   55.307]     +100: 40919798 4159e46f 42065e7a 00000000  |     4.5498    13.6183    33.5923     0.0000
+[   55.307]     +110: 0180c34c 007af684 01ed3a84 00000104  |          .          .          .          .
+[   55.307]     +120: 2b24a970 66727573 5f656361 65707974  |          .          .          .          .
+[   55.307]     +130: 00000000 00000000 00000002 00000000  |     0.0000     0.0000          .     0.0000
+[   55.307]     +140: 00000000 00000000 73fb2934 00000000  |     0.0000     0.0000          .     0.0000
+[   55.307]     +150: 00000000 3f800000 00000000 00000000  |     0.0000     1.0000     0.0000     0.0000
+[   55.307]     +160: 00000000 3f7ffffc 00000000 00000000  |     0.0000     1.0000     0.0000     0.0000
+[   55.307]     +170: 4159e46f c0490fd3 c0490fd3 bf800000  |    13.6183    -3.1416    -3.1416    -1.0000
+[   55.307]     +180: c0490fd3 00000000 c2a8a000 4222c000  |    -3.1416     0.0000   -84.3125    40.6875
+[   55.307]     +190: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +1a0: 00000000 00000000 00006980 00000000  |     0.0000     0.0000          .     0.0000
+[   55.307]     +1b0: 2481aea5 417b0000 ffffffff 4159e46f  |          .    15.6875          .    13.6183
+[   55.307]     +1c0: 00000000 f700b858 00000000 00000000  |     0.0000          .     0.0000     0.0000
+[   55.307]     +1d0: 00000000 421bff00 00000000 00000000  |     0.0000    38.9990     0.0000     0.0000
+[   55.307]     +1e0: 00000006 2af566b8 c2a30000 0000003d  |          .          .   -81.5000          .
+[   55.307]     +1f0: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +200: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +210: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +220: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +230: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +240: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +250: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.307]     +260: 01000101 00000000 00000000 01000001  |          .     0.0000     0.0000          .
+[   55.307]     +270: 01000000 00010000 c2ab0000 42168000  |          .          .   -85.5000    37.6250
+[   55.307]     +280: 2b2497d0 00010001 00000000 00000000  |          .          .     0.0000     0.0000
+[   55.307]     +290: 00000000 00000000 00000000 c2000000  |     0.0000     0.0000     0.0000   -32.0000
+[   55.307]     +2a0: 00640000 00000000 00010001 00000000  |          .     0.0000          .     0.0000
+[   55.307]     +2b0: 00000000 00000000 01000100 00000000  |     0.0000     0.0000          .     0.0000
+[   55.307]     +2c0: 00010100 00000000 00010100 00010000  |          .     0.0000          .          .
+[   55.307]     +2d0: 00000100 00010000 00000000 41dd0000  |          .          .     0.0000    27.6250
+[   55.307]     +2e0: 00000009 00000001 00000000 00000000  |          .          .     0.0000     0.0000
+[   55.307]     +2f0: 00000000 00000000 01010000 00010001  |     0.0000     0.0000          .          .
+[   55.307]     +300: 00000000 00000000 01000100 41e70000  |     0.0000     0.0000          .    28.8750
+[   55.307]     +310: 00000001 00000001 00000000 3bfb5918  |          .          .     0.0000     0.0077
+[   55.307]     +320: c29e0000 00000000 00000000 00000000  |   -79.0000     0.0000     0.0000     0.0000
+[   55.307]     +330: 00000000 00000000 bf800000 03e803e8  |     0.0000     0.0000    -1.0000          .
+[   55.307]     +340: 3f800000 2b2497d0 00000000 00000000  |     1.0000          .     0.0000     0.0000
+[   55.307]     +350: c2a6e000 41fb0000 417b0000 c2a7c000  |   -83.4375    31.3750    15.6875   -83.8750
+[   55.307]     +360: 41fc8000 00000000 c2aa6000 3bfb40f0  |    31.5625     0.0000   -85.1875     0.0077
+[   55.307]     +370: 3bfb8400 3bfb8650 3bfb88a0 3bfb8af0  |     0.0077     0.0077     0.0077     0.0077
+[   55.307] definición del jugador @ 0x090c5160 (0x40 bytes)
+[   55.307]     +000: 2ce42ec8 00000000 00000001 00000000  |          .     0.0000          .     0.0000
+[   55.307]     +010: a21d4e0b 5e5739ea a6cb83cf 01000001  |          .          .          .          .
+[   55.307]     +020: 40919798 4159e46f 42065e7a 00000000  |     4.5498    13.6183    33.5923     0.0000
+[   55.308]     +030: c0490fd3 00000000 cdcdcdcd cdcdcdcd  |    -3.1416     0.0000          .          .
+[   55.308] controlador de jugador @ 0x3bfb5918 (0x60 bytes)
+[   55.308]     +000: 00ff0580 00000000 00000000 00000000  |          .     0.0000     0.0000     0.0000
+[   55.308]     +010: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   55.308]     +020: 00000000 00000000 cdcdcd00 00000000  |     0.0000     0.0000          .     0.0000
+[   55.308]     +030: 00000000 00000000 00000000 090d1318  |     0.0000     0.0000     0.0000          .
+[   55.308]     +040: 00000000 09113b40 cdcdcd01 0000004c  |     0.0000          .          .          .
+[   55.308]     +050: 00000014 01da69f4 00000000 00000027  |          .          .     0.0000          .
+[   55.308] gestor de cámara @ 0x0629a038 (0x220 bytes)
+[   55.308]     +000: 01da6814 00000000 00000000 00000000  |          .     0.0000     0.0000     0.0000
+[   55.308]     +010: 2719daa4 5034ebdb 2927603b 6ad3b296  |          .          .          .          .
+[   55.308]     +020: 2719daa4 27e03fc3 2927603b 19c03d05  |          .          .          .          .
+[   55.308]     +030: 2927603b 28125a28 2719daa4 6982a65d  |          .          .          .          .
+[   55.308]     +040: 2719daa4 96dd194c 2927603b e71beea1  |          .          .          .          .
+[   55.308]     +050: 2719daa4 ac0a9ba9 2927603b f6ca1252  |          .          .          .          .
+[   55.308]     +060: 0629a270 00000004 00000020 0629eee8  |          .          .          .          .
+[   55.308]     +070: 0000002d 00000040 0629afe0 0629b068  |          .          .          .          .
+[   55.308]     +080: 0629b0f0 0629b178 0629b200 0629b288  |          .          .          .          .
+[   55.308]     +090: 0629b310 0629b398 0629a0b0 00000008  |          .          .          .          .
+[   55.308]     +0a0: 0629a380 00000004 00000020 0629a7c0  |          .          .          .          .
+[   55.308]     +0b0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +0c0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +0d0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +0e0: cdcdcdcd cdcdcdcd cdcdcdcd 0629a0e4  |          .          .          .          .
+[   55.308]     +0f0: 00000001 cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +100: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +110: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +120: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +130: cdcdcdcd 0629a12c 00000000 cdcdcdcd  |          .          .     0.0000          .
+[   55.308]     +140: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +150: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +160: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +170: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +180: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +190: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +1a0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   55.308]     +1b0: cdcdcdcd cdcdcdcd cdcdcdcd 0629a174  |          .          .          .          .
+[   55.308]     +1c0: 00000000 cdcdcdcd 00000000 00000000  |     0.0000          .     0.0000     0.0000
+[   55.308]     +1d0: 00000000 00000000 0629a7c0 0629a7c0  |     0.0000     0.0000          .          .
+[   55.308]     +1e0: 0629ad84 0629a660 00000000 00000000  |          .          .     0.0000     0.0000
+[   55.308]     +1f0: 0629a408 0629b420 0629c9b0 0629ca04  |          .          .          .          .
+[   55.308]     +200: 0629ca1c c0490fdb c0490fdb 423c0000  |          .    -3.1416    -3.1416    47.0000
+[   55.308]     +210: 3f800000 00000000 00000000 2481aea5  |     1.0000     0.0000     0.0000          .
+[   55.308] cámara activa @ 0x0629a7c0 (0x60 bytes)
+[   55.308]     +000: 01da64f8 00000000 00000000 00000000  |          .     0.0000     0.0000     0.0000
+[   55.308]     +010: 3f800000 408fa2a7 416ea286 4203dca4  |     1.0000     4.4886    14.9147    32.9655
+[   55.308]     +020: 42920000 3d4ccccd 447a0000 00000000  |    73.0000     0.0500  1000.0000     0.0000
+[   55.308]     +030: 3f800000 00000000 b5800000 40919791  |     1.0000     0.0000    -0.0000     4.5498
+[   55.308]     +040: 3c9d5a00 41fead58 423c0000 3d4ccccd  |     0.0192    31.8346    47.0000     0.0500
+[   55.308]     +050: 447a0000 00000000 3f800000 00000000  |  1000.0000     0.0000     1.0000     0.0000
+[   55.308] NETZ +0x000 @ 0x090c02e0 (0x20 bytes)
+[   55.308]     +000: 01ed74fc 00000000 00000001 ffffffc0  |          .     0.0000          .          .
+[   55.308]     +010: 00000001 0000003f ffffffff ffffffff  |          .          .          .          .
+[   55.308] NETZ +0x690 @ 0x090c0970 (0x10 bytes)
+[   55.308]     +000: cdcdcdcd cdcdcdcd 0000000c 00000000  |          .          .          .     0.0000
+[   55.308] cola A @ 0x090b7ea8 (0x40 bytes)
+[   55.308]     +000: 00000000 031d1c3c 21b4a840 0000002c  |     0.0000          .          .          .
+[   55.308]     +010: 0000002c ffffffff ffffffff 00000000  |          .          .          .     0.0000
+[   55.308]     +020: 00000000 00000000 00000fa0 031d1c3c  |     0.0000     0.0000          .          .
+[   55.308]     +030: 090b7ef0 00000000 00004000 cdcdcd00  |          .     0.0000          .          .
+[   55.308] sesión de red @ 0x090bbef8 (0x40 bytes)
+[   55.308]     +000: 00000000 031d1c3c 21b4a8f8 0000002f  |     0.0000          .          .          .
+[   55.308]     +010: 0000002f 031d1c3c 090bbf30 00000000  |          .          .          .     0.0000
+[   55.308]     +020: 00004000 0000000c 00000002 cdcd0000  |          .          .          .          .
+[   55.308]     +030: 00000030 00004000 0002002b a4010000  |          .          .          .          .
+[   55.308] ==== fin del volcado ====
+[   56.057] ST frames +50 (contador del juego 9, +6) fps=49.3 Run prom=19.98 ms max=69.29 ms dt=0.0172 dts=0.0172 t_juego=0.2
+[   56.057]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   56.057]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   56.057]    J0 pos=(4.541, 13.580, 33.478) yaw=-3.1416 rad (-180.0 grados) | se movió 0.000 desde el ST anterior
+[   56.057]    cam 0x0629a7c0 pos=(4.546, 15.179, 33.756) q=(0.0000, 1.0000, 0.0000, -0.0000) |q|^2=1.0000
+[   56.057]    cam - J0 = (0.004, 1.599, 0.278)
+[   56.057]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (1 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   56.057]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/50, suma 0 bytes
+[   56.057]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/50, suma 0 bytes
+[   56.057] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 432, hace 32 ms
+[   57.073] ST frames +61 (contador del juego 70, +61) fps=60.0 Run prom=16.53 ms max=17.76 ms dt=0.0174 dts=0.0174 t_juego=1.2
+[   57.073]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   57.073]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   57.073]    J0 pos=(4.512, 13.278, 33.173) yaw=3.1416 rad (180.0 grados) | se movió 0.430 desde el ST anterior
+[   57.073]    cam 0x0629a7c0 pos=(4.512, 14.852, 33.309) q=(0.0000, 1.0000, 0.0000, -0.0000) |q|^2=1.0000
+[   57.073]    cam - J0 = (0.000, 1.574, 0.137)
+[   57.073]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   57.073]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   57.073]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   57.073] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 453, hace 0 ms
+[   58.088] ST frames +61 (contador del juego 131, +61) fps=60.1 Run prom=16.51 ms max=17.95 ms dt=0.0163 dts=0.0163 t_juego=2.2
+[   58.088]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   58.089]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   58.089]    J0 pos=(4.158, 13.278, 33.413) yaw=-2.2136 rad (-126.8 grados) | se movió 0.428 desde el ST anterior
+[   58.089]    cam 0x0629a7c0 pos=(4.248, 14.860, 33.449) q=(-0.0534, 0.8885, -0.0975, -0.4452) |q|^2=1.0000
+[   58.089]    cam - J0 = (0.090, 1.582, 0.036)
+[   58.089]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   58.089]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   58.089]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   58.089] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 473, hace 16 ms
+[   59.105] ST frames +61 (contador del juego 192, +61) fps=60.0 Run prom=16.55 ms max=17.36 ms dt=0.0167 dts=0.0167 t_juego=3.2
+[   59.105]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   59.105]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   59.105]    J0 pos=(3.269, 13.278, 34.927) yaw=-0.9735 rad (-55.8 grados) | se movió 1.756 desde el ST anterior
+[   59.105]    cam 0x0629a7c0 pos=(3.373, 14.851, 34.835) q=(0.0698, -0.4659, 0.0285, 0.8816) |q|^2=1.0000
+[   59.105]    cam - J0 = (0.105, 1.573, -0.092)
+[   59.105]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   59.105]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   59.105]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   59.105] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 493, hace 33 ms
+[   60.121] ST frames +61 (contador del juego 253, +61) fps=60.0 Run prom=16.53 ms max=17.21 ms dt=0.0167 dts=0.0167 t_juego=4.3
+[   60.121]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   60.121]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   60.121]    J0 pos=(2.937, 13.278, 37.336) yaw=-0.9515 rad (-54.5 grados) | se movió 2.432 desde el ST anterior
+[   60.121]    cam 0x0629a7c0 pos=(3.037, 14.847, 37.229) q=(0.0517, -0.4569, 0.0169, 0.8879) |q|^2=1.0000
+[   60.121]    cam - J0 = (0.100, 1.569, -0.107)
+[   60.121]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   60.121]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   60.121]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   60.121] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 514, hace 0 ms
+[   60.321] volcado (automático, 5 s después de aparecer el jugador)
+[   60.321] ==== volcado: frame del juego 265 ====
+[   60.321] g_root @ 0x090b7df0 (0xc0 bytes)
+[   60.321]     +000: 090c3c88 090c02e0 090c4f00 090c43d0  |          .          .          .          .
+[   60.321]     +010: 090d0000 090d08b8 090d0960 2afac888  |          .          .          .          .
+[   60.321]     +020: 2afacc08 2afaf010 2afaf080 2afaf0dc  |          .          .          .          .
+[   60.321]     +030: 2afac628 090b7dc4 090d09a8 090bffb4  |          .          .          .          .
+[   60.321]     +040: 090d1240 090d1318 090dad28 090675b8  |          .          .          .          .
+[   60.321]     +050: 090b7ea8 090bbef8 0629a038 2afac928  |          .          .          .          .
+[   60.321]     +060: 2afacbc0 2afac6c8 090bff38 090cffd8  |          .          .          .          .
+[   60.321]     +070: 090daf30 00000000 09105650 090dea68  |          .     0.0000          .          .
+[   60.321]     +080: 091096b0 090dede8 09109d0c 3beae9ac  |          .          .          .     0.0072
+[   60.321]     +090: 090cff48 090cfd08 09087858 09077708  |          .          .          .          .
+[   60.321]     +0a0: 090d5044 090979a8 0910a00c 3beae9dc  |          .          .          .     0.0072
+[   60.321]     +0b0: 000000b0 00000040 00000000 031d1c3c  |          .          .     0.0000          .
+[   60.321] ModeManager @ 0x090bffb4 (0x60 bytes)
+[   60.321]     +000: 0910cc38 0910ddb8 00000000 00000000  |          .          .     0.0000     0.0000
+[   60.321]     +010: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   60.321]     +020: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   60.321]     +030: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   60.321]     +040: 0910ddb8 00000001 00000002 00000005  |          .          .          .          .
+[   60.321]     +050: 0910cc38 0910cd50 0910ce68 0910cf80  |          .          .          .          .
+[   60.321] modo actual @ 0x0910ddb8 (0x20 bytes)
+[   60.321]     +000: 01ed43e8 00000010 00000000 00000000  |          .          .     0.0000     0.0000
+[   60.321]     +010: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   60.321] CharacterManager @ 0x090c4f00 (0x180 bytes)
+[   60.321]     +000: 01ed68e8 01ed68e0 01ed690c 01ed68d8  |          .          .          .          .
+[   60.321]     +010: 01ed6900 01ed68d0 01ed68f4 01ed68c8  |          .          .          .          .
+[   60.321]     +020: 01ed68bc 01ed68b4 090675b8 090c02e0  |          .          .          .          .
+[   60.321]     +030: 090c3c88 090c43d0 2b2497d0 cdcdcdcd  |          .          .          .          .
+[   60.321]     +040: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +050: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +060: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +070: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +080: 090c4f38 00000001 2b24daa0 2b251d70  |          .          .          .          .
+[   60.321]     +090: 2b256040 2b25a310 2b25e5e0 cdcdcdcd  |          .          .          .          .
+[   60.321]     +0a0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +0b0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +0c0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +0d0: 090c4f88 00000005 cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +0e0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +0f0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +100: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +110: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +120: 090c4fd8 00000000 00000000 00000000  |          .     0.0000     0.0000     0.0000
+[   60.321]     +130: 00000000 00000000 cdcdcdcd cdcdcdcd  |     0.0000     0.0000          .          .
+[   60.321]     +140: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +150: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +160: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.321]     +170: 090c5028 00000000 0b9593a0 cdcdcdcd  |          .     0.0000          .          .
+[   60.321]   jugadores (1):
+[   60.321]     J[0] 0x2b2497d0 vt rva 0xef5d80 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 pos=(2.86, 13.28, 37.81) yaw=-0.995 "Character: 0"
+[   60.321]   NPCs (5):
+[   60.321]     N[0] 0x2b24daa0 vt rva 0xef5d80 Character(ok) def 0x090c5a70 tipo 1 1c=0 1f=1 ctrl 0x00000000 pos=(28.78, 18.28, -30.25) yaw=0.000 "BackstageAlien"
+[   60.321]     N[1] 0x2b251d70 vt rva 0xef5d80 Character(ok) def 0x090c5330 tipo 6 1c=0 1f=1 ctrl 0x00000000 pos=(29.41, 20.64, 20.14) yaw=-0.077 "CV5"
+[   60.321]     N[2] 0x2b256040 vt rva 0xef5d80 Character(ok) def 0x090c5500 tipo 6 1c=0 1f=1 ctrl 0x00000000 pos=(34.02, 19.24, -1.22) yaw=-1.571 "CV1"
+[   60.321]     N[3] 0x2b25a310 vt rva 0xef5d80 Character(ok) def 0x090c56d0 tipo 6 1c=0 1f=1 ctrl 0x00000000 pos=(32.11, 19.29, 0.17) yaw=1.571 "CV2"
+[   60.321]     N[4] 0x2b25e5e0 vt rva 0xef5d80 Character(ok) def 0x090c58a0 tipo 6 1c=0 1f=1 ctrl 0x00000000 pos=(50.97, 15.73, -59.77) yaw=-1.615 "TechNPC_Search"
+[   60.321] jugador 0 (Character) @ 0x2b2497d0 (0x380 bytes)
+[   60.321]     +000: 01ed5d80 00000000 00000dc4 0000004e  |          .     0.0000          .          .
+[   60.321]     +010: 72616843 65746361 30203a72 00000d00  |          .          .          .          .
+[   60.321]     +020: 3f000000 3ea00000 3ea00000 c1800000  |     0.5000     0.3125     0.3125   -16.0000
+[   60.321]     +030: be400000 c2ae2000 42d10000 420f4000  |    -0.1875   -87.0625   104.5000    35.8125
+[   60.321]     +040: 42b8e000 41800000 42014000 007b0000  |    92.4375    16.0000    32.3125          .
+[   60.321]     +050: 00000001 b222f72f 9b5b9d09 00000000  |          .          .          .     0.0000
+[   60.321]     +060: 00000000 090c5160 c2a92000 42048000  |     0.0000          .   -84.5625    33.1250
+[   60.321]     +070: 4036cc42 415472f9 42173c7e 00000000  |     2.8562    13.2781    37.8091     0.0000
+[   60.321]     +080: bee69ecd 00000000 4016d2da 00000000  |    -0.4504     0.0000     2.3566     0.0000
+[   60.321]     +090: 00000000 c1f00000 00000000 00000000  |     0.0000   -30.0000     0.0000     0.0000
+[   60.321]     +0a0: 417b0001 c2a32000 420b0000 417b0000  |    15.6875   -81.5625    34.7500    15.6875
+[   60.321]     +0b0: 403745c0 415472f9 421714c4 00000000  |     2.8636    13.2781    37.7703     0.0000
+[   60.321]     +0c0: 403745c0 415472f9 421714c4 00000000  |     2.8636    13.2781    37.7703     0.0000
+[   60.321]     +0d0: 4479c000 4479c000 4479f99a 00000000  |   999.0000   999.0000   999.9000     0.0000
+[   60.321]     +0e0: 40919798 4159e46f 42065e7a 00000000  |     4.5498    13.6183    33.5923     0.0000
+[   60.321]     +0f0: 403b954a 415472f9 4215805f 00000000  |     2.9310    13.2781    37.3754     0.0000
+[   60.321]     +100: 403bf5e5 415472f9 421557db 00000000  |     2.9369    13.2781    37.3358     0.0000
+[   60.321]     +110: 0180c34c 007af684 01ed3a84 00000104  |          .          .          .          .
+[   60.321]     +120: 2b24a970 66727573 5f656361 65707974  |          .          .          .          .
+[   60.321]     +130: 00000000 00000000 00000002 00000000  |     0.0000     0.0000          .     0.0000
+[   60.321]     +140: 00000000 00000000 73fb2934 00000000  |     0.0000     0.0000          .     0.0000
+[   60.321]     +150: 00000000 3f800000 00000000 00000000  |     0.0000     1.0000     0.0000     0.0000
+[   60.321]     +160: 00000000 3f7ffffc 00000000 00000000  |     0.0000     1.0000     0.0000     0.0000
+[   60.321]     +170: 415472f7 bf7ebe1d bf7ebe1d bf800000  |    13.2781    -0.9951    -0.9951    -1.0000
+[   60.321]     +180: bf7ebe1d 401918ed c2a8a000 4222c000  |    -0.9951     2.3921   -84.3125    40.6875
+[   60.321]     +190: 3fdb4a26 00000000 3fd5b2f2 00000000  |     1.7132     0.0000     1.6695     0.0000
+[   60.321]     +1a0: 00000000 00000000 00006980 00000000  |     0.0000     0.0000          .     0.0000
+[   60.321]     +1b0: 2481aea5 417b0001 ffffffff 4159e46f  |          .    15.6875          .    13.6183
+[   60.321]     +1c0: 00000000 f700b858 00000000 00000000  |     0.0000          .     0.0000     0.0000
+[   60.321]     +1d0: 00000000 421b0000 00000000 00000000  |     0.0000    38.7500     0.0000     0.0000
+[   60.321]     +1e0: 00000006 2af566b8 c2a30000 0000003d  |          .          .   -81.5000          .
+[   60.321]     +1f0: be95c29b 3fd6c924 bf2df8ba be935ef1  |    -0.2925     1.6780    -0.6796    -0.2878
+[   60.321]     +200: 3fd7e9f8 be993bb6 3fd5621d be9beb66  |     1.6868    -0.2993     1.6671    -0.3045
+[   60.321]     +210: 3fd4e2ad bea11f37 3fd2b9db bea39a38  |     1.6632    -0.3147     1.6463    -0.3195
+[   60.321]     +220: 3fd238fe be86b594 3fdb82e8 be89a5b6  |     1.6424    -0.2631     1.7149    -0.2688
+[   60.321]     +230: 3fdb38ed be907a04 3fd86b96 bf4110aa  |     1.7127    -0.2822     1.6908    -0.7542
+[   60.321]     +240: bf373ae8 bf392c7f bf2076b2 bf25818b  |    -0.7157    -0.7233    -0.6268    -0.6465
+[   60.321]     +250: bf14c952 bf1f7914 bf4412c5 00000005  |    -0.5812    -0.6229    -0.7659          .
+[   60.321]     +260: 01010100 00000000 00000000 01000001  |          .     0.0000     0.0000          .
+[   60.321]     +270: 01000000 00010000 c2ab0000 42168000  |          .          .   -85.5000    37.6250
+[   60.321]     +280: 2b2497d0 00010001 00000000 00000000  |          .          .     0.0000     0.0000
+[   60.321]     +290: 00000000 00000000 00000000 c2000000  |     0.0000     0.0000     0.0000   -32.0000
+[   60.321]     +2a0: 00640000 00000000 00010001 00000000  |          .     0.0000          .     0.0000
+[   60.321]     +2b0: 00000000 00000000 01000100 00000000  |     0.0000     0.0000          .     0.0000
+[   60.321]     +2c0: 00010100 00000000 00010101 00010000  |          .     0.0000          .          .
+[   60.321]     +2d0: 00010100 00010000 00000000 41dd0000  |          .          .     0.0000    27.6250
+[   60.321]     +2e0: 00000009 00000001 00000000 00000000  |          .          .     0.0000     0.0000
+[   60.321]     +2f0: 00000000 00000005 01010000 00010001  |     0.0000          .          .          .
+[   60.321]     +300: 00000000 00000000 01000000 41e70000  |     0.0000     0.0000          .    28.8750
+[   60.321]     +310: 00000001 00000001 00000000 3bfb5918  |          .          .     0.0000     0.0077
+[   60.321]     +320: c29e0000 00000000 00000000 00000000  |   -79.0000     0.0000     0.0000     0.0000
+[   60.321]     +330: 00000000 00000000 bf800000 03e80398  |     0.0000     0.0000    -1.0000          .
+[   60.321]     +340: 3f800000 2b2497d0 00000000 00000000  |     1.0000          .     0.0000     0.0000
+[   60.321]     +350: c2a6e000 41fb0000 417b0000 c2a7c000  |   -83.4375    31.3750    15.6875   -83.8750
+[   60.321]     +360: 41fc8000 00000000 c2aa6000 3bfb40f0  |    31.5625     0.0000   -85.1875     0.0077
+[   60.321]     +370: 3bfb8400 3bfb8650 3bfb88a0 3bfb8af0  |     0.0077     0.0077     0.0077     0.0077
+[   60.321] definición del jugador @ 0x090c5160 (0x40 bytes)
+[   60.321]     +000: 2ce42ec8 00000000 00000001 00000000  |          .     0.0000          .     0.0000
+[   60.321]     +010: a21d4e0b 5e5739ea a6cb83cf 01000001  |          .          .          .          .
+[   60.321]     +020: 40919798 4159e46f 42065e7a 00000000  |     4.5498    13.6183    33.5923     0.0000
+[   60.321]     +030: c0490fd3 00000000 cdcdcdcd cdcdcdcd  |    -3.1416     0.0000          .          .
+[   60.321] controlador de jugador @ 0x3bfb5918 (0x60 bytes)
+[   60.322]     +000: 00ff0581 be56b908 00000000 00000000  |          .    -0.2097     0.0000     0.0000
+[   60.322]     +010: 00000000 00000000 00000000 00000000  |     0.0000     0.0000     0.0000     0.0000
+[   60.322]     +020: 00000000 00000000 cdcdcd00 00000000  |     0.0000     0.0000          .     0.0000
+[   60.322]     +030: 00000000 00000000 00000000 090d1318  |     0.0000     0.0000     0.0000          .
+[   60.322]     +040: 00000000 09113b40 cdcdcd01 0000004c  |     0.0000          .          .          .
+[   60.322]     +050: 00000015 3bfb6b08 3bfb59a4 00000027  |          .     0.0077     0.0077          .
+[   60.322] gestor de cámara @ 0x0629a038 (0x220 bytes)
+[   60.322]     +000: 01da6814 00000000 00000000 00000000  |          .     0.0000     0.0000     0.0000
+[   60.322]     +010: 2719daa4 5034ebdb 2927603b 6ad3b296  |          .          .          .          .
+[   60.322]     +020: 2719daa4 27e03fc3 2927603b 19c03d05  |          .          .          .          .
+[   60.322]     +030: 2927603b 28125a28 2719daa4 6982a65d  |          .          .          .          .
+[   60.322]     +040: 2719daa4 96dd194c 2927603b e71beea1  |          .          .          .          .
+[   60.322]     +050: 2719daa4 ac0a9ba9 2927603b f6ca1252  |          .          .          .          .
+[   60.322]     +060: 0629a270 00000004 00000020 0629eee8  |          .          .          .          .
+[   60.322]     +070: 0000002d 00000040 0629afe0 0629b068  |          .          .          .          .
+[   60.322]     +080: 0629b0f0 0629b178 0629b200 0629b288  |          .          .          .          .
+[   60.322]     +090: 0629b310 0629b398 0629a0b0 00000008  |          .          .          .          .
+[   60.322]     +0a0: 0629a380 00000004 00000020 0629a7c0  |          .          .          .          .
+[   60.322]     +0b0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +0c0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +0d0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +0e0: cdcdcdcd cdcdcdcd cdcdcdcd 0629a0e4  |          .          .          .          .
+[   60.322]     +0f0: 00000001 cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +100: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +110: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +120: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +130: cdcdcdcd 0629a12c 00000000 cdcdcdcd  |          .          .     0.0000          .
+[   60.322]     +140: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +150: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +160: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +170: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +180: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +190: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +1a0: cdcdcdcd cdcdcdcd cdcdcdcd cdcdcdcd  |          .          .          .          .
+[   60.322]     +1b0: cdcdcdcd cdcdcdcd cdcdcdcd 0629a174  |          .          .          .          .
+[   60.322]     +1c0: 00000000 cdcdcdcd 00000000 00000000  |     0.0000          .     0.0000     0.0000
+[   60.322]     +1d0: 00000000 00000000 0629a7c0 0629a7c0  |     0.0000     0.0000          .          .
+[   60.322]     +1e0: 0629ad84 0629a660 00000000 00000000  |          .          .     0.0000     0.0000
+[   60.322]     +1f0: 0629a408 0629b420 0629c9b0 0629ca04  |          .          .          .          .
+[   60.322]     +200: 0629ca1c bf7ebe1d bf7ebe1d 423c0000  |          .    -0.9951    -0.9951    47.0000
+[   60.322]     +210: 3f800000 00000000 00000000 2481aea5  |     1.0000     0.0000     0.0000          .
+[   60.322] cámara activa @ 0x0629a7c0 (0x60 bytes)
+[   60.322]     +000: 01da64f8 3d2a0437 bef3a6f7 3cb84008  |          .     0.0415    -0.4759     0.0225
+[   60.322]     +010: 3f60d45f 403d8cd8 416de341 42169f55  |     0.8782     2.9617    14.8680    37.6556
+[   60.322]     +020: 423c0000 3d4ccccd 447a0000 3d37f87d  |    47.0000     0.0500  1000.0000     0.0449
+[   60.322]     +030: bef3e881 3c6e3e53 3f60c29a 403d146e  |    -0.4764     0.0145     0.8780     2.9544
+[   60.322]     +040: 416dec79 4216c72c 423c0000 3d4ccccd  |    14.8702    37.6945    47.0000     0.0500
+[   60.322]     +050: 447a0000 3d37f87d bef3e881 3c6e3e53  |  1000.0000     0.0449    -0.4764     0.0145
+[   60.322] NETZ +0x000 @ 0x090c02e0 (0x20 bytes)
+[   60.322]     +000: 01ed74fc 00000000 00000001 ffffffc0  |          .     0.0000          .          .
+[   60.322]     +010: 00000001 0000003f ffffffff ffffffff  |          .          .          .          .
+[   60.322] NETZ +0x690 @ 0x090c0970 (0x10 bytes)
+[   60.322]     +000: cdcdcdcd cdcdcdcd 0000000c 00000000  |          .          .          .     0.0000
+[   60.322] cola A @ 0x090b7ea8 (0x40 bytes)
+[   60.322]     +000: 00000000 031d1c3c 21b4a840 0000002c  |     0.0000          .          .          .
+[   60.322]     +010: 0000002c ffffffff ffffffff 00000000  |          .          .          .     0.0000
+[   60.322]     +020: 00000000 00000000 00000fa0 031d1c3c  |     0.0000     0.0000          .          .
+[   60.322]     +030: 090b7ef0 00000000 00004000 cdcdcd00  |          .     0.0000          .          .
+[   60.322] sesión de red @ 0x090bbef8 (0x40 bytes)
+[   60.322]     +000: 00000000 031d1c3c 21b4a8f8 0000002f  |     0.0000          .          .          .
+[   60.322]     +010: 0000002f 031d1c3c 090bbf30 00000000  |          .          .          .     0.0000
+[   60.322]     +020: 00004000 00000099 00000002 cdcd0000  |          .          .          .          .
+[   60.322]     +030: 00000030 00004000 418b0025 130871c4  |          .          .    17.3751          .
+[   60.322] ==== fin del volcado ====
+[   61.137] ST frames +61 (contador del juego 314, +61) fps=60.0 Run prom=16.50 ms max=18.23 ms dt=0.0166 dts=0.0166 t_juego=5.3
+[   61.137]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   61.137]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   61.137]    J0 pos=(3.123, 13.278, 39.487) yaw=-1.1197 rad (-64.2 grados) | se movió 2.159 desde el ST anterior
+[   61.137]    cam 0x0629a7c0 pos=(3.231, 14.848, 39.418) q=(0.0228, -0.5308, 0.0090, 0.8471) |q|^2=1.0000
+[   61.137]    cam - J0 = (0.109, 1.570, -0.069)
+[   61.137]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   61.137]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   61.137]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   61.137] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 534, hace 17 ms
+[   62.153] ST frames +61 (contador del juego 375, +61) fps=60.0 Run prom=16.56 ms max=17.20 ms dt=0.0170 dts=0.0170 t_juego=6.3
+[   62.153]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   62.153]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   62.153]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.075 desde el ST anterior
+[   62.153]    cam 0x0629a7c0 pos=(3.273, 14.849, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   62.153]    cam - J0 = (0.115, 1.571, -0.056)
+[   62.153]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   62.153]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   62.153]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   62.153] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.881, 13.279, 35.609) yaw=-2.159 seq 554, hace 33 ms
+[   63.119] GHOST: NPC elegido para mover: NPCs[1] = 0x2b251d70 "CV5", vtable rva 0xef5d80, def 0x090c5330 tipo 6 flags 1c=0 1f=1, controlador 0x00000000 (activo 0), pos=(29.41, 20.64, 20.14), id 1c3460b37e03a5dc
+[   63.136] GHOST: primer teletransporte de 0x2b251d70 a (0.83, 13.28, 35.69; w 0.00) yaw -0.529 [red]
+[   63.169] ST frames +61 (contador del juego 436, +61) fps=60.0 Run prom=16.54 ms max=17.45 ms dt=0.0164 dts=0.0164 t_juego=7.3
+[   63.169]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   63.169]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   63.169]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   63.169]    cam 0x0629a7c0 pos=(3.273, 14.849, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   63.169]    cam - J0 = (0.115, 1.571, -0.056)
+[   63.169]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   63.169]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   63.169]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   63.169] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.831, 13.279, 35.694) yaw=-0.529 seq 574, hace 50 ms
+[   64.135] GHOST: personaje en (0.12, 13.28, 37.75), objetivo (0.12, 13.28, 37.75) [red], 18 teletransportes; NPCs[1]
+[   64.185] ST frames +61 (contador del juego 497, +61) fps=60.0 Run prom=16.55 ms max=17.29 ms dt=0.0166 dts=0.0166 t_juego=8.3
+[   64.185]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   64.185]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   64.185]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   64.185]    cam 0x0629a7c0 pos=(3.273, 14.848, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   64.185]    cam - J0 = (0.116, 1.570, -0.056)
+[   64.185]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   64.185]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   64.185]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   64.185] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.119, 13.279, 37.751) yaw=1.606 seq 594, hace 50 ms
+[   65.152] GHOST: personaje en (0.07, 13.28, 40.08), objetivo (0.07, 13.28, 40.08) [red], 11 teletransportes; NPCs[1]
+[   65.202] ST frames +61 (contador del juego 558, +61) fps=60.0 Run prom=16.57 ms max=17.19 ms dt=0.0167 dts=0.0167 t_juego=9.3
+[   65.202]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   65.202]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   65.202]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   65.202]    cam 0x0629a7c0 pos=(3.273, 14.850, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   65.202]    cam - J0 = (0.115, 1.572, -0.056)
+[   65.202]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   65.202]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   65.202]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   65.202] NET join 100.126.161.126:47811: enviados 21, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.083, 13.279, 40.193) yaw=1.675 seq 615, hace 33 ms
+[   66.168] GHOST: personaje en (0.00, 13.28, 41.78), objetivo (0.00, 13.28, 41.78) [red], 13 teletransportes; NPCs[1]
+[   66.218] ST frames +61 (contador del juego 619, +61) fps=60.0 Run prom=16.57 ms max=17.34 ms dt=0.0167 dts=0.0167 t_juego=10.3
+[   66.218]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   66.218]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   66.218]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   66.218]    cam 0x0629a7c0 pos=(3.273, 14.849, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   66.218]    cam - J0 = (0.115, 1.571, -0.056)
+[   66.218]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   66.218]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   66.218]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   66.218] NET join 100.126.161.126:47811: enviados 20, recibidos 19, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.002, 13.279, 41.777) yaw=2.369 seq 634, hace 83 ms
+[   67.184] GHOST: personaje en (0.14, 13.28, 42.64), objetivo (0.14, 13.28, 42.64) [red], 8 teletransportes; NPCs[1]
+[   67.234] ST frames +61 (contador del juego 680, +61) fps=60.0 Run prom=16.56 ms max=17.05 ms dt=0.0164 dts=0.0164 t_juego=11.4
+[   67.234]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   67.234]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   67.234]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   67.234]    cam 0x0629a7c0 pos=(3.273, 14.848, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   67.234]    cam - J0 = (0.116, 1.570, -0.056)
+[   67.234]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   67.234]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   67.234]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   67.234] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.142, 13.279, 42.644) yaw=-1.301 seq 654, hace 100 ms
+[   68.200] GHOST: personaje en (-0.99, 13.28, 42.66), objetivo (-1.00, 13.28, 42.66) [red], 10 teletransportes; NPCs[1]
+[   68.250] ST frames +61 (contador del juego 741, +61) fps=60.0 Run prom=16.54 ms max=17.19 ms dt=0.0164 dts=0.0164 t_juego=12.4
+[   68.250]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   68.250]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   68.250]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   68.250]    cam 0x0629a7c0 pos=(3.273, 14.850, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   68.250]    cam - J0 = (0.115, 1.572, -0.056)
+[   68.250]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   68.250]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   68.250]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   68.250] NET join 100.126.161.126:47811: enviados 21, recibidos 22, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.996, 13.279, 42.663) yaw=-1.662 seq 676, hace 16 ms
+[   69.216] GHOST: personaje en (-1.00, 13.28, 42.66), objetivo (-1.00, 13.28, 42.66) [red], 2 teletransportes; NPCs[1]
+[   69.266] ST frames +61 (contador del juego 802, +61) fps=60.0 Run prom=16.52 ms max=17.17 ms dt=0.0169 dts=0.0169 t_juego=13.4
+[   69.266]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   69.266]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   69.266]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   69.266]    cam 0x0629a7c0 pos=(3.273, 14.848, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   69.266]    cam - J0 = (0.115, 1.570, -0.056)
+[   69.267]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   69.267]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   69.267]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   69.267] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.996, 13.279, 42.663) yaw=-1.662 seq 696, hace 0 ms
+[   70.232] GHOST: personaje en (-1.00, 13.28, 42.66), objetivo (-1.00, 13.28, 42.66) [red], 2 teletransportes; NPCs[1]
+[   70.282] ST frames +61 (contador del juego 863, +61) fps=60.0 Run prom=16.53 ms max=17.16 ms dt=0.0166 dts=0.0166 t_juego=14.4
+[   70.282]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   70.282]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   70.282]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   70.282]    cam 0x0629a7c0 pos=(3.273, 14.848, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   70.282]    cam - J0 = (0.115, 1.570, -0.056)
+[   70.282]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   70.282]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   70.282]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   70.282] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.996, 13.279, 42.663) yaw=-1.662 seq 717, hace 0 ms
+[   70.832] SYNC: aplicando uso remoto (evento 1): objetivo 044106b1eb7fc7c0, RPC A 0x26, personaje = el avatar (1c3460b37e03a5dc), flag 007c5801
+[   70.849] SYNC handler A del uso 1: ctx 0x21e7c070 (vtable rva 0xef4eec, vf[1] rva 0x74d3f0, vf[2] rva 0x3806a0) | objetivo 044106b1eb7fc7c0, personaje 1c3460b37e03a5dc
+[   70.849] SYNC handler de sesión del uso 1: ctx 0x21e7c074 (vtable rva 0xef4ee4, vf[1] rva 0x393fb0, vf[2] rva 0x3b5a80) | objetivo 044106b1eb7fc7c0, personaje 1c3460b37e03a5dc
+[   71.249] GHOST: personaje en (-1.52, 13.37, 42.61), objetivo (-1.52, 13.38, 42.61) [red], 13 teletransportes; NPCs[1]
+[   71.299] ST frames +61 (contador del juego 924, +61) fps=60.0 Run prom=16.53 ms max=17.12 ms dt=0.0164 dts=0.0164 t_juego=15.4
+[   71.299]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   71.299]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   71.299]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   71.299]    cam 0x0629a7c0 pos=(3.273, 14.850, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   71.299]    cam - J0 = (0.115, 1.571, -0.056)
+[   71.299]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   71.299]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   71.299]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   71.299] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-1.522, 13.378, 42.609) yaw=-1.571 seq 737, hace 16 ms
+[   71.299] NET eventos: enviados 0, recibidos 1, repetidos descartados 2 (totales)
+[   72.265] GHOST: personaje en (-1.52, 13.27, 42.61), objetivo (-1.52, 13.28, 42.61) [red], 30 teletransportes; NPCs[1]
+[   72.315] ST frames +61 (contador del juego 985, +61) fps=60.0 Run prom=16.54 ms max=17.19 ms dt=0.0169 dts=0.0169 t_juego=16.4
+[   72.315]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   72.315]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   72.315]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   72.315]    cam 0x0629a7c0 pos=(3.273, 14.848, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   72.315]    cam - J0 = (0.116, 1.570, -0.056)
+[   72.315]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   72.315]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   72.315]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   72.315] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-1.522, 13.276, 42.609) yaw=-1.571 seq 757, hace 0 ms
+[   73.281] GHOST: personaje en (-0.77, 13.28, 42.48), objetivo (-0.77, 13.28, 42.48) [red], 10 teletransportes; NPCs[1]
+[   73.331] ST frames +61 (contador del juego 1046, +61) fps=60.0 Run prom=16.53 ms max=17.37 ms dt=0.0163 dts=0.0163 t_juego=17.5
+[   73.331]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   73.331]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   73.331]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   73.331]    cam 0x0629a7c0 pos=(3.273, 14.849, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   73.331]    cam - J0 = (0.115, 1.571, -0.056)
+[   73.331]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   73.331]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   73.331]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   73.331] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.593, 13.276, 42.349) yaw=-1.571 seq 778, hace 0 ms
+[   74.297] GHOST: personaje en (-0.03, 13.28, 41.85), objetivo (-0.02, 13.28, 41.84) [red], 11 teletransportes; NPCs[1]
+[   74.347] ST frames +61 (contador del juego 1107, +61) fps=60.0 Run prom=16.57 ms max=17.37 ms dt=0.0167 dts=0.0167 t_juego=18.5
+[   74.347]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   74.347]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   74.347]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   74.348]    cam 0x0629a7c0 pos=(3.273, 14.849, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   74.348]    cam - J0 = (0.115, 1.571, -0.056)
+[   74.348]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   74.348]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   74.348]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   74.348] NET join 100.126.161.126:47811: enviados 21, recibidos 19, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.019, 13.276, 41.838) yaw=-1.571 seq 797, hace 50 ms
+[   75.314] GHOST: personaje en (-0.02, 13.28, 41.84), objetivo (-0.02, 13.28, 41.84) [red], 2 teletransportes; NPCs[1]
+[   75.363] ST frames +61 (contador del juego 1168, +61) fps=60.0 Run prom=16.56 ms max=17.38 ms dt=0.0166 dts=0.0166 t_juego=19.5
+[   75.363]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   75.363]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   75.363]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   75.363]    cam 0x0629a7c0 pos=(3.273, 14.848, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   75.363]    cam - J0 = (0.116, 1.570, -0.056)
+[   75.363]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   75.363]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   75.363]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   75.363] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.019, 13.276, 41.838) yaw=-1.571 seq 818, hace 0 ms
+[   76.329] GHOST: personaje en (-0.02, 13.28, 41.84), objetivo (-0.02, 13.28, 41.84) [red], 2 teletransportes; NPCs[1]
+[   76.380] ST frames +61 (contador del juego 1229, +61) fps=60.0 Run prom=16.56 ms max=17.20 ms dt=0.0166 dts=0.0166 t_juego=20.5
+[   76.380]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   76.380]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   76.380]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   76.380]    cam 0x0629a7c0 pos=(3.273, 14.850, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   76.380]    cam - J0 = (0.115, 1.572, -0.056)
+[   76.380]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   76.380]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   76.380]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   76.380] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.019, 13.276, 41.838) yaw=-1.571 seq 839, hace 0 ms
+[   77.346] GHOST: personaje en (-0.02, 13.28, 41.84), objetivo (-0.02, 13.28, 41.84) [red], 2 teletransportes; NPCs[1]
+[   77.396] ST frames +61 (contador del juego 1290, +61) fps=60.0 Run prom=16.56 ms max=17.10 ms dt=0.0166 dts=0.0166 t_juego=21.5
+[   77.396]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   77.396]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   77.396]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   77.396]    cam 0x0629a7c0 pos=(3.273, 14.849, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   77.396]    cam - J0 = (0.115, 1.571, -0.056)
+[   77.396]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   77.396]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   77.396]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   77.396] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.019, 13.276, 41.838) yaw=-1.571 seq 859, hace 17 ms
+[   78.362] GHOST: personaje en (-0.02, 13.28, 41.84), objetivo (-0.02, 13.28, 41.84) [red], 2 teletransportes; NPCs[1]
+[   78.412] ST frames +61 (contador del juego 1351, +61) fps=60.0 Run prom=16.56 ms max=17.08 ms dt=0.0166 dts=0.0166 t_juego=22.5
+[   78.412]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   78.412]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   78.412]    J0 pos=(3.158, 13.278, 39.554) yaw=-1.1227 rad (-64.3 grados) | se movió 0.000 desde el ST anterior
+[   78.412]    cam 0x0629a7c0 pos=(3.273, 14.848, 39.498) q=(0.0203, -0.5322, 0.0128, 0.8463) |q|^2=1.0000
+[   78.412]    cam - J0 = (0.116, 1.570, -0.056)
+[   78.412]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   78.412]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   78.412]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   78.412] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.019, 13.276, 41.838) yaw=-1.571 seq 879, hace 17 ms
+[   79.378] GHOST: personaje en (-0.02, 13.28, 41.84), objetivo (-0.02, 13.28, 41.84) [red], 2 teletransportes; NPCs[1]
+[   79.428] ST frames +61 (contador del juego 1412, +61) fps=60.0 Run prom=16.56 ms max=17.56 ms dt=0.0166 dts=0.0166 t_juego=23.6
+[   79.428]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   79.428]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   79.428]    J0 pos=(3.158, 13.278, 39.554) yaw=-0.4155 rad (-23.8 grados) | se movió 0.000 desde el ST anterior
+[   79.428]    cam 0x0629a7c0 pos=(3.206, 14.848, 39.443) q=(0.0433, -0.2061, 0.0091, 0.9775) |q|^2=1.0000
+[   79.428]    cam - J0 = (0.049, 1.570, -0.110)
+[   79.428]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   79.428]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   79.428]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   79.428] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.019, 13.276, 41.838) yaw=-1.571 seq 900, hace 0 ms
+[   80.394] GHOST: personaje en (-0.02, 13.28, 41.84), objetivo (-0.02, 13.28, 41.84) [red], 2 teletransportes; NPCs[1]
+[   80.444] ST frames +61 (contador del juego 1473, +61) fps=60.0 Run prom=16.54 ms max=17.66 ms dt=0.0166 dts=0.0166 t_juego=24.6
+[   80.444]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   80.444]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   80.444]    J0 pos=(4.145, 13.278, 39.586) yaw=1.0082 rad (57.8 grados) | se movió 0.988 desde el ST anterior
+[   80.444]    cam 0x0629a7c0 pos=(4.009, 14.856, 39.524) q=(0.0463, 0.4825, -0.0317, 0.8741) |q|^2=1.0000
+[   80.444]    cam - J0 = (-0.137, 1.578, -0.062)
+[   80.444]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   80.444]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   80.444]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   80.444] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.019, 13.276, 41.838) yaw=-1.571 seq 920, hace 17 ms
+[   81.411] GHOST: personaje en (-0.02, 13.28, 41.84), objetivo (-0.02, 13.28, 41.84) [red], 2 teletransportes; NPCs[1]
+[   81.460] ST frames +61 (contador del juego 1534, +61) fps=60.0 Run prom=16.54 ms max=17.32 ms dt=0.0165 dts=0.0165 t_juego=25.6
+[   81.460]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   81.460]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   81.460]    J0 pos=(6.363, 13.278, 39.080) yaw=1.5038 rad (86.2 grados) | se movió 2.274 desde el ST anterior
+[   81.460]    cam 0x0629a7c0 pos=(6.208, 14.853, 39.100) q=(0.0209, 0.6828, -0.0300, 0.7297) |q|^2=1.0000
+[   81.460]    cam - J0 = (-0.154, 1.575, 0.020)
+[   81.460]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   81.460]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   81.460]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   81.460] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.019, 13.276, 41.838) yaw=-1.571 seq 940, hace 33 ms
+[   82.427] GHOST: personaje en (-0.02, 13.28, 41.84), objetivo (-0.02, 13.28, 41.84) [red], 2 teletransportes; NPCs[1]
+[   82.477] ST frames +61 (contador del juego 1595, +61) fps=60.0 Run prom=16.56 ms max=17.39 ms dt=0.0166 dts=0.0166 t_juego=26.6
+[   82.477]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   82.477]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   82.477]    J0 pos=(8.619, 13.278, 38.756) yaw=1.5469 rad (88.6 grados) | se movió 2.280 desde el ST anterior
+[   82.477]    cam 0x0629a7c0 pos=(8.451, 14.850, 38.752) q=(0.0155, 0.6984, -0.0146, 0.7154) |q|^2=1.0000
+[   82.477]    cam - J0 = (-0.169, 1.572, -0.004)
+[   82.477]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   82.477]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   82.477]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   82.477] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.019, 13.276, 41.838) yaw=-1.571 seq 961, hace 0 ms
+[   83.443] GHOST: personaje en (-0.01, 13.28, 41.83), objetivo (-0.02, 13.28, 41.84) [red], 2 teletransportes; NPCs[1]
+[   83.493] ST frames +61 (contador del juego 1656, +61) fps=60.0 Run prom=16.56 ms max=17.12 ms dt=0.0168 dts=0.0168 t_juego=27.6
+[   83.493]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   83.493]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   83.493]    J0 pos=(9.110, 13.278, 38.775) yaw=1.5513 rad (88.9 grados) | se movió 0.491 desde el ST anterior
+[   83.493]    cam 0x0629a7c0 pos=(8.980, 14.848, 38.773) q=(0.0141, 0.7000, -0.0139, 0.7138) |q|^2=1.0000
+[   83.493]    cam - J0 = (-0.130, 1.570, -0.002)
+[   83.493]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   83.493]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   83.493]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   83.493] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(-0.019, 13.276, 41.838) yaw=-1.571 seq 981, hace 17 ms
+[   84.459] GHOST: personaje en (0.61, 13.28, 41.75), objetivo (0.61, 13.28, 41.77) [red], 20 teletransportes; NPCs[1]
+[   84.509] ST frames +61 (contador del juego 1717, +61) fps=60.0 Run prom=16.54 ms max=17.25 ms dt=0.0167 dts=0.0167 t_juego=28.6
+[   84.509]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   84.509]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   84.509]    J0 pos=(9.110, 13.278, 38.775) yaw=1.5513 rad (88.9 grados) | se movió 0.000 desde el ST anterior
+[   84.509]    cam 0x0629a7c0 pos=(8.981, 14.849, 38.773) q=(0.0141, 0.7000, -0.0139, 0.7138) |q|^2=1.0000
+[   84.509]    cam - J0 = (-0.130, 1.571, -0.002)
+[   84.509]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   84.509]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   84.509]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   84.509] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(0.686, 13.276, 41.680) yaw=1.796 seq 1001, hace 33 ms
+[   85.475] GHOST: personaje en (2.26, 13.28, 39.96), objetivo (2.26, 13.28, 39.96) [red], 21 teletransportes; NPCs[1]
+[   85.525] ST frames +61 (contador del juego 1778, +61) fps=60.0 Run prom=16.52 ms max=17.18 ms dt=0.0166 dts=0.0166 t_juego=29.7
+[   85.525]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   85.525]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   85.525]    J0 pos=(9.110, 13.278, 38.775) yaw=1.5513 rad (88.9 grados) | se movió 0.000 desde el ST anterior
+[   85.525]    cam 0x0629a7c0 pos=(8.981, 14.849, 38.773) q=(0.0141, 0.7000, -0.0139, 0.7138) |q|^2=1.0000
+[   85.525]    cam - J0 = (-0.130, 1.571, -0.002)
+[   85.525]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   85.525]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   85.525]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   85.525] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(2.365, 13.276, 39.936) yaw=1.604 seq 1022, hace 0 ms
+[   86.491] GHOST: personaje en (4.63, 13.28, 39.82), objetivo (4.63, 13.28, 39.82) [red], 23 teletransportes; NPCs[1]
+[   86.541] ST frames +61 (contador del juego 1839, +61) fps=60.0 Run prom=16.53 ms max=17.16 ms dt=0.0163 dts=0.0163 t_juego=30.7
+[   86.541]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   86.541]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   86.541]    J0 pos=(9.110, 13.278, 38.775) yaw=1.5513 rad (88.9 grados) | se movió 0.000 desde el ST anterior
+[   86.541]    cam 0x0629a7c0 pos=(8.980, 14.848, 38.773) q=(0.0141, 0.7000, -0.0139, 0.7138) |q|^2=1.0000
+[   86.541]    cam - J0 = (-0.130, 1.570, -0.002)
+[   86.541]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   86.541]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   86.541]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   86.541] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(4.743, 13.276, 39.811) yaw=1.604 seq 1042, hace 16 ms
+[   87.508] GHOST: personaje en (6.52, 13.28, 40.08), objetivo (6.53, 13.28, 40.09) [red], 22 teletransportes; NPCs[1]
+[   87.558] ST frames +61 (contador del juego 1900, +61) fps=60.0 Run prom=16.52 ms max=17.16 ms dt=0.0172 dts=0.0172 t_juego=31.7
+[   87.558]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   87.558]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   87.558]    J0 pos=(9.110, 13.278, 38.775) yaw=1.5513 rad (88.9 grados) | se movió 0.000 desde el ST anterior
+[   87.558]    cam 0x0629a7c0 pos=(8.981, 14.850, 38.773) q=(0.0141, 0.7000, -0.0139, 0.7138) |q|^2=1.0000
+[   87.558]    cam - J0 = (-0.130, 1.572, -0.002)
+[   87.558]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   87.558]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   87.558]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   87.558] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.542, 13.276, 40.090) yaw=1.747 seq 1062, hace 34 ms
+[   88.523] GHOST: personaje en (6.56, 13.28, 40.09), objetivo (6.56, 13.28, 40.09) [red], 21 teletransportes; NPCs[1]
+[   88.574] ST frames +61 (contador del juego 1961, +61) fps=60.0 Run prom=16.52 ms max=17.84 ms dt=0.0173 dts=0.0173 t_juego=32.7
+[   88.574]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   88.574]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   88.574]    J0 pos=(9.110, 13.278, 38.775) yaw=1.5513 rad (88.9 grados) | se movió 0.000 desde el ST anterior
+[   88.574]    cam 0x0629a7c0 pos=(8.981, 14.849, 38.773) q=(0.0141, 0.7000, -0.0139, 0.7138) |q|^2=1.0000
+[   88.574]    cam - J0 = (-0.130, 1.571, -0.002)
+[   88.574]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   88.574]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   88.574]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   88.574] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1083, hace 0 ms
+[   89.540] GHOST: personaje en (6.56, 13.28, 40.09), objetivo (6.56, 13.28, 40.09) [red], 20 teletransportes; NPCs[1]
+[   89.590] ST frames +61 (contador del juego 2022, +61) fps=60.1 Run prom=16.53 ms max=17.28 ms dt=0.0169 dts=0.0169 t_juego=33.7
+[   89.590]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   89.590]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   89.590]    J0 pos=(9.110, 13.278, 38.775) yaw=1.5513 rad (88.9 grados) | se movió 0.000 desde el ST anterior
+[   89.590]    cam 0x0629a7c0 pos=(8.980, 14.848, 38.773) q=(0.0141, 0.7000, -0.0139, 0.7138) |q|^2=1.0000
+[   89.590]    cam - J0 = (-0.130, 1.570, -0.002)
+[   89.590]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   89.590]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   89.590]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   89.590] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1103, hace 17 ms
+[   90.556] GHOST: personaje en (6.54, 13.28, 40.08), objetivo (6.56, 13.28, 40.09) [red], 20 teletransportes; NPCs[1]
+[   90.606] ST frames +61 (contador del juego 2083, +61) fps=60.0 Run prom=16.53 ms max=17.12 ms dt=0.0167 dts=0.0167 t_juego=34.7
+[   90.606]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   90.606]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   90.606]    J0 pos=(9.110, 13.278, 38.775) yaw=1.5513 rad (88.9 grados) | se movió 0.000 desde el ST anterior
+[   90.606]    cam 0x0629a7c0 pos=(8.981, 14.850, 38.773) q=(0.0141, 0.7000, -0.0139, 0.7138) |q|^2=1.0000
+[   90.606]    cam - J0 = (-0.130, 1.572, -0.002)
+[   90.606]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   90.606]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   90.606]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   90.606] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1123, hace 34 ms
+[   90.739] MARCA 1 (frame 2713, contador del juego 2091) J0 pos=(9.11, 13.28, 38.77) yaw=1.551
+[   91.572] GHOST: personaje en (6.56, 13.28, 40.09), objetivo (6.56, 13.28, 40.09) [red], 21 teletransportes; NPCs[1]
+[   91.622] ST frames +61 (contador del juego 2144, +61) fps=60.1 Run prom=16.51 ms max=17.33 ms dt=0.0163 dts=0.0163 t_juego=35.8
+[   91.622]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   91.622]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   91.622]    J0 pos=(9.110, 13.278, 38.775) yaw=1.5513 rad (88.9 grados) | se movió 0.000 desde el ST anterior
+[   91.622]    cam 0x0629a7c0 pos=(8.981, 14.849, 38.773) q=(0.0141, 0.7000, -0.0139, 0.7138) |q|^2=1.0000
+[   91.622]    cam - J0 = (-0.130, 1.571, -0.002)
+[   91.622]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   91.622]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   91.622]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   91.622] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1144, hace 0 ms
+[   91.646] SYNC uso local 1: this 0x21e7c070 (vtable rva 0xef4eec, vf[1] rva 0x74d3f0), desde rva 0x3a31ec | objetivo 044106b1071fbb9e, personaje 2ff722b2099d5b9b (jugador local), flag 013a5801
+[   91.646] SYNC   mandado al otro jugador (evento 1, nivel 16)
+[   91.655] SYNC handler A del uso 2: ctx 0x21e7c070 (vtable rva 0xef4eec, vf[1] rva 0x74d3f0, vf[2] rva 0x3806a0) | objetivo 044106b1071fbb9e, personaje 2ff722b2099d5b9b
+[   91.655] SYNC handler de sesión del uso 2: ctx 0x21e7c074 (vtable rva 0xef4ee4, vf[1] rva 0x393fb0, vf[2] rva 0x3b5a80) | objetivo 044106b1071fbb9e, personaje 2ff722b2099d5b9b
+[   92.588] GHOST: personaje en (6.56, 13.28, 40.09), objetivo (6.56, 13.28, 40.09) [red], 21 teletransportes; NPCs[1]
+[   92.638] ST frames +61 (contador del juego 2205, +61) fps=60.0 Run prom=16.52 ms max=17.63 ms dt=0.0168 dts=0.0168 t_juego=36.8
+[   92.638]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   92.638]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   92.638]    J0 pos=(10.551, 13.378, 38.695) yaw=1.5708 rad (90.0 grados) | se movió 1.446 desde el ST anterior
+[   92.638]    cam 0x0629a7c0 pos=(10.578, 14.954, 38.695) q=(0.0141, 0.7000, -0.0139, 0.7138) |q|^2=1.0000
+[   92.638]    cam - J0 = (0.028, 1.576, 0.000)
+[   92.638]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   92.638]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   92.638]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   92.638] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1164, hace 17 ms
+[   92.638] NET eventos: enviados 1, recibidos 1, repetidos descartados 2 (totales)
+[   93.605] GHOST: personaje en (6.56, 13.28, 40.09), objetivo (6.56, 13.28, 40.09) [red], 20 teletransportes; NPCs[1]
+[   93.638] ST frames +60 (contador del juego 2265, +60) fps=60.0 Run prom=16.51 ms max=17.32 ms dt=0.0173 dts=0.0173 t_juego=37.8
+[   93.638]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   93.638]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   93.638]    J0 pos=(10.551, 13.276, 38.695) yaw=1.5709 rad (90.0 grados) | se movió 0.102 desde el ST anterior
+[   93.638]    cam 0x0629a7c0 pos=(10.430, 14.846, 38.695) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[   93.638]    cam - J0 = (-0.121, 1.570, 0.000)
+[   93.638]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   93.638]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[   93.638]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[   93.638] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1184, hace 17 ms
+[   94.620] GHOST: personaje en (6.54, 13.28, 40.08), objetivo (6.56, 13.28, 40.09) [red], 20 teletransportes; NPCs[1]
+[   94.654] ST frames +61 (contador del juego 2326, +61) fps=60.0 Run prom=16.51 ms max=17.28 ms dt=0.0168 dts=0.0168 t_juego=38.8
+[   94.654]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   94.654]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   94.654]    J0 pos=(10.316, 13.276, 38.695) yaw=1.5709 rad (90.0 grados) | se movió 0.234 desde el ST anterior
+[   94.654]    cam 0x0629a7c0 pos=(10.228, 14.846, 38.698) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[   94.654]    cam - J0 = (-0.088, 1.571, 0.003)
+[   94.654]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   94.654]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   94.654]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   94.654] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1204, hace 17 ms
+[   95.637] GHOST: personaje en (6.56, 13.28, 40.09), objetivo (6.56, 13.28, 40.09) [red], 21 teletransportes; NPCs[1]
+[   95.670] ST frames +61 (contador del juego 2387, +61) fps=60.1 Run prom=16.53 ms max=17.17 ms dt=0.0166 dts=0.0166 t_juego=39.8
+[   95.670]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   95.670]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   95.670]    J0 pos=(9.296, 13.276, 39.501) yaw=1.5709 rad (90.0 grados) | se movió 1.300 desde el ST anterior
+[   95.670]    cam 0x0629a7c0 pos=(9.177, 14.870, 39.486) q=(0.0305, 0.7065, -0.0296, 0.7065) |q|^2=1.0000
+[   95.670]    cam - J0 = (-0.119, 1.594, -0.015)
+[   95.670]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   95.670]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   95.670]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   95.670] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1225, hace 0 ms
+[   96.653] GHOST: personaje en (6.56, 13.28, 40.09), objetivo (6.56, 13.28, 40.09) [red], 20 teletransportes; NPCs[1]
+[   96.686] ST frames +61 (contador del juego 2448, +61) fps=60.0 Run prom=16.56 ms max=17.16 ms dt=0.0164 dts=0.0164 t_juego=40.8
+[   96.686]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   96.686]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   96.686]    J0 pos=(9.296, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.003 desde el ST anterior
+[   96.686]    cam 0x0629a7c0 pos=(9.174, 14.846, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[   96.686]    cam - J0 = (-0.121, 1.570, 0.000)
+[   96.686]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   96.686]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   96.686]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   96.686] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1245, hace 16 ms
+[   97.669] GHOST: personaje en (6.54, 13.28, 40.08), objetivo (6.56, 13.28, 40.09) [red], 20 teletransportes; NPCs[1]
+[   97.702] ST frames +61 (contador del juego 2509, +61) fps=60.0 Run prom=16.56 ms max=17.34 ms dt=0.0167 dts=0.0167 t_juego=41.8
+[   97.702]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   97.702]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   97.702]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.470 desde el ST anterior
+[   97.702]    cam 0x0629a7c0 pos=(8.706, 14.867, 39.518) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[   97.702]    cam - J0 = (-0.120, 1.591, 0.013)
+[   97.702]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   97.702]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   97.702]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   97.702] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1265, hace 33 ms
+[   98.602] MARCA 2 (frame 3185, contador del juego 2563) J0 pos=(8.83, 13.28, 39.50) yaw=1.571
+[   98.685] GHOST: personaje en (6.56, 13.28, 40.09), objetivo (6.56, 13.28, 40.09) [red], 21 teletransportes; NPCs[1]
+[   98.718] ST frames +61 (contador del juego 2570, +61) fps=60.0 Run prom=16.56 ms max=17.13 ms dt=0.0167 dts=0.0167 t_juego=42.8
+[   98.718]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   98.718]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   98.718]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[   98.718]    cam 0x0629a7c0 pos=(8.704, 14.846, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[   98.718]    cam - J0 = (-0.121, 1.570, 0.000)
+[   98.718]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   98.719]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   98.719]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   98.719] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1285, hace 33 ms
+[   99.702] GHOST: personaje en (6.56, 13.28, 40.09), objetivo (6.56, 13.28, 40.09) [red], 20 teletransportes; NPCs[1]
+[   99.735] ST frames +61 (contador del juego 2631, +61) fps=60.0 Run prom=16.55 ms max=17.34 ms dt=0.0166 dts=0.0166 t_juego=43.9
+[   99.735]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[   99.735]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[   99.735]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[   99.735]    cam 0x0629a7c0 pos=(8.704, 14.845, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[   99.735]    cam - J0 = (-0.121, 1.569, 0.000)
+[   99.735]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[   99.735]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   99.735]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[   99.735] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.556, 13.276, 40.089) yaw=1.747 seq 1306, hace 0 ms
+[  100.718] GHOST: personaje en (6.47, 13.28, 39.71), objetivo (6.49, 13.28, 39.72) [red], 20 teletransportes; NPCs[1]
+[  100.751] ST frames +61 (contador del juego 2692, +61) fps=60.0 Run prom=16.54 ms max=17.30 ms dt=0.0163 dts=0.0163 t_juego=44.9
+[  100.751]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  100.751]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  100.751]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[  100.751]    cam 0x0629a7c0 pos=(8.704, 14.844, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[  100.751]    cam - J0 = (-0.122, 1.568, 0.000)
+[  100.751]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  100.751]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  100.751]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  100.751] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.481, 13.276, 39.696) yaw=1.758 seq 1326, hace 16 ms
+[  101.718] GHOST: personaje en (6.10, 13.28, 39.81), objetivo (6.12, 13.28, 39.83) [red], 21 teletransportes; NPCs[1]
+[  101.767] ST frames +61 (contador del juego 2753, +61) fps=60.0 Run prom=16.55 ms max=17.11 ms dt=0.0168 dts=0.0168 t_juego=45.9
+[  101.767]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  101.767]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  101.767]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[  101.767]    cam 0x0629a7c0 pos=(8.704, 14.846, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[  101.767]    cam - J0 = (-0.121, 1.570, 0.000)
+[  101.767]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  101.767]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  101.767]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  101.767] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.117, 13.276, 39.826) yaw=-1.732 seq 1346, hace 33 ms
+[  102.733] GHOST: personaje en (4.34, 13.28, 39.54), objetivo (4.34, 13.28, 39.54) [red], 21 teletransportes; NPCs[1]
+[  102.783] ST frames +61 (contador del juego 2814, +61) fps=60.0 Run prom=16.55 ms max=17.13 ms dt=0.0166 dts=0.0166 t_juego=46.9
+[  102.783]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  102.783]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  102.783]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[  102.783]    cam 0x0629a7c0 pos=(8.704, 14.845, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[  102.783]    cam - J0 = (-0.121, 1.569, 0.000)
+[  102.783]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  102.783]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  102.783]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  102.783] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(4.229, 13.276, 39.536) yaw=-1.732 seq 1367, hace 0 ms
+[  103.750] GHOST: personaje en (2.84, 13.28, 40.05), objetivo (2.84, 13.28, 40.05) [red], 20 teletransportes; NPCs[1]
+[  103.799] ST frames +61 (contador del juego 2875, +61) fps=60.0 Run prom=16.53 ms max=17.22 ms dt=0.0172 dts=0.0172 t_juego=47.9
+[  103.799]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  103.799]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  103.800]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[  103.800]    cam 0x0629a7c0 pos=(8.704, 14.845, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[  103.800]    cam - J0 = (-0.121, 1.569, 0.000)
+[  103.800]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  103.800]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  103.800]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  103.800] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(2.918, 13.276, 40.038) yaw=-0.167 seq 1387, hace 17 ms
+[  104.765] GHOST: personaje en (4.86, 13.28, 39.33), objetivo (4.87, 13.28, 39.35) [red], 23 teletransportes; NPCs[1]
+[  104.815] ST frames +61 (contador del juego 2936, +61) fps=60.1 Run prom=16.54 ms max=17.19 ms dt=0.0161 dts=0.0161 t_juego=48.9
+[  104.815]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  104.815]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  104.815]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[  104.815]    cam 0x0629a7c0 pos=(8.704, 14.846, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[  104.815]    cam - J0 = (-0.121, 1.570, 0.000)
+[  104.815]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  104.815]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  104.815]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  104.815] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(4.980, 13.276, 39.369) yaw=1.345 seq 1407, hace 33 ms
+[  105.765] GHOST: personaje en (6.49, 13.28, 40.91), objetivo (6.49, 13.28, 40.91) [red], 25 teletransportes; NPCs[1]
+[  105.815] ST frames +60 (contador del juego 2996, +60) fps=60.0 Run prom=16.55 ms max=17.59 ms dt=0.0169 dts=0.0169 t_juego=49.9
+[  105.815]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  105.815]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  105.815]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[  105.815]    cam 0x0629a7c0 pos=(8.704, 14.845, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[  105.815]    cam - J0 = (-0.121, 1.569, 0.000)
+[  105.815]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  105.815]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[  105.815]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[  105.815] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(6.575, 13.276, 40.998) yaw=1.628 seq 1427, hace 0 ms
+[  106.781] GHOST: personaje en (8.60, 13.28, 41.53), objetivo (8.60, 13.28, 41.53) [red], 25 teletransportes; NPCs[1]
+[  106.831] ST frames +61 (contador del juego 3057, +61) fps=60.0 Run prom=16.54 ms max=17.70 ms dt=0.0169 dts=0.0169 t_juego=51.0
+[  106.831]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  106.831]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  106.831]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[  106.831]    cam 0x0629a7c0 pos=(8.704, 14.845, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[  106.831]    cam - J0 = (-0.121, 1.569, 0.000)
+[  106.831]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  106.831]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  106.831]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  106.831] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(8.831, 13.276, 41.503) yaw=1.673 seq 1448, hace 0 ms
+[  107.798] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 21 teletransportes; NPCs[1]
+[  107.847] ST frames +61 (contador del juego 3118, +61) fps=60.0 Run prom=16.54 ms max=17.01 ms dt=0.0167 dts=0.0167 t_juego=52.0
+[  107.847]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  107.847]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  107.847]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[  107.848]    cam 0x0629a7c0 pos=(8.704, 14.846, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[  107.848]    cam - J0 = (-0.121, 1.570, 0.000)
+[  107.848]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  107.848]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  107.848]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  107.848] NET join 100.126.161.126:47811: enviados 21, recibidos 19, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1467, hace 33 ms
+[  108.813] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 21 teletransportes; NPCs[1]
+[  108.863] ST frames +61 (contador del juego 3179, +61) fps=60.0 Run prom=16.53 ms max=17.60 ms dt=0.0161 dts=0.0161 t_juego=53.0
+[  108.863]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  108.863]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  108.863]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[  108.863]    cam 0x0629a7c0 pos=(8.704, 14.844, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[  108.863]    cam - J0 = (-0.122, 1.568, 0.000)
+[  108.863]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  108.863]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  108.863]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  108.863] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1488, hace 0 ms
+[  109.830] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 20 teletransportes; NPCs[1]
+[  109.863] ST frames +60 (contador del juego 3239, +60) fps=60.0 Run prom=16.55 ms max=17.04 ms dt=0.0171 dts=0.0171 t_juego=54.0
+[  109.863]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  109.863]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  109.863]    J0 pos=(8.826, 13.276, 39.504) yaw=1.5709 rad (90.0 grados) | se movió 0.000 desde el ST anterior
+[  109.863]    cam 0x0629a7c0 pos=(8.704, 14.846, 39.505) q=(0.0300, 0.7065, -0.0300, 0.7064) |q|^2=1.0000
+[  109.863]    cam - J0 = (-0.121, 1.570, 0.000)
+[  109.863]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  109.863]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[  109.863]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[  109.863] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1508, hace 34 ms
+[  110.846] GHOST: personaje en (9.07, 13.28, 41.46), objetivo (9.07, 13.28, 41.48) [red], 20 teletransportes; NPCs[1]
+[  110.879] ST frames +61 (contador del juego 3300, +61) fps=60.1 Run prom=16.52 ms max=17.11 ms dt=0.0165 dts=0.0165 t_juego=55.0
+[  110.879]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  110.879]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  110.879]    J0 pos=(8.826, 13.276, 39.504) yaw=1.6799 rad (96.3 grados) | se movió 0.000 desde el ST anterior
+[  110.879]    cam 0x0629a7c0 pos=(8.721, 14.842, 39.515) q=(0.0651, 0.7411, -0.0727, 0.6643) |q|^2=1.0000
+[  110.879]    cam - J0 = (-0.104, 1.566, 0.011)
+[  110.879]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  110.879]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  110.879]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  110.879] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1528, hace 17 ms
+[  111.862] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 21 teletransportes; NPCs[1]
+[  111.879] ST frames +60 (contador del juego 3360, +60) fps=60.0 Run prom=16.56 ms max=17.05 ms dt=0.0169 dts=0.0169 t_juego=56.0
+[  111.879]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  111.879]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  111.879]    J0 pos=(8.826, 13.276, 39.504) yaw=1.4785 rad (84.7 grados) | se movió 0.000 desde el ST anterior
+[  111.879]    cam 0x0629a7c0 pos=(8.705, 14.844, 39.494) q=(0.0316, 0.6731, -0.0288, 0.7383) |q|^2=1.0000
+[  111.879]    cam - J0 = (-0.121, 1.568, -0.011)
+[  111.879]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  111.879]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[  111.879]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[  111.879] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1548, hace 17 ms
+[  112.878] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 20 teletransportes; NPCs[1]
+[  112.895] ST frames +61 (contador del juego 3421, +61) fps=60.1 Run prom=16.55 ms max=17.13 ms dt=0.0165 dts=0.0165 t_juego=57.0
+[  112.895]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  112.895]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  112.895]    J0 pos=(8.826, 13.276, 39.504) yaw=1.4773 rad (84.6 grados) | se movió 0.000 desde el ST anterior
+[  112.895]    cam 0x0629a7c0 pos=(8.706, 14.846, 39.494) q=(0.0326, 0.6727, -0.0297, 0.7386) |q|^2=1.0000
+[  112.895]    cam - J0 = (-0.120, 1.570, -0.011)
+[  112.895]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  112.895]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  112.895]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  112.895] NET join 100.126.161.126:47811: enviados 21, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1569, hace 16 ms
+[  113.894] GHOST: personaje en (9.07, 13.28, 41.46), objetivo (9.07, 13.28, 41.48) [red], 20 teletransportes; NPCs[1]
+[  113.911] ST frames +61 (contador del juego 3482, +61) fps=60.0 Run prom=16.56 ms max=17.31 ms dt=0.0162 dts=0.0162 t_juego=58.0
+[  113.911]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  113.911]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  113.911]    J0 pos=(8.826, 13.276, 39.504) yaw=1.4776 rad (84.7 grados) | se movió 0.000 desde el ST anterior
+[  113.911]    cam 0x0629a7c0 pos=(8.705, 14.844, 39.493) q=(0.0326, 0.6727, -0.0297, 0.7386) |q|^2=1.0000
+[  113.911]    cam - J0 = (-0.120, 1.568, -0.011)
+[  113.911]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  113.911]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  113.911]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  113.911] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1589, hace 16 ms
+[  114.910] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 21 teletransportes; NPCs[1]
+[  114.927] ST frames +60 (contador del juego 3542, +60) fps=59.0 Run prom=16.84 ms max=29.73 ms dt=0.0170 dts=0.0170 t_juego=59.1
+[  114.927]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  114.927]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  114.927]    J0 pos=(8.826, 13.276, 39.504) yaw=1.4776 rad (84.7 grados) | se movió 0.000 desde el ST anterior
+[  114.927]    cam 0x0629a7c0 pos=(8.706, 14.846, 39.494) q=(0.0326, 0.6727, -0.0297, 0.7386) |q|^2=1.0000
+[  114.927]    cam - J0 = (-0.120, 1.570, -0.011)
+[  114.927]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  114.927]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[  114.927]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[  114.927] NET join 100.126.161.126:47811: enviados 20, recibidos 18, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1607, hace 133 ms
+[  115.926] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 20 teletransportes; NPCs[1]
+[  115.943] ST frames +61 (contador del juego 3603, +61) fps=60.0 Run prom=16.55 ms max=18.45 ms dt=0.0168 dts=0.0168 t_juego=60.1
+[  115.943]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  115.943]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  115.943]    J0 pos=(8.826, 13.276, 39.504) yaw=1.1239 rad (64.4 grados) | se movió 0.000 desde el ST anterior
+[  115.943]    cam 0x0629a7c0 pos=(8.722, 14.843, 39.464) q=(0.0628, 0.5314, -0.0396, 0.8439) |q|^2=1.0000
+[  115.943]    cam - J0 = (-0.103, 1.567, -0.040)
+[  115.943]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  115.943]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  115.943]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  115.943] NET join 100.126.161.126:47811: enviados 20, recibidos 22, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1629, hace 67 ms
+[  116.926] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 20 teletransportes; NPCs[1]
+[  116.959] ST frames +61 (contador del juego 3664, +61) fps=60.0 Run prom=16.53 ms max=17.16 ms dt=0.0168 dts=0.0168 t_juego=61.1
+[  116.960]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  116.960]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  116.960]    J0 pos=(8.771, 13.276, 38.905) yaw=0.7798 rad (44.7 grados) | se movió 0.602 desde el ST anterior
+[  116.960]    cam 0x0629a7c0 pos=(8.687, 14.868, 38.878) q=(0.0687, 0.3795, -0.0368, 0.9219) |q|^2=1.0000
+[  116.960]    cam - J0 = (-0.084, 1.592, -0.027)
+[  116.960]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  116.960]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  116.960]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  116.960] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1649, hace 83 ms
+[  117.942] GHOST: personaje en (9.07, 13.28, 41.47), objetivo (9.07, 13.28, 41.48) [red], 20 teletransportes; NPCs[1]
+[  117.976] ST frames +61 (contador del juego 3725, +61) fps=60.0 Run prom=16.55 ms max=17.06 ms dt=0.0169 dts=0.0169 t_juego=62.1
+[  117.976]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  117.976]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  117.976]    J0 pos=(9.319, 13.276, 38.151) yaw=0.6650 rad (38.1 grados) | se movió 0.932 desde el ST anterior
+[  117.976]    cam 0x0629a7c0 pos=(9.219, 14.846, 38.024) q=(0.0285, 0.3262, -0.0099, 0.9448) |q|^2=1.0000
+[  117.976]    cam - J0 = (-0.100, 1.570, -0.127)
+[  117.976]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  117.976]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  117.976]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  117.976] NET join 100.126.161.126:47811: enviados 20, recibidos 22, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1671, hace 0 ms
+[  118.959] GHOST: personaje en (9.07, 13.28, 41.46), objetivo (9.07, 13.28, 41.48) [red], 21 teletransportes; NPCs[1]
+[  118.992] ST frames +61 (contador del juego 3786, +61) fps=60.1 Run prom=16.52 ms max=17.45 ms dt=0.0162 dts=0.0162 t_juego=63.1
+[  118.992]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  118.992]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  118.992]    J0 pos=(9.453, 13.276, 38.322) yaw=0.6650 rad (38.1 grados) | se movió 0.217 desde el ST anterior
+[  118.992]    cam 0x0629a7c0 pos=(9.375, 14.845, 38.223) q=(0.0285, 0.3262, -0.0099, 0.9448) |q|^2=1.0000
+[  118.992]    cam - J0 = (-0.078, 1.569, -0.099)
+[  118.992]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  118.992]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  118.992]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  118.992] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1691, hace 16 ms
+[  119.975] GHOST: personaje en (9.08, 13.28, 41.49), objetivo (9.07, 13.28, 41.48) [red], 6 teletransportes; NPCs[1]
+[  120.008] ST frames +61 (contador del juego 3847, +61) fps=60.0 Run prom=16.52 ms max=17.31 ms dt=0.0171 dts=0.0171 t_juego=64.1
+[  120.008]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  120.008]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  120.008]    J0 pos=(9.453, 13.276, 38.322) yaw=0.1988 rad (11.4 grados) | se movió 0.000 desde el ST anterior
+[  120.008]    cam 0x0629a7c0 pos=(9.428, 14.846, 38.201) q=(0.0371, 0.0992, -0.0037, 0.9944) |q|^2=1.0000
+[  120.008]    cam - J0 = (-0.025, 1.570, -0.121)
+[  120.008]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  120.008]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  120.008]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  120.008] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1711, hace 17 ms
+[  120.990] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 29 teletransportes; NPCs[1]
+[  121.024] ST frames +61 (contador del juego 3908, +61) fps=60.1 Run prom=16.51 ms max=17.64 ms dt=0.0166 dts=0.0166 t_juego=65.2
+[  121.024]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  121.024]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  121.024]    J0 pos=(9.453, 13.276, 38.322) yaw=0.1989 rad (11.4 grados) | se movió 0.000 desde el ST anterior
+[  121.024]    cam 0x0629a7c0 pos=(9.428, 14.845, 38.201) q=(0.0371, 0.0992, -0.0037, 0.9944) |q|^2=1.0000
+[  121.024]    cam - J0 = (-0.025, 1.569, -0.121)
+[  121.024]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  121.024]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  121.024]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  121.024] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1731, hace 33 ms
+[  122.007] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 30 teletransportes; NPCs[1]
+[  122.024] ST frames +60 (contador del juego 3968, +60) fps=60.0 Run prom=16.53 ms max=17.52 ms dt=0.0174 dts=0.0174 t_juego=66.2
+[  122.024]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  122.024]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  122.024]    J0 pos=(9.188, 13.276, 38.458) yaw=0.7115 rad (40.8 grados) | se movió 0.298 desde el ST anterior
+[  122.024]    cam 0x0629a7c0 pos=(9.135, 14.851, 38.351) q=(0.0457, 0.3475, -0.0066, 0.9365) |q|^2=1.0000
+[  122.024]    cam - J0 = (-0.053, 1.575, -0.107)
+[  122.024]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  122.024]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[  122.024]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/60, suma 0 bytes
+[  122.024] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1752, hace 0 ms
+[  123.023] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 31 teletransportes; NPCs[1]
+[  123.040] ST frames +61 (contador del juego 4029, +61) fps=60.1 Run prom=16.53 ms max=17.19 ms dt=0.0169 dts=0.0169 t_juego=67.2
+[  123.040]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  123.040]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  123.040]    J0 pos=(7.905, 13.276, 38.784) yaw=0.8182 rad (46.9 grados) | se movió 1.324 desde el ST anterior
+[  123.040]    cam 0x0629a7c0 pos=(7.840, 14.869, 38.688) q=(0.0446, 0.3972, -0.0146, 0.9165) |q|^2=1.0000
+[  123.040]    cam - J0 = (-0.065, 1.593, -0.096)
+[  123.040]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  123.040]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  123.040]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  123.040] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1772, hace 0 ms
+[  124.039] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 30 teletransportes; NPCs[1]
+[  124.056] ST frames +61 (contador del juego 4090, +61) fps=60.0 Run prom=16.56 ms max=17.13 ms dt=0.0168 dts=0.0168 t_juego=68.2
+[  124.056]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  124.056]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  124.056]    J0 pos=(7.835, 13.276, 38.819) yaw=0.9513 rad (54.5 grados) | se movió 0.078 desde el ST anterior
+[  124.056]    cam 0x0629a7c0 pos=(7.738, 14.844, 38.750) q=(0.0453, 0.4573, -0.0233, 0.8878) |q|^2=1.0000
+[  124.056]    cam - J0 = (-0.097, 1.568, -0.069)
+[  124.056]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  124.056]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  124.056]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  124.056] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1792, hace 17 ms
+[  125.055] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 31 teletransportes; NPCs[1]
+[  125.072] ST frames +61 (contador del juego 4151, +61) fps=60.1 Run prom=16.56 ms max=17.09 ms dt=0.0163 dts=0.0163 t_juego=69.2
+[  125.072]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  125.072]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  125.072]    J0 pos=(7.835, 13.276, 38.819) yaw=0.9782 rad (56.0 grados) | se movió 0.000 desde el ST anterior
+[  125.072]    cam 0x0629a7c0 pos=(7.737, 14.845, 38.754) q=(0.0461, 0.4692, -0.0245, 0.8816) |q|^2=1.0000
+[  125.072]    cam - J0 = (-0.098, 1.569, -0.065)
+[  125.072]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  125.072]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  125.072]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  125.072] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1812, hace 33 ms
+[  126.071] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 30 teletransportes; NPCs[1]
+[  126.088] ST frames +61 (contador del juego 4212, +61) fps=60.0 Run prom=16.57 ms max=17.03 ms dt=0.0167 dts=0.0167 t_juego=70.2
+[  126.088]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  126.088]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  126.088]    J0 pos=(7.835, 13.276, 38.819) yaw=0.9782 rad (56.0 grados) | se movió 0.000 desde el ST anterior
+[  126.088]    cam 0x0629a7c0 pos=(7.737, 14.844, 38.753) q=(0.0461, 0.4692, -0.0245, 0.8816) |q|^2=1.0000
+[  126.088]    cam - J0 = (-0.098, 1.568, -0.065)
+[  126.088]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  126.088]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  126.088]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  126.088] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1833, hace 0 ms
+[  127.097] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 29 teletransportes; NPCs[1]
+[  127.097] ST frames +58 (contador del juego 4268, +56) fps=57.5 Run prom=17.30 ms max=40.41 ms dt=0.0405 dts=0.0405 t_juego=71.2
+[  127.097]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  127.097]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  127.097]    J0 pos=(7.835, 13.276, 38.819) yaw=0.9782 rad (56.0 grados) | se movió 0.000 desde el ST anterior
+[  127.097]    cam 0x0629a7c0 pos=(7.737, 14.844, 38.753) q=(0.0461, 0.4692, -0.0245, 0.8816) |q|^2=1.0000
+[  127.097]    cam - J0 = (-0.098, 1.568, -0.066)
+[  127.097]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  127.097]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/58, suma 0 bytes
+[  127.097]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/58, suma 0 bytes
+[  127.097] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1853, hace 0 ms
+[  128.104] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 2 teletransportes; NPCs[1]
+[  128.104] ST frames +61 (contador del juego 4268, +0) fps=60.6 Run prom=16.41 ms max=16.99 ms dt=0.0165 dts=0.0165 t_juego=71.2
+[  128.104]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  128.104]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  128.104]    J0 pos=(7.835, 13.276, 38.819) yaw=0.9782 rad (56.0 grados) | se movió 0.000 desde el ST anterior
+[  128.104]    cam 0x0629a7c0 pos=(7.737, 14.844, 38.753) q=(0.0461, 0.4692, -0.0245, 0.8816) |q|^2=1.0000
+[  128.104]    cam - J0 = (-0.098, 1.568, -0.066)
+[  128.104]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  128.104]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  128.104]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  128.104] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1873, hace 16 ms
+[  129.120] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 2 teletransportes; NPCs[1]
+[  129.120] ST frames +61 (contador del juego 4268, +0) fps=60.0 Run prom=16.56 ms max=17.02 ms dt=0.0165 dts=0.0165 t_juego=71.2
+[  129.120]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  129.120]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  129.120]    J0 pos=(7.835, 13.276, 38.819) yaw=0.9782 rad (56.0 grados) | se movió 0.000 desde el ST anterior
+[  129.120]    cam 0x0629a7c0 pos=(7.737, 14.844, 38.753) q=(0.0461, 0.4692, -0.0245, 0.8816) |q|^2=1.0000
+[  129.120]    cam - J0 = (-0.098, 1.568, -0.066)
+[  129.120]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  129.120]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  129.120]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  129.120] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1893, hace 33 ms
+[  130.136] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 2 teletransportes; NPCs[1]
+[  130.136] ST frames +61 (contador del juego 4268, +0) fps=60.0 Run prom=16.55 ms max=18.12 ms dt=0.0167 dts=0.0167 t_juego=71.2
+[  130.136]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  130.136]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  130.136]    J0 pos=(7.835, 13.276, 38.819) yaw=0.9782 rad (56.0 grados) | se movió 0.000 desde el ST anterior
+[  130.136]    cam 0x0629a7c0 pos=(7.737, 14.844, 38.753) q=(0.0461, 0.4692, -0.0245, 0.8816) |q|^2=1.0000
+[  130.136]    cam - J0 = (-0.098, 1.568, -0.066)
+[  130.136]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  130.136]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  130.136]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  130.136] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1914, hace 0 ms
+[  131.152] GHOST: personaje en (9.07, 13.28, 41.48), objetivo (9.07, 13.28, 41.48) [red], 2 teletransportes; NPCs[1]
+[  131.152] ST frames +61 (contador del juego 4268, +0) fps=60.0 Run prom=16.53 ms max=17.25 ms dt=0.0165 dts=0.0165 t_juego=71.2
+[  131.152]    modo: estado 5 (corriendo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  131.153]    personajes: jugadores 1, NPCs 5, pendientes 0 | J0 0x2b2497d0 Character(ok) def 0x090c5160 tipo 0 1c=1 1f=1 ctrl 0x3bfb5918 activo 1
+[  131.153]    J0 pos=(7.835, 13.276, 38.819) yaw=0.9782 rad (56.0 grados) | se movió 0.000 desde el ST anterior
+[  131.153]    cam 0x0629a7c0 pos=(7.737, 14.844, 38.753) q=(0.0461, 0.4692, -0.0245, 0.8816) |q|^2=1.0000
+[  131.153]    cam - J0 = (-0.098, 1.568, -0.066)
+[  131.153]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 0000003f:00000001 (0 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  131.153]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  131.153]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/61, suma 0 bytes
+[  131.153] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1934, hace 17 ms
+[  133.083] Run tardó 1.16 s (¿carga?)
+[  133.083] EV frame 5183: ModeManager estado 5 (corriendo) -> 7 (salir-modo), modo 0x0910ddb8 -> 0x0910ddb8
+[  133.083] EV personajes: jugadores 1 -> 0, NPCs 5 -> 0, pendientes 0 -> 0
+[  133.083] EV jugador 0: 0x2b2497d0 -> 0x00000000 (vtable rva 0x0 = -; def 0x00000000 tipo 0 flags 1c=0 1f=0)
+[  133.083] EV controlador de jugador 0x3bfb5918 (activo 1) -> 0x00000000 (activo 0)
+[  133.084] GHOST: cambió el jugador local (0x2b2497d0 -> 0x00000000): se reinicia
+[  133.084] ST frames +47 (contador del juego 4268, +0) fps=24.3 Run prom=40.93 ms max=1164.62 ms dt=0.0169 dts=0.0169 t_juego=0.0
+[  133.084]    modo: estado 7 (salir-modo) idx 1 modo 0x0910ddb8 (modo-de-nivel, nivel 16) | nivel 16/35 "Production\Tech_Hub"
+[  133.084]    personajes: jugadores 0, NPCs 0, pendientes 0 | J0 0x00000000 - def 0x00000000 tipo 0 1c=0 1f=0 ctrl 0x00000000 activo 0
+[  133.084]    cam 0x0629a7c0 pos=(0.000, 0.000, 0.000) q=(0.0000, 0.0000, 0.0000, 1.0000) |q|^2=1.0000
+[  133.084]    red: NETZ 0x090c02e0 transporte 0x00000000 máscara 00000000:00000000 (1 cambios) | sesión 0x090bbef8 proveedor 0x00000000 +2C=0 +2D=0
+[  133.084]    cola A 0x090b7ea8 (global 0x090b7ea8) sumidero 0x00000000: tamaño tras Run máx 0, frames con datos 0/47, suma 0 bytes
+[  133.084]    cola B (sesión, se descarta sin proveedor): tamaño tras Run máx 0, frames con datos 0/47, suma 0 bytes
+[  133.084] NET join 100.126.161.126:47811: enviados 16, recibidos 39, perdidos 0, inválidos 0 | remoto: nivel 16 con jugador pos=(9.071, 13.276, 41.478) yaw=1.673 seq 1973, hace 0 ms
+[  133.084] ModeManager::Run devolvió 0: el juego sale del loop principal (frames vistos 5183)
+[  133.084] NET: cerrado (enviados 1733, recibidos 1973, perdidos 0 en total)
+[  133.289] DLL_PROCESS_DETACH (fin del proceso)
