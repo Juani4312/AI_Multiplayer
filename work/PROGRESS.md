@@ -74,7 +74,7 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 
 ## Siguiente paso
 0. Leer `mod/README.md`, `work/RUNTIME_PLAN.md` y `work/DESIGN_OPTIONS.md`.
-1. **Con el usuario:** primera corrida del mod (pendiente 2). El log responde los bloques 0–3 del plan de runtime: offsets base, jugador, cámara, NETZ y crecimiento de la cola A. Con eso se cierra la fase 2 y se decide la arquitectura (A/B/C de `DESIGN_OPTIONS.md`).
+1. **Con el usuario:** primera corrida del mod (pendiente 2). El log responde los bloques 0–3 del plan de runtime: offsets base, jugador, cámara, NETZ, crecimiento de las colas A y B y catálogo de endpoints RPC. Analizarlo con `python3 -I work/scripts/analyze_aimp_log.py <aimp.log>`. Con eso se cierra la fase 2 y se decide la arquitectura (A/B/C de `DESIGN_OPTIONS.md`).
 2. Después de esa corrida:
    - si las colas crecen por frame, segunda corrida con `AIMP_TRACE_QUEUES=1` (experimento 3.6: tipo, tamaño y call site de cada mensaje; el catálogo tipo → handler, 3.5, ya sale en la primera corrida). Con eso, mapear offline cada tipo a su productor y su handler;
    - fase 3: UDP mínimo con la posición.

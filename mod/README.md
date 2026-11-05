@@ -122,7 +122,7 @@ archivos fuera de la carpeta del log.
 3. Cargar una partida. Ya en el juego: quedarse quieto 5 s, caminar en línea recta unos 5 s, girar
    despacio 360°, agacharse, abrir una puerta y apretar F9 en dos lugares distintos.
 4. Salir al menú y cerrar el juego.
-5. Revisar `aimp.log`. El análisis de lo esperado está en `work/RUNTIME_PLAN.md`.
+5. Revisar `aimp.log`: `python3 -I work/scripts/analyze_aimp_log.py <aimp.log>` cruza el log con cada chequeo de `work/RUNTIME_PLAN.md` y marca OK / FALLA / sin datos.
 6. Si la primera corrida anduvo, segunda corrida con `AIMP_TRACE_QUEUES=1 WINEDLLOVERRIDES="winmm=n,b" %command%`: repetir lo mismo y anotar la hora aproximada de cada acción (abrir una puerta, agarrar un item, ver al Alien), para cruzarla con los tipos de mensaje del log.
 
 Si el juego no arranca: sacar la DLL (o usar `AIMP_NOHOOK=1`) y revisar el log. Si ni siquiera hay log,
