@@ -201,3 +201,8 @@ Detalle en `findings/06-scripts-y-entidades.md`. Evidencia en `work/evidence/h06
 - Las vtables de entidades de script con comportamiento (Door, TriggerSimple, HostOnlyTrigger) son idénticas entre sí: el comportamiento está en datos/handlers por tipo.
 - Vftables RTTI de tipos clave listadas en el hallazgo (para identificar entidades en runtime).
 - `IsMultiplayerMode` = variable booleana (los overrides son get/set genéricos).
+
+## 2026-11-05 — Hallazgo 07 (items, parte 1)
+Detalle en `findings/07-items-e-inventario.md`. Evidencia en `work/evidence/h07/`.
+- `PICKUP_MANAGER_TICK` = `0x7CA0B0` → `FUN_007c51e0(dt)`: pickups/interacción solo para el jugador 0; `g_root+0xA0` (de `FUN_007b0bb0`) tiene un temporizador en `+0x55B8/+0x55C4/+0x55C8`.
+- `pickup_manager.cpp` `0x786300` (casts de física); `thrown_item_manager.cpp` `0x792E00`.
