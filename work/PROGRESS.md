@@ -62,10 +62,11 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
   2. Hay un **vector de jugadores** (`[[g_root+8]+0x80]`, contador `+0x84`). Cualquier personaje con la definición de jugador entra ahí y recibe un **controlador de jugador** (hallazgos 03 y 05).
   3. La condición del Alien **`TargetIsPlayer` no depende de `GetPlayer()`** (hallazgo 08).
   4. **Más de 70 productores de mensajes de replicación** (patrón RPC "ejecutar local + encolar") escriben en dos colas aunque no haya red (hallazgo 10, parte 3). Interceptar esas colas podría dar la sincronización de eventos casi "gratis". Es el experimento de runtime prioritario. Además, la cola A (`g_root+0x50`) se **despacha en loopback** cada frame (`FUN_00a2a3f0` → `FUN_00a2a220`): el camino de "recepción" corre en retail. Ver la parte 4 del hallazgo 10 para el plan de coop que habilita.
+- **Verificado offline:** el algoritmo de ShortGuid de Cathode (`work/scripts/shortguid_check.py`, contra `COMMANDS.PAK`) y que ningún nivel usa los nodos MP.
 - Herramienta clave: `work/scripts/ghidra/dump.sh` + `Dump.java` (4 s por consulta sobre el proyecto persistente).
 
 ## Siguiente paso
-0. Leer `work/RUNTIME_PLAN.md`: el plan consolidado de verificación en runtime (qué leer, dónde y qué esperar).
+0. Leer `work/RUNTIME_PLAN.md` (plan de verificación en runtime) y `work/DESIGN_OPTIONS.md` (opciones de arquitectura del coop A/B/C, para decidir con el usuario).
 1. **Con el usuario:** fase 1+2 del mod (proxy `winmm`, hook en `ModeManager::Run`, log de estado y posición). Es la forma de verificar en runtime todo lo anterior. Requiere su confirmación para compilar, colocar la DLL y ejecutar el juego.
 2. Experimentos de runtime prioritarios (cuando haya mod):
    - `GetPlayer`, la posición `+0x70`, el yaw `+0x174`, la cámara `[[g_root+0x58]+0x1DC]`;
