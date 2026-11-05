@@ -52,6 +52,9 @@ int mem_u8(uintptr_t addr, uint8_t *out);
 int mem_f32(uintptr_t addr, float *out);
 /* Lee un string terminado en 0 (como mucho cap-1 bytes); 0 si no se pudo leer. */
 int mem_cstr(uintptr_t addr, char *out, size_t cap);
+/* Escritura que no crashea (WriteProcessMemory). Solo la usa la fase 4 (ghost.c),
+ * sobre campos que ya se validaron con una lectura. */
+int mem_write(uintptr_t addr, const void *src, size_t n);
 
 /* Estado global. */
 extern HMODULE g_aimp_self;      /* nuestra DLL */

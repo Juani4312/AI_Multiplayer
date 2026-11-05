@@ -27,6 +27,23 @@ static const uint8_t AIMP_MODEMGR_RUN_PROLOGUE[10] __attribute__((unused)) = {
     0x51, 0x53, 0x55, 0x56, 0x8B, 0xF1, 0x83, 0x7E, 0x4C, 0xFF
 };
 
+/* Fase 4 (hallazgo 12): spawn de autoridad y teletransporte de personajes. */
+#define AIMP_RVA_SPAWN_AUTH       0x00397490u  /* FUN_00797490: thiscall(this, pedido*, flag), ret 8 */
+#define AIMP_SPAWN_AUTH_STEAL     6            /* push ebp; mov ebp,esp; push ebx; push esi; push edi */
+static const uint8_t AIMP_SPAWN_AUTH_PROLOGUE[8] __attribute__((unused)) = {
+    0x55, 0x8B, 0xEC, 0x53, 0x56, 0x57, 0x8B, 0xF9
+};
+#define AIMP_RVA_CHR_TELEPORT     0x003C6330u  /* FUN_007c6330: thiscall(pj, pos*, yaw, p3) -> SetTransform(.., p3, 0), ret 0xC */
+static const uint8_t AIMP_CHR_TELEPORT_PROLOGUE[13] __attribute__((unused)) = {
+    0x53, 0x8B, 0x5C, 0x24, 0x08, 0x55, 0x8B, 0x6C, 0x24, 0x14, 0x57, 0x8B, 0xF9
+};
+#define SPAWN_REQ_SIZE            0x130
+#define SREQ_KEY                  0x00  /* clave del bloque por personaje (mapa FUN_007b1760) */
+#define SREQ_ID                   0x28  /* 8 bytes; en el del jugador, el id que va en los RPCs */
+#define SREQ_TYPE                 0x30  /* 0 jugador; 3/6 en NPCs (= def+0x04) */
+#define SREQ_NAME                 0x64  /* char[0x40] */
+#define SREQ_COMPOSITE            0xA4  /* char[0x40] (composite o "CUTSCENE") */
+
 #define AIMP_RVA_G_ROOT           0x012F0C88u  /* Root* (dato en .data) */
 
 /* Campos de g_root (Root::Init 0x7DA540, hallazgos 02, 04, 05 y 10) */
