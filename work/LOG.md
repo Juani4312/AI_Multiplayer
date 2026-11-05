@@ -35,3 +35,4 @@
 - 08:05 **Hallazgo 10 (parte 5)**: `RegisterAllRPCs()` = `FUN_00a2a620` asigna ids de tipo secuenciales a los endpoints de la lista estática `DAT_01be1bd0` (layout `{next, fn, ctx, u16 tipo}`) → los ids coinciden entre máquinas con el mismo binario.
 - 08:15 `work/RUNTIME_PLAN.md`: plan consolidado de verificación en runtime (guardas de build, loop, jugador/cámara, red del engine con la cola RPC, IA).
 - 08:25 Solo 8 endpoints RPC registrados estáticamente (`0x1636534`…`0x163661C`); el tipo del spawn no está entre ellos → el modelo de colas/endpoints está incompleto (¿cola B?). Anotado para runtime.
+- 08:35 Corrección (verificada en asm): `RegisterAllRPCs` llena la tabla de la **sesión** (`g_root+0x54`); la cola A (`g_root+0x50`) tiene su propia tabla en `+0x08`, de registro todavía no ubicado. Corregidos el hallazgo 10 (parte 5) y `RUNTIME_PLAN.md`.
