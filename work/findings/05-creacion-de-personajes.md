@@ -76,3 +76,21 @@ Estados de `Character+0x1122`: `0` jugador, `1` NPC, `3` pendiente, `4` liberado
 2. ¿Qué hace `NETZ->FUN_007ddc60` durante el spawn? (¿asigna un id de red?)
 3. ¿Qué sistemas usan solo `GetPlayer()` (índice 0) y cuáles recorren el vector de jugadores? Es clave para la IA (hallazgo 08): si el Alien solo mira el índice 0, el segundo jugador sería invisible para la IA.
 4. ¿De dónde sale la definición del jugador (`def` con `+0x1C != 0`)? ¿`CHR_INFO/ATTRIBUTES/THE_PLAYER.BML`?
+
+---
+
+## Parte 2 (adelanto) - El controlador de jugador
+
+- `Character::Setup` (`FUN_007cc400`, slot 2 de las vtables `0x012F4FC8`/`0x012F5D80`, llamado al crear el personaje vía `FUN_007cf2e0` desde `RequestCharacter`) hace, en `0x7CC55E`:
+  ```c
+  if (def->m_1F && def->m_1C && pj->m_31C == NULL)
+      CreatePlayerController(pj, 1);      // FUN_007b2630
+  ```
+- `CreatePlayerController` (`0x7B2630`) reserva 0x4C bytes, los construye con `FUN_0078fb90(personaje)`, pone `controlador+0x48 = 1` (activo) y guarda `personaje+0x31C = controlador`.
+- **Un personaje con la definición del jugador (`def+0x1C` y `def+0x1F`) recibe su propio controlador de jugador**, entra al vector de jugadores (`FinishSpawning`) y el Alien lo trata como "jugador" (`CONDITION_TARGET_IS_PLAYER` mira `+0x31C`/`+0x48`, hallazgo 08).
+- **Riesgo para el diseño (sin verificar):** el controlador probablemente lee el **input local**. Un segundo personaje-jugador en la misma máquina podría moverse con el mismo teclado/mando. Para el avatar del jugador remoto habría que:
+  - (a) desactivar su controlador (`+0x48 = 0`), sabiendo que eso también lo saca de `TargetIsPlayer`; o
+  - (b) alimentar su controlador con el input recibido por red; o
+  - (c) moverlo por transform (`SetTransform`, hallazgo 03) sin controlador.
+
+  NETZ (hallazgo 10) resolvía esto con personajes "logic" (en el host) y "display" (en los clientes).
