@@ -131,12 +131,13 @@ sesión tipo 0x2E (0xF0 bytes) → FUN_00414a70(ctx = CM+0x04)
 | 7 | NPC existente + teleport | crash en el primer teleport: `MOVAPS` desalineado (error del mod) |
 | 8 | NPC existente + teleport alineado | **OK 20 s**: el INNOCENT "CV5" sigue al jugador a 1,5 m, sin errores; el usuario lo vio |
 | 8 | clon por `SpawnCharacter` (clave 64) | crash en `RequestCharacter` → `FUN_006ad740`: el recurso que se busca por la clave nueva es NULL (`FUN_00a2bc70` sin chequeo) |
+| 9 | **avatar por red**, las dos máquinas con `AIMP_GHOST=3` (laptop Windows en join, papito Proton en host) | **OK en los dos sentidos**: en cada máquina un INNOCENT siguió al jugador de la otra (media 0,18 m del objetivo, 0 perdidos, 0 excepciones). El usuario: "nos vemos mutuamente" |
 
 ## Decisión (fase 4 v1)
 
 El avatar del otro jugador es **un NPC humano del nivel** (`AIMP_GHOST=3`). Se lo teletransporta en cada frame a la posición y el yaw recibidos por red, sin límite de tiempo, y si desaparece se elige otro.
 
 Pendiente:
-- prueba por red con la laptop (`instructions.md`, paso 6);
+- ~~prueba por red con la laptop~~: hecha (corrida 9);
 - después, que no se note la IA del NPC (animación, que no se escape ni ataque);
 - crear un personaje nuevo de verdad: reutilizar la clave de uno liberado, o preparar sus recursos.
