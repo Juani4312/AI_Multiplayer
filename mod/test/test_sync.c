@@ -253,7 +253,7 @@ int main(void)
     expect(log, "SYNC   no se manda: el objetivo empieza con un prefijo de AIMP_SYNC_USE_SKIP", 1);
     expect(log, "SYNC   mandado al otro jugador (evento 2", 0);
     expect(log, "objetivo eed179bb3c7301a5, personaje 1c3460b37e03a5dc, flag 00000000", 1);
-    expect(log, "SYNC: aplicando uso remoto (evento 7): objetivo 044106b16f529959, RPC A 0x26", 1);
+    expect(log, "SYNC: aplicando uso remoto (evento 7): objetivo 044106b16f529959, RPC A 0x26, personaje = el jugador local (2ff722b2099d5b9b)", 1);
     expect(log, "del nivel 9; acá el nivel es 16: se ignora", 1);
     expect(log, "todavía no está asignado: se ignora el evento 9", 1);
     expect(log, "SYNC handler A del uso 1: ctx 0x", 1);

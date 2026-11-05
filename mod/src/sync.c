@@ -20,6 +20,7 @@
  */
 #include "sync.h"
 #include "game.h"
+#include "ghost.h"
 #include "hook.h"
 #include "log.h"
 
@@ -33,7 +34,7 @@ static AimpHook g_hk_use, g_hk_ha, g_hk_hs;
 static UseFn g_use_orig;
 static HandlerFn g_ha_orig, g_hs_orig;
 static AimpNet *g_net;
-static int g_on;
+static int g_on, g_actor = 1; /* quién usa lo que llega: 1 = el avatar (si hay), 0 = el jugador local */
 static volatile uint32_t g_level;
 static volatile LONG g_n_use, g_n_ha, g_n_hs;
 /* Prefijos de objetivo (primeros 4 bytes del id, en hex como en el log) cuyos usos no se mandan:
@@ -155,6 +156,9 @@ int sync_install(AimpNet *net)
     if (!trace && !g_on)
         return 0;
     g_net = net;
+    /* Corrida 11: con el jugador local como personaje, un botón remoto lo teletransporta al botón.
+     * Con el avatar (el NPC que ya está donde está el otro), el que se mueve es el avatar. */
+    g_actor = aimp_env_int(L"AIMP_SYNC_USE_ACTOR", 1);
     wchar_t wskip[128];
     if (aimp_env_str(L"AIMP_SYNC_USE_SKIP", wskip, 128))
         aimp_utf8(g_skip, sizeof g_skip, wskip);
@@ -197,11 +201,16 @@ void sync_frame(AimpNet *net, uint32_t level)
                        level);
             continue;
         }
-        uint32_t pl = local_player();
+        uint32_t pl = g_actor ? ghost_avatar() : 0;
+        const char *who = "el avatar";
+        if (!pl) {
+            pl = local_player();
+            who = "el jugador local";
+        }
         uint8_t p[20];
         aimp_memcpy(p, e.data, sizeof p);
         if (!pl || !mem_read(pl + CHR_ID, p + 8, 8)) {
-            log_printf("SYNC: uso remoto (evento %u) sin jugador local: se ignora", e.seq);
+            log_printf("SYNC: uso remoto (evento %u) sin jugador local ni avatar: se ignora", e.seq);
             continue;
         }
         uint16_t type = *(volatile uint16_t *)(g_aimp_exe + AIMP_RVA_USE_TYPE_A);
@@ -209,8 +218,10 @@ void sync_frame(AimpNet *net, uint32_t level)
             log_printf("SYNC: el id del RPC de uso todavía no está asignado: se ignora el evento %u", e.seq);
             continue;
         }
-        log_printf("SYNC: aplicando uso remoto (evento %u): objetivo %s, RPC A 0x%x, personaje = jugador local, flag %08x", e.seq, t,
-                   type, rd32(p + 16));
+        char cid[17];
+        hex8(cid, p + 8);
+        log_printf("SYNC: aplicando uso remoto (evento %u): objetivo %s, RPC A 0x%x, personaje = %s (%s), flag %08x", e.seq, t,
+                   type, who, cid, rd32(p + 16));
         ((EnqueueFn)(void *)(g_aimp_exe + AIMP_RVA_ENQUEUE_A))(type, p, sizeof p);
     }
     net_send_events(net);
