@@ -43,11 +43,13 @@ _Última actualización: 2026-11-05 (sesión autónoma: el usuario pidió seguir
 | Hallazgo 01 (inventario) | ✅ `findings/01-inventario.md` |
 | Hallazgo 02 (game loop) | ✅ `findings/02-game-loop.md` (hook: `ModeManager::Run` RVA 0x3A8460) |
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
-| Mod fase 1+2 (proxy winmm + hook + log de posición) | ⏳ siguiente (compilar; probar requiere confirmación) |
+| Mod fase 1+2 (proxy winmm + hook + log de posición) | ⏸️ pendiente, a hacer en una sesión con el usuario |
+| Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
+| Hallazgo 10 (NETZ: red del engine) | ⏳ siguiente |
 | Hash del AI.exe del amigo | ⏳ cuando reinstale (no bloquea hasta la fase 3) |
 | KnownDLLs del amigo | ⏳ `reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs"` |
 
 ## Siguiente paso
-1. Escribir la fase 1+2 del mod en `mod/`: proxy `winmm.dll` (reexporta todo hacia la winmm del sistema), hook en `ModeManager::Run` (RVA 0x3A8460) con verificación de bytes, log por frame del estado del ModeManager y de la posición/yaw del jugador. Compilar con mingw. **Probar en el juego requiere confirmación del usuario.**
-2. Hallazgo 04 (cámara): RTTI `CATHODE::PlayerCamera` (vftable `0x1315D34`), `GetCurrentCameraPos`/`Target`/`Fov`.
-3. Hallazgo 05 (creación de entidades): quién llena `[[g_root+8]+0x80]`, constructor de `Character` `0x7B2390` y su factory.
+1. **Hallazgo 10 (NETZ, red del engine)**: `NETZ_DISPATCH` → `[g_root+0x04]->FUN_007dde20()`; `NET_AI_UPDATE` → `FUN_007dfd70`/`FUN_007dd970`. Quién crea `g_root+0x04`, qué transporte usa (WS2_32/WSOCK32), si está activo en retail. Puede cambiar el diseño de la red del mod.
+2. Hallazgo 05 (creación de entidades): quién llena `[[g_root+8]+0x80]`, constructor de `Character` `0x7B2390` y su factory.
+3. Mod fase 1+2: pendiente, para hacer junto con el usuario.
