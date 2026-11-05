@@ -312,3 +312,13 @@ Autorizado por el usuario ("corré y modificá lo que necesites, siempre que lo 
   - `DATA/ENV/PRODUCTION/BSP_LV426_PT01/WORLD/COMMANDS.PAK`: `DDA19F70AB8ABE5194FA7A372A680ED8C5AAE6A30842101547DA8F724F48A47F`
   - `DATA/ENV/PRODUCTION/TECH_COMMS/WORLD/COMMANDS.PAK`: `42FD34D7FAF7EA9A22B961D7C6A0C12700FA90327CA1F796F445CC958ECBDD3A`
 - Si en la laptop verificada difieren, los de la laptop son los vanilla y se confirma que los de `papito` son del mod. Si son iguales, los de `papito` ya eran vanilla. La comparación vuelve en `work/windows/report.md` (agregado al paso 1 de `work/windows/instructions.md`).
+
+## 2026-11-05 — Pruebas en Windows 10 nativo (laptop), pasos 1 y 2
+Evidencia: `work/windows/report.md` y `work/windows/logs/aimp-partida-20261105-110343.log` (commit c0d31b1, hecho por la sesión de Claude Code en la laptop, con el kit del commit 31fe898).
+- Windows 10 Home 10.0.19045, 64-bit. `AI.exe` SHA-256 dde66521…19a90, buildid 4940658: **misma build**. En la carpeta del juego solo estaban las DLLs oficiales (AMD_AGS, ATIAGS, CRASHREPORTER32, STEAM_API): la copia por red local desde `papito` **no trajo** ReShade ni MovieFix.
+- **winmm no está en KnownDLLs** (lista completa en el reporte). Instalar en `Program Files (x86)\Steam\…` no pidió administrador.
+- `proxy: winmm real = C:\Windows\system32\winmm.dll`, **195 exports resueltos, 10 ausentes**: DrvClose DrvDefDriverProc DrvOpen DrvOpenA DrvSendMessage GetDriverFlags OpenDriverA mmioInstallIOProc16 winmmDbgOut winmmSetDebugLevel. El juego no llamó a ninguno: no hubo cartel del stub.
+- `build reconocida`. Hook en `0x00d08460` → **base de `AI.exe` 0x00960000: ASLR la reubicó** (en Proton carga en 0x400000). El mod trabaja con RVAs y anduvo igual: confirma la decisión del hallazgo 01.
+- `FASE 1` a los 35,1 s (Frontend). Carga de Tech_Hub (nivel 16): J0 `Character(ok)`, 41 resúmenes con movimiento, `MARCA 1` con la posición. fps promedio 58,1. Salida limpia (`ModeManager::Run devolvió 0`, `DLL_PROCESS_DETACH`), sin errores en el Visor de eventos.
+- **Fases 1 y 2 verificadas también en Windows nativo.**
+- Detalle del kit: PowerShell 5.1 lee el log UTF-8 como ANSI (`mÃ³dulos`) si no se le pasa `-Encoding UTF8`. Las líneas que copia `collect` al reporte salen bien.
