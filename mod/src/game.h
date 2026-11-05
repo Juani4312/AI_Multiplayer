@@ -101,6 +101,20 @@ static const uint8_t AIMP_MODEMGR_RUN_PROLOGUE[10] __attribute__((unused)) = {
 #define SESSION_QDATA             0x18
 #define SESSION_QSIZE             0x1C
 
+/* ---- Catálogo de endpoints RPC (hallazgo 10, partes 5 y 7; experimento 3.5) ----
+ * Listas estáticas que llenan inicializadores globales; RegisterAll asigna los ids en
+ * el orden de la lista: cola A = FUN_00a2a2b0 (lista DAT_01be1bcc, tabla [colaA+0x08],
+ * cantidad +0x0C); sesión = FUN_00a2a620 (lista DAT_01be1bd0, tabla [sesión+0x08]).
+ * Endpoint: +0x00 next, +0x04 fn (handler: fn(ctx, payload) -> bytes), +0x08 ctx, +0x0C u16 tipo. */
+#define AIMP_RVA_RPC_LIST_A       0x017E1BCCu
+#define AIMP_RVA_RPC_LIST_S       0x017E1BD0u
+#define EP_NEXT                   0x00
+#define EP_FN                     0x04
+#define EP_CTX                    0x08
+#define EP_TYPE                   0x0C
+#define QA_NHANDLERS              0x0C
+#define SESSION_NHANDLERS         0x0C
+
 /* ---- Productores de mensajes (hallazgo 10, parte 3; experimento 3.6) ----
  * Wrappers cdecl (tipo u16, datos, tamaño) -> encolar. Prólogo verificado en el
  * archivo, sin relocations en los 14 bytes:

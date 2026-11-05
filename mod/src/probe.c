@@ -45,7 +45,7 @@ static uint64_t g_qa_sum;
 static uint32_t g_qb_max, g_qb_frames_nz;
 static uint64_t g_qb_sum;
 static int64_t g_trace_ticks, g_last_trace;
-static int g_warned_qa;
+static int g_warned_qa, g_rpc_listed;
 static uint32_t g_status_frame_game;
 static float g_status_pos[3];
 static int g_status_pos_ok;
@@ -184,6 +184,27 @@ static void list_levels(const Snap *s)
     }
 }
 
+/* Experimento 3.5: recorre una lista estática de endpoints RPC (solo lectura). */
+static void log_rpc_list(const char *name, uint32_t head_rva)
+{
+    uint32_t ep = *(volatile uint32_t *)(g_aimp_exe + head_rva), n = 0;
+    log_printf("RPC lista %s (global rva 0x%x): cabeza 0x%08x", name, head_rva, ep);
+    while (ep && n < 2048) {
+        uint32_t next = 0, fn = 0, ctx = 0;
+        uint16_t type = 0;
+        if (!mem_u32(ep + EP_NEXT, &next) || !mem_u32(ep + EP_FN, &fn) || !mem_u32(ep + EP_CTX, &ctx) ||
+            !mem_read(ep + EP_TYPE, &type, 2)) {
+            log_printf("RPC   %s: endpoint ilegible en 0x%08x", name, ep);
+            break;
+        }
+        log_printf("RPC   %s tipo 0x%04x handler rva 0x%x ctx 0x%08x endpoint rva 0x%x", name, type, rva(fn), ctx,
+                   rva(ep));
+        ep = next;
+        n++;
+    }
+    log_printf("RPC lista %s: %u endpoints", name, n);
+}
+
 static void snap_events(const Snap *a, const Snap *b, uintptr_t mm_this)
 {
 #define CHG(f) (a->f != b->f)
@@ -202,6 +223,18 @@ static void snap_events(const Snap *a, const Snap *b, uintptr_t mm_this)
     if (CHG(level_cur) || aimp_memcmp(a->level_name, b->level_name, sizeof a->level_name) != 0)
         log_printf("EV nivel actual %d \"%s\" -> %d \"%s\"", (int)a->level_cur, a->level_name, (int)b->level_cur,
                    b->level_name);
+    if (!g_rpc_listed && b->qa) {
+        uint32_t na = 0, ns = 0;
+        mem_u32(b->qa + QA_NHANDLERS, &na);
+        if (b->sess_g)
+            mem_u32(b->sess_g + SESSION_NHANDLERS, &ns);
+        if (na) { /* RegisterAll ya corrió */
+            g_rpc_listed = 1;
+            log_printf("EV tablas de handlers: cola A %u, sesión %u", na, ns);
+            log_rpc_list("A", AIMP_RVA_RPC_LIST_A);
+            log_rpc_list("sesión", AIMP_RVA_RPC_LIST_S);
+        }
+    }
     if (!g_levels_listed && b->levels && b->level_count && b->level_count <= LEVELS_MAX) {
         g_levels_listed = 1;
         list_levels(b);

@@ -45,7 +45,7 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 | Hallazgo 03 (entidad del jugador) | ✅ `findings/03-jugador.md` (`GetPlayer` RVA 0x38BAF0; pos +0x70, yaw +0x174) |
 | Mod fase 1+2 (proxy winmm + hook + log de posición) | 🟡 **implementado y probado fuera del juego** (`mod/`, tests con wine OK). Falta la corrida en el juego (requiere al usuario) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
-| Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–3 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; colas de mensajes con 70+ productores) |
+| Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–7 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; cola A en loopback; **cola B = salida a la red, descartada en retail**; registro de handlers de la cola A) |
 | Hallazgo 05 (creación de personajes) | 🟡 partes 1–2 en `findings/05-creacion-de-personajes.md` (FinishSpawning, controlador de jugador, request y spawner de script) |
 | Hallazgo 08 (IA y múltiples jugadores) | 🟡 parte 1 en `findings/08-ia-y-multiples-jugadores.md` (IA mixta) |
 | Hallazgo 09 (niveles/checkpoints/guardado) | 🟡 parte 1 en `findings/09-niveles-checkpoints-guardado.md` |
@@ -76,10 +76,10 @@ _Última actualización: 2026-11-05, tarde (sesión autónoma: el usuario pidió
 0. Leer `mod/README.md`, `work/RUNTIME_PLAN.md` y `work/DESIGN_OPTIONS.md`.
 1. **Con el usuario:** primera corrida del mod (pendiente 2). El log responde los bloques 0–3 del plan de runtime: offsets base, jugador, cámara, NETZ y crecimiento de la cola A. Con eso se cierra la fase 2 y se decide la arquitectura (A/B/C de `DESIGN_OPTIONS.md`).
 2. Después de esa corrida:
-   - si la cola A crece por frame, hacer el experimento 3.5/3.6: hook del despacho `FUN_00a2a220` para registrar tipo, handler y bytes de cada mensaje;
+   - si las colas crecen por frame, segunda corrida con `AIMP_TRACE_QUEUES=1` (experimento 3.6: tipo, tamaño y call site de cada mensaje; el catálogo tipo → handler, 3.5, ya sale en la primera corrida). Con eso, mapear offline cada tipo a su productor y su handler;
    - fase 3: UDP mínimo con la posición.
 3. Estático pendiente:
    - 05 parte 2: definición del jugador para el spawn de un segundo personaje;
-   - 10: quién llena la tabla de handlers de la cola A;
+   - 10: lado de recepción de la sesión (quién despacha lo que entregaría el proveedor) y `FUN_00a2a520`;
    - 06 parte 2, 09 parte 2 (dispatcher de comandos de UI), 07 parte 2 (inventario);
    - 04: matrices de vista/proyección (mejor en runtime).
