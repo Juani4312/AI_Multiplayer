@@ -415,3 +415,24 @@ Evidencia: `work/evidence/runtime/run8-ghost-npc-ok.log` (gitignored).
   - En `FUN_006ad740`, la búsqueda de un recurso (`FUN_00a2adc0()->vf[3]()`) devuelve 0 para el clon. Guarda 0 en `pj+0x338` y llama al getter sin chequear.
   - Hipótesis: el nivel precarga recursos por clave de spawn y la clave nueva (64) no tiene. Crear personajes **nuevos** requiere reutilizar la clave de uno liberado, o preparar esos recursos. Queda para más adelante.
 - **Decisión para la fase 4 v1: el avatar del otro jugador es un NPC humano del nivel** (`AIMP_GHOST=3`). Sigue sin límite (`AIMP_GHOST_NPC_MS` ≤ 0) y, si el NPC desaparece, elige otro. Falta la prueba por red (laptop con `aimp_check.ps1 … -Ghost 3`).
+
+## 2026-11-05 — Corrida 9: **avatar por red en los dos sentidos** (fase 4 v1)
+Evidencia:
+- papito (host, Proton): `work/evidence/runtime/run9-avatar-red-host.log` (gitignored);
+- laptop (join, Windows 10): `work/windows/logs/aimp-avatar-20261105-125704.log` y `work/windows/report.md`, paso 6.
+
+Ambas con `AIMP_GHOST=3` (DLL `c2f86d1`), en Tech_Hub, por Tailscale (directo por LAN).
+- **Laptop:**
+  - el INNOCENT "CV5" siguió al jugador de papito en 141 resúmenes `[red]`, con 640 teleports y 27 objetivos distintos;
+  - distancia al objetivo: media 0,181 m, máxima 4,34 m (una sola muestra, justo después del primer teleport);
+  - 3 marcas F8, ninguna excepción, salida limpia;
+  - red: 3858 enviados, 3612 recibidos, 0 perdidos, ~20/s en cada sentido; 60 fps.
+- **papito:**
+  - el mismo NPC ("CV5", `NPCs[1]`) siguió al jugador de la laptop en 152 resúmenes `[red]`;
+  - media 0,185 m, máxima 0,47 m;
+  - 3553 recibidos, 0 perdidos, 0 excepciones.
+  - Mientras la laptop estaba en el menú o cargando, el civil quedó en el modo local (+1,5 m). Pasó a `[red]` en cuanto llegó "nivel 16 con jugador". Después del BYE de la laptop volvió al modo local.
+- **El usuario:** "ya estoy metido en ambos y nos vemos mutuamente". **La fase 4 v1 funciona entre Windows nativo y Linux/Proton.**
+- La cadencia fija de la red se ve en la práctica: ~20/s de los dos lados (antes, ~16/s).
+- El descarte del backlog también: `NET: descartados 221 paquetes que llegaron antes del primer frame`.
+- Desvío del NPC con el objetivo quieto: 0,1 a 0,35 m, por su IA. Arreglado en `8bc1f7e` (se lo vuelve a poner si se aleja más de 2 cm), sin probar todavía.
