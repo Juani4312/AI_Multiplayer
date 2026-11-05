@@ -361,3 +361,26 @@ Dato de la laptop (`work/windows/report.md`, "COMMANDS.PAK en la laptop"):
 - Teleport: `FUN_007c6330(pj, pos*, yaw, p3)`, `ret 0xC` → `SetTransform(pj, pos, yaw, p3, 0)`.
 - Código: `mod/src/ghost.c` (`AIMP_TRACE_SPAWN`, `AIMP_GHOST`, `AIMP_GHOST_DELAY_MS`, `AIMP_GHOST_FROM`), `mem_write` en `mem.c`. Test nuevo `test_ghost`: stubs de código máquina en las RVAs reales, con los prólogos y el `ret N` originales; verifica el balance del stack, la captura, la máquina de estados, el controlador, el teleport y el reinicio por nivel. **Todos los tests OK.**
 - Falta: la corrida en el juego (requiere al usuario).
+
+## 2026-11-05 — Corrida 6 (fase 4, `AIMP_GHOST=1`): el clon por el spawn de autoridad hizo caer el juego
+Evidencia: `work/evidence/runtime/run6-ghost.log` (gitignored).
+- Hook en `FUN_00797490` instalado en el juego real. Al cargar Tech_Hub, 6 pedidos con nombre:
+  - 1 = `THE_PLAYER` (tipo 0, id `2ff722b2099d5b9b`);
+  - 2–5 = `INNOCENT` (tipo 6);
+  - 6 = `ALIEN` (tipo 1).
+
+  **`+0xA4` es el nombre de la definición** (`CHR_INFO/ATTRIBUTES`), no el composite. `+0x64` (nombre) viene vacío.
+- Pedidos completos: **posición en `+0x50…+0x5B`** y **yaw en `+0x60`** (el del jugador: (4,55, 13,62, 33,59) y −π, el punto de guardado).
+  - `+0xF0` = la clave otra vez: 1, 2, 6.
+  - El del jugador además trae tres refs en `+0x04…+0x0C` y `+0x4C` = 1.
+  - Los INNOCENT traen bloques en `+0x100` (6 ShortGuids) y `+0x118` (0…5), con `+0xF4` = 1.
+- `this` del spawn de autoridad = `0x07809f10`, vtable `0x12F6900`, igual al `ctx` del endpoint A 0x29. Su **`vf[1]` es `ret 4` (vacío)** y su `vf[2]` es `mov al,1; ret 4`. En retail ni el spawn de autoridad ni el handler del 0x29 (`FUN_00414d10`) crean el personaje: solo avisan a listas de observadores y reenvían a la cola B.
+  - Las cuatro listas (`0x16F322C`/`0x16F3230`, `0x16A6728`/`0x16A672C`) tienen **una sola referencia cada una en todo el binario**, la lectura de su dispatcher. No hay escritores, ni con base cercana: casi seguro están vacías.
+- `GHOST: clonando…` con clave 64 → el spawn volvió (1 jugador, 5 NPCs, 0 pendientes). **El juego se cerró en el frame siguiente**, sin `DLL_PROCESS_DETACH`. El log no tiene buffer (`WriteFile` por línea) y el mod solo hace lecturas seguras en ese estado, así que fue dentro del `Run` del juego. Sin evidencia de dónde: no había registro de excepciones.
+- Sospecha concreta: en el clon quedó `+0xF0` = 1 (la clave original) con `+0x00` = 64.
+- Cambios para la corrida 7:
+  - `crash.c`: VEH que loguea excepciones de crash (código, módulo+RVA, acceso, registros, retornos a `.text`), probado en `test_ghost`;
+  - hook también en `SpawnCharacter` (`0x7D3B50`, prólogo `51 53 55 56 57 8B 7C 24 18`, `ret 4`);
+  - log de las cuatro listas de observadores;
+  - clon por `SpawnCharacter` (no por la autoridad) con la clave en `+0x00` y en `+0xF0`;
+  - modo `AIMP_GHOST=2`: primero mueve un INNOCENT existente 20 s (prueba del teleport) y después intenta el clon.

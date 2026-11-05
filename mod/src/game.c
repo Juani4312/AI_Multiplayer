@@ -1,5 +1,6 @@
 /* Verificación de la build y hook del loop principal. */
 #include "game.h"
+#include "crash.h"
 #include "ghost.h"
 #include "hook.h"
 #include "log.h"
@@ -75,6 +76,7 @@ int game_init(void)
         log_printf("AIMP_NOHOOK=1: sin hooks");
         return 0;
     }
+    crash_install(); /* AIMP_CRASHLOG=0 lo apaga */
     probe_init();
     if (!hook_install(&g_hook_run, "ModeManager::Run", (void *)(g_aimp_exe + AIMP_RVA_MODEMGR_RUN),
                       AIMP_MODEMGR_RUN_PROLOGUE, sizeof AIMP_MODEMGR_RUN_PROLOGUE, AIMP_MODEMGR_RUN_STEAL,

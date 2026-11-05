@@ -1,46 +1,58 @@
 /* Fase 4 (experimental): avatar del jugador remoto ("ghost"). Hallazgo 12.
  *
- * El spawn de autoridad del engine es FUN_00797490 (thiscall(this, pedido*, flag), ret 8):
- * avisa a dos listas de observadores, llama a this->vf[1](pedido) (SpawnCharacter) y
- * encola una copia del pedido de 0x130 bytes como RPC (A 0x29, hallazgo 11).
+ * Lo que se sabe (corrida 6):
+ * - El spawn de autoridad FUN_00797490 (thiscall(this, pedido*, flag), ret 8) recibe un
+ *   `this` cuyo vf[1] es un `ret 4` vacío: solo avisa a dos listas de observadores (vacías
+ *   en el binario) y encola la copia del pedido como RPC A 0x29. El handler del 0x29 tampoco
+ *   crea nada (vf[2] = `mov al,1; ret 4`). Clonar el pedido por ahí hizo caer el juego en el
+ *   frame siguiente, sin que se sepa todavía dónde.
+ * - Por eso ahora también se hookea SpawnCharacter (0x7D3B50, thiscall(interfaz, pedido*),
+ *   ret 4), que según el hallazgo 05 es quien crea el personaje.
  *
- * - AIMP_TRACE_SPAWN=1: hook en esa función. Guarda `this` y una copia de cada pedido, y
- *   los loguea decodificados (clave, tipo, id, nombres) con el volcado completo. Solo mira.
- * - AIMP_GHOST=1 (implica el hook): AIMP_GHOST_DELAY_MS después de que aparece el jugador
- *   local, clona el último pedido del jugador (tipo 0; o el de clave AIMP_GHOST_FROM) con
- *   otra clave y otro id, y llama a la función original con el mismo `this`. Cuando el
- *   personaje nuevo aparece en un vector del CharacterManager, le apaga el controlador de
- *   jugador (+0x31C -> +0x48 = 0, para que no lea el input local) y en cada frame lo
- *   teletransporta (FUN_007c6330) a la posición del otro jugador si hay red y están en el
- *   mismo nivel; si no, a 1,5 m del jugador local.
+ * Variables:
+ * - AIMP_TRACE_SPAWN=1: solo mira. Loguea los pedidos de los dos hooks ("SP" y "SC") y las
+ *   cuatro listas de observadores.
+ * - AIMP_GHOST (implica el trazado):
+ *     1 = clon: AIMP_GHOST_DELAY_MS después de que aparece el jugador, clona su pedido (tipo 0)
+ *         con otra clave (+0x00 y +0xF0) y otro id, y llama a SpawnCharacter con el mismo
+ *         `this` que usó el juego. Si no se vio SpawnCharacter, no clona.
+ *     2 = NPC y después clon: primero mueve un NPC existente (AIMP_GHOST_NPC_TYPE, 6 =
+ *         INNOCENT) durante AIMP_GHOST_NPC_MS, y después hace el clon.
+ *     3 = solo NPC.
+ *   Al clon le apaga el controlador de jugador (+0x31C -> +0x48 = 0). Al personaje elegido
+ *   (clon o NPC) lo teletransporta en cada frame con FUN_007c6330: a la posición del otro
+ *   jugador si hay red y están en el mismo nivel, o a 1,5 m en x del jugador local.
  *
- * Esto sí escribe en el juego y llama a funciones del engine. Cada paso se loguea antes de
- * hacerlo: si el juego se cae, la última línea del log dice dónde.
+ * Esto escribe en el juego y llama a funciones del engine. Cada paso se loguea antes de
+ * hacerlo; si el juego se cae, el registro de excepciones (crash.c) dice dónde.
  */
 #include "ghost.h"
 #include "game.h"
 #include "hook.h"
 #include "log.h"
 
-#define MAX_REQS 32  /* anillo de pedidos capturados */
-#define LOG_REQS 24  /* pedidos con volcado completo por sesión */
+#define MAX_REQS 32 /* anillo de pedidos capturados */
+#define LOG_REQS 24 /* pedidos con volcado completo por sesión */
+#define LOG_SC 24
 #define MAX_CHARS 64
 #define MAX_ATTEMPTS 4
 
 typedef void(__attribute__((fastcall)) * SpawnAuthFn)(void *self, void *edx, void *req, uint32_t flag);
+typedef uint32_t(__attribute__((fastcall)) * SpawnCharFn)(void *self, void *edx, void *req);
 typedef void(__attribute__((fastcall)) * TeleportFn)(void *self, void *edx, const float *pos, float yaw, uint32_t p3);
 
-enum { G_OFF, G_WAIT_PLAYER, G_DELAY, G_FIND, G_ACTIVE, G_DONE };
+enum { G_OFF, G_WAIT_PLAYER, G_DELAY, G_NPC, G_FIND, G_ACTIVE, G_DONE };
 
-static AimpHook g_hook;
-static SpawnAuthFn g_spawn_orig;
+static AimpHook g_hook_auth, g_hook_sc;
+static SpawnAuthFn g_auth_orig;
+static SpawnCharFn g_sc_orig;
 static TeleportFn g_teleport;
-static volatile uintptr_t g_this; /* `this` del último spawn visto */
+static volatile uintptr_t g_this, g_sc_this; /* `this` del último spawn de autoridad / SpawnCharacter */
 static uint8_t g_req[MAX_REQS][SPAWN_REQ_SIZE];
-static volatile LONG g_nreq; /* pedidos vistos en la sesión */
+static volatile LONG g_nreq, g_nsc;
 static uint8_t g_clone[SPAWN_REQ_SIZE];
-static int g_ghost, g_state = G_OFF, g_from_key = -1;
-static int64_t g_freq = 1, g_delay_ticks, g_t0, g_deadline, g_last_log, g_last_tp;
+static int g_mode, g_state = G_OFF, g_from_key = -1, g_npc_type = 6, g_obs_logged;
+static int64_t g_freq = 1, g_delay_ticks, g_npc_ticks, g_t0, g_deadline, g_last_log, g_last_tp;
 static uint32_t g_player, g_chr, g_before[2 * MAX_CHARS], g_nbefore, g_attempts, g_tps;
 static float g_last_pos[3], g_last_yaw;
 
@@ -77,20 +89,23 @@ static void id_str(char *out, const uint8_t *id) /* 8 bytes en orden de memoria,
 
 static void log_request(const char *tag, long n, uintptr_t self, const uint8_t *r, uintptr_t from)
 {
-    char name[0x41], comp[0x41], id[17];
+    char name[0x41], def[0x41], id[17];
     uint32_t vt = 0, vf1 = 0;
+    float pos[3], yaw;
     sanitize(name, r + SREQ_NAME, sizeof name);
-    sanitize(comp, r + SREQ_COMPOSITE, sizeof comp);
+    sanitize(def, r + SREQ_COMPOSITE, sizeof def);
     id_str(id, r + SREQ_ID);
+    aimp_memcpy(pos, r + SREQ_POS, sizeof pos);
+    aimp_memcpy(&yaw, r + SREQ_YAW, sizeof yaw);
     if (self && mem_u32(self, &vt) && vt)
         mem_u32(vt + 4, &vf1);
-    log_printf("SP %s %ld: this 0x%08x (vtable rva 0x%x, vf[1] rva 0x%x), desde rva 0x%x | clave %u tipo %u id %s | \"%s\" / \"%s\"",
-               tag, n, (unsigned)self, rva(vt), rva(vf1), rva((uint32_t)from), rd32(r + SREQ_KEY), rd32(r + SREQ_TYPE),
-               id, name, comp);
+    log_printf("%s %ld: this 0x%08x (vtable rva 0x%x, vf[1] rva 0x%x), desde rva 0x%x | clave %u/%u tipo %u id %s | \"%s\" / \"%s\" | pos=(%.2f, %.2f, %.2f) yaw=%.3f",
+               tag, n, (unsigned)self, rva(vt), rva(vf1), rva((uint32_t)from), rd32(r + SREQ_KEY), rd32(r + SREQ_KEY2),
+               rd32(r + SREQ_TYPE), id, name, def, (double)pos[0], (double)pos[1], (double)pos[2], (double)yaw);
 }
 
-__attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_spawn(void *self, void *edx, void *req,
-                                                                                 uint32_t flag)
+__attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_auth(void *self, void *edx, void *req,
+                                                                                uint32_t flag)
 {
     if (req) {
         LONG n = InterlockedIncrement(&g_nreq);
@@ -98,48 +113,108 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_spa
         aimp_memcpy(slot, req, SPAWN_REQ_SIZE);
         g_this = (uintptr_t)self;
         if (n <= LOG_REQS) {
-            log_request("pedido", n, (uintptr_t)self, slot, (uintptr_t)__builtin_return_address(0));
+            log_request("SP pedido", n, (uintptr_t)self, slot, (uintptr_t)__builtin_return_address(0));
             log_hexdump("SP   volcado", (uintptr_t)slot, SPAWN_REQ_SIZE);
         }
     }
-    g_spawn_orig(self, edx, req, flag);
+    g_auth_orig(self, edx, req, flag);
+}
+
+__attribute__((fastcall, force_align_arg_pointer, noinline)) static uint32_t det_sc(void *self, void *edx, void *req)
+{
+    LONG n = InterlockedIncrement(&g_nsc);
+    g_sc_this = (uintptr_t)self;
+    if (req && n <= LOG_SC) {
+        uint8_t r[SPAWN_REQ_SIZE];
+        if (mem_read((uintptr_t)req, r, sizeof r)) {
+            /* ¿Es el mismo pedido que el último del spawn de autoridad? */
+            LONG k = g_nreq;
+            int same = k > 0 && aimp_memcmp(r, g_req[(k - 1) % MAX_REQS], 0xE4) == 0;
+            log_request("SC SpawnCharacter", n, (uintptr_t)self, r, (uintptr_t)__builtin_return_address(0));
+            log_printf("SC   pedido en 0x%08x; %s", (unsigned)(uintptr_t)req,
+                       same ? "igual al último del spawn de autoridad (0xE4 bytes)" : "distinto del último del spawn de autoridad");
+        } else {
+            log_printf("SC SpawnCharacter %ld: this 0x%08x, pedido 0x%08x ilegible", (long)n, (unsigned)(uintptr_t)self,
+                       (unsigned)(uintptr_t)req);
+        }
+    }
+    uint32_t r = g_sc_orig(self, edx, req);
+    if (n <= LOG_SC)
+        log_printf("SC   devolvió 0x%08x", r);
+    return r;
 }
 
 int ghost_install(void)
 {
-    g_ghost = aimp_env_int(L"AIMP_GHOST", 0);
-    if (!g_ghost && !aimp_env_int(L"AIMP_TRACE_SPAWN", 0))
+    g_mode = aimp_env_int(L"AIMP_GHOST", 0);
+    if (g_mode < 0 || g_mode > 3)
+        g_mode = 0;
+    if (!g_mode && !aimp_env_int(L"AIMP_TRACE_SPAWN", 0))
         return 0;
     LARGE_INTEGER f;
     QueryPerformanceFrequency(&f);
     g_freq = f.QuadPart ? f.QuadPart : 1;
     uint8_t got[sizeof AIMP_CHR_TELEPORT_PROLOGUE];
     uintptr_t tp = g_aimp_exe + AIMP_RVA_CHR_TELEPORT;
-    if (g_ghost && (!mem_read(tp, got, sizeof got) || aimp_memcmp(got, AIMP_CHR_TELEPORT_PROLOGUE, sizeof got) != 0)) {
+    if (g_mode && (!mem_read(tp, got, sizeof got) || aimp_memcmp(got, AIMP_CHR_TELEPORT_PROLOGUE, sizeof got) != 0)) {
         log_printf("GHOST: el prólogo de FUN_007c6330 (teleport) no coincide; AIMP_GHOST queda apagado");
-        g_ghost = 0;
+        g_mode = 0;
     }
     g_teleport = (TeleportFn)(void *)tp;
-    if (!hook_install(&g_hook, "spawn de autoridad (FUN_00797490)", (void *)(g_aimp_exe + AIMP_RVA_SPAWN_AUTH),
-                      AIMP_SPAWN_AUTH_PROLOGUE, sizeof AIMP_SPAWN_AUTH_PROLOGUE, AIMP_SPAWN_AUTH_STEAL,
-                      (void *)det_spawn, (void **)&g_spawn_orig)) {
-        g_ghost = 0;
-        return 0;
+    int ok = hook_install(&g_hook_auth, "spawn de autoridad (FUN_00797490)", (void *)(g_aimp_exe + AIMP_RVA_SPAWN_AUTH),
+                          AIMP_SPAWN_AUTH_PROLOGUE, sizeof AIMP_SPAWN_AUTH_PROLOGUE, AIMP_SPAWN_AUTH_STEAL, (void *)det_auth,
+                          (void **)&g_auth_orig);
+    int ok_sc = hook_install(&g_hook_sc, "SpawnCharacter (FUN_007d3b50)", (void *)(g_aimp_exe + AIMP_RVA_SPAWN_CHAR),
+                             AIMP_SPAWN_CHAR_PROLOGUE, sizeof AIMP_SPAWN_CHAR_PROLOGUE, AIMP_SPAWN_CHAR_STEAL, (void *)det_sc,
+                             (void **)&g_sc_orig);
+    if (!ok || !ok_sc) {
+        log_printf("GHOST: falta un hook del spawn (autoridad %d, SpawnCharacter %d); AIMP_GHOST queda apagado", ok, ok_sc);
+        g_mode = 0;
+        return ok || ok_sc;
     }
-    int delay = aimp_env_int(L"AIMP_GHOST_DELAY_MS", 8000);
+    int delay = aimp_env_int(L"AIMP_GHOST_DELAY_MS", 8000), npc_ms = aimp_env_int(L"AIMP_GHOST_NPC_MS", 20000);
     g_delay_ticks = g_freq * (delay < 0 ? 0 : delay) / 1000;
+    g_npc_ticks = g_freq * (npc_ms < 0 ? 0 : npc_ms) / 1000;
     g_from_key = aimp_env_int(L"AIMP_GHOST_FROM", -1);
-    if (g_ghost) {
+    g_npc_type = aimp_env_int(L"AIMP_GHOST_NPC_TYPE", 6);
+    static const char *const names[] = { "", "clon del jugador", "NPC existente y después clon", "solo NPC existente" };
+    if (g_mode) {
         g_state = G_WAIT_PLAYER;
-        if (g_from_key < 0)
-            log_printf("AIMP_GHOST=1 (fase 4, experimental): %d ms después de que aparece el jugador se clona su pedido de spawn", delay);
-        else
-            log_printf("AIMP_GHOST=1 (fase 4, experimental): %d ms después de que aparece el jugador se clona el pedido de clave %d",
-                       delay, g_from_key);
+        log_printf("AIMP_GHOST=%d (fase 4, experimental: %s): empieza %d ms después de que aparece el jugador; NPC de tipo %d durante %d ms",
+                   g_mode, names[g_mode], delay, g_npc_type, npc_ms);
     } else {
         log_printf("AIMP_TRACE_SPAWN=1: se loguean los pedidos de spawn (solo mira)");
     }
     return 1;
+}
+
+static void log_observers(void)
+{
+    static const struct {
+        uint32_t rva;
+        const char *name;
+    } lists[] = { { AIMP_RVA_OBS_AUTH_PRE, "autoridad antes" },
+                  { AIMP_RVA_OBS_AUTH_POST, "autoridad después" },
+                  { AIMP_RVA_OBS_RPC_PRE, "RPC 0x29 antes" },
+                  { AIMP_RVA_OBS_RPC_POST, "RPC 0x29 después" } };
+    for (unsigned i = 0; i < sizeof lists / sizeof lists[0]; i++) {
+        uint32_t node = *(volatile uint32_t *)(g_aimp_exe + lists[i].rva), n = 0;
+        char line[400];
+        int len = aimp_snprintf(line, sizeof line, "SP observadores %s (rva 0x%x):", lists[i].name, lists[i].rva);
+        while (node && n < 8 && len > 0 && (size_t)len < sizeof line - 40) {
+            uint32_t vt = 0, vf1 = 0, next = 0;
+            mem_u32(node, &vt);
+            if (vt)
+                mem_u32(vt + 4, &vf1);
+            len += aimp_snprintf(line + len, sizeof line - (size_t)len, " [0x%08x vt rva 0x%x vf1 rva 0x%x]", node, rva(vt),
+                                 rva(vf1));
+            if (!mem_u32(node + 4, &next))
+                break;
+            node = next;
+            n++;
+        }
+        log_printf("%s%s", line, n ? "" : " vacía");
+    }
 }
 
 static int read_vec(uint32_t cm, uint32_t f_arr, uint32_t f_n, uint32_t *out, uint32_t *n)
@@ -188,6 +263,61 @@ static int was_before(uint32_t p)
     return 0;
 }
 
+static void describe(const char *what, uint32_t p, const char *where, uint32_t idx)
+{
+    uint32_t vt = 0, def = 0, type = 0, ctrl = 0;
+    uint8_t f1c = 0, f1f = 0, act = 0, id[8] = { 0 };
+    float pos[3] = { 0 };
+    char ids[17], name[33] = "";
+    mem_u32(p, &vt);
+    mem_u32(p + CHR_DEF, &def);
+    if (def) {
+        mem_u32(def + DEF_TYPE, &type);
+        mem_u8(def + DEF_FLAG_1C, &f1c);
+        mem_u8(def + DEF_FLAG_1F, &f1f);
+    }
+    mem_u32(p + CHR_CTRL, &ctrl);
+    if (ctrl)
+        mem_u8(ctrl + CTRL_ACTIVE, &act);
+    mem_read(p + CHR_POS, pos, sizeof pos);
+    mem_read(p + CHR_ID, id, sizeof id);
+    mem_cstr(p + 0x10, name, sizeof name);
+    id_str(ids, id);
+    log_printf("GHOST: %s: %s[%u] = 0x%08x \"%s\", vtable rva 0x%x, def 0x%08x tipo %u flags 1c=%u 1f=%u, controlador 0x%08x (activo %u), pos=(%.2f, %.2f, %.2f), id %s",
+               what, where, idx, p, name, rva(vt), def, type, f1c, f1f, ctrl, act, (double)pos[0], (double)pos[1], (double)pos[2],
+               ids);
+}
+
+static void start_moving(uint32_t p, int64_t now)
+{
+    g_chr = p;
+    g_state = g_state == G_NPC ? G_NPC : G_ACTIVE;
+    g_last_log = now;
+    g_last_tp = 0;
+    g_tps = 0;
+}
+
+static void pick_npc(const Chars *c, int64_t now)
+{
+    uint32_t best = 0, best_i = 0;
+    for (uint32_t i = 0; i < c->nnpc && !best; i++) {
+        uint32_t def = 0, type = 0;
+        if (c->npc[i] && mem_u32(c->npc[i] + CHR_DEF, &def) && def && mem_u32(def + DEF_TYPE, &type) && (int)type == g_npc_type) {
+            best = c->npc[i];
+            best_i = i;
+        }
+    }
+    if (!best) {
+        log_printf("GHOST: no hay NPC de tipo %d en el nivel (%u NPCs)%s", g_npc_type, c->nnpc,
+                   g_mode == 2 ? "; se pasa al clon" : "");
+        g_t0 = now - g_npc_ticks; /* para que el modo 2 siga con el clon */
+        return;
+    }
+    describe("NPC elegido para mover", best, "NPCs", best_i);
+    g_t0 = now;
+    start_moving(best, now);
+}
+
 static void do_spawn(const Chars *c, int64_t now)
 {
     LONG total = g_nreq;
@@ -200,9 +330,9 @@ static void do_spawn(const Chars *c, int64_t now)
             break;
         }
     }
-    if (found < 0 || !g_this) {
-        log_printf("GHOST: no hay pedido para clonar (pedidos vistos %ld, this 0x%08x): no se clona en este nivel", (long)total,
-                   (unsigned)g_this);
+    if (found < 0 || !g_sc_this) {
+        log_printf("GHOST: no se clona: pedido %s, SpawnCharacter %s (pedidos vistos %ld, llamadas a SpawnCharacter %ld)",
+                   found < 0 ? "no encontrado" : "ok", g_sc_this ? "visto" : "no visto", (long)total, (long)g_nsc);
         g_state = G_DONE;
         return;
     }
@@ -216,6 +346,7 @@ static void do_spawn(const Chars *c, int64_t now)
     char id_old[17], id_new[17];
     id_str(id_old, g_clone + SREQ_ID);
     aimp_memcpy(g_clone + SREQ_KEY, &key, 4);
+    aimp_memcpy(g_clone + SREQ_KEY2, &key, 4);
     aimp_memcpy(g_clone + SREQ_ID + 4, &id1, 4);
     id_str(id_new, g_clone + SREQ_ID);
     g_nbefore = 0;
@@ -224,59 +355,41 @@ static void do_spawn(const Chars *c, int64_t now)
     for (uint32_t i = 0; i < c->nnpc; i++)
         g_before[g_nbefore++] = c->npc[i];
     g_attempts++;
-    log_printf("GHOST: clonando el pedido (clave %u -> %u, id %s -> %s) con this 0x%08x; antes: %u jugadores, %u NPCs, %u pendientes",
-               old_key, key, id_old, id_new, (unsigned)g_this, c->npl, c->nnpc, c->npend);
-    log_request("clon", (long)g_attempts, g_this, g_clone, 0);
-    g_spawn_orig((void *)g_this, NULL, g_clone, 0);
+    log_printf("GHOST: clonando el pedido (clave %u -> %u en +0x00 y +0xF0, id %s -> %s) por SpawnCharacter, this 0x%08x; antes: %u jugadores, %u NPCs, %u pendientes",
+               old_key, key, id_old, id_new, (unsigned)g_sc_this, c->npl, c->nnpc, c->npend);
+    log_request("GHOST clon", (long)g_attempts, g_sc_this, g_clone, 0);
+    uint32_t ret = g_sc_orig((void *)g_sc_this, NULL, g_clone);
     Chars a;
     if (read_chars(&a))
-        log_printf("GHOST: el spawn volvió; ahora %u jugadores, %u NPCs, %u pendientes", a.npl, a.nnpc, a.npend);
+        log_printf("GHOST: SpawnCharacter devolvió 0x%08x; ahora %u jugadores, %u NPCs, %u pendientes", ret, a.npl, a.nnpc, a.npend);
     else
-        log_printf("GHOST: el spawn volvió; no se pudo leer el CharacterManager");
+        log_printf("GHOST: SpawnCharacter devolvió 0x%08x; no se pudo leer el CharacterManager", ret);
+    g_chr = 0;
     g_state = G_FIND;
     g_deadline = now + 5 * g_freq;
 }
 
 static void on_found(uint32_t p, const char *where, uint32_t idx, int64_t now)
 {
-    uint32_t vt = 0, def = 0, type = 0, ctrl = 0;
-    uint8_t f1c = 0, f1f = 0, act = 0, id[8] = { 0 };
-    float pos[3] = { 0 };
-    char ids[17];
-    mem_u32(p, &vt);
-    mem_u32(p + CHR_DEF, &def);
-    if (def) {
-        mem_u32(def + DEF_TYPE, &type);
-        mem_u8(def + DEF_FLAG_1C, &f1c);
-        mem_u8(def + DEF_FLAG_1F, &f1f);
-    }
+    describe("apareció el clon", p, where, idx);
+    uint32_t ctrl = 0;
     mem_u32(p + CHR_CTRL, &ctrl);
-    if (ctrl)
-        mem_u8(ctrl + CTRL_ACTIVE, &act);
-    mem_read(p + CHR_POS, pos, sizeof pos);
-    mem_read(p + CHR_ID, id, sizeof id);
-    id_str(ids, id);
-    log_printf("GHOST: apareció el clon: %s[%u] = 0x%08x, vtable rva 0x%x, def 0x%08x tipo %u flags 1c=%u 1f=%u, controlador 0x%08x (activo %u), pos=(%.2f, %.2f, %.2f), id %s",
-               where, idx, p, rva(vt), def, type, f1c, f1f, ctrl, act, (double)pos[0], (double)pos[1], (double)pos[2], ids);
     if (ctrl) {
         uint8_t zero = 0;
         log_printf("GHOST: desactivando el controlador del clon (+0x%x = 0)", CTRL_ACTIVE);
         if (!mem_write(ctrl + CTRL_ACTIVE, &zero, 1))
             log_printf("GHOST: no se pudo escribir en el controlador");
     }
-    g_chr = p;
-    g_state = G_ACTIVE;
-    g_last_log = now;
-    g_last_tp = 0;
-    g_tps = 0;
+    start_moving(p, now);
 }
 
-static void move_clone(const Chars *c, const AimpNet *net, uint32_t level, int64_t now)
+static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t now)
 {
     uint32_t idx;
     const char *where = find_chr(c, g_chr, &idx);
     if (!where) {
-        log_printf("GHOST: el clon 0x%08x ya no está en los vectores; se deja de mover", g_chr);
+        log_printf("GHOST: el personaje 0x%08x ya no está en los vectores; se deja de mover", g_chr);
+        g_chr = 0;
         g_state = G_DONE;
         return;
     }
@@ -301,8 +414,8 @@ static void move_clone(const Chars *c, const AimpNet *net, uint32_t level, int64
     int moved = dx * dx + dy * dy + dz * dz > 0.0004f || dyaw > 0.01f || dyaw < -0.01f;
     if (moved || !g_last_tp || now - g_last_tp > g_freq / 2) {
         if (!g_last_tp)
-            log_printf("GHOST: primer teletransporte a (%.2f, %.2f, %.2f) yaw %.3f [%s]", (double)t[0], (double)t[1],
-                       (double)t[2], (double)tyaw, src);
+            log_printf("GHOST: primer teletransporte de 0x%08x a (%.2f, %.2f, %.2f) yaw %.3f [%s]", g_chr, (double)t[0],
+                       (double)t[1], (double)t[2], (double)tyaw, src);
         g_teleport((void *)g_chr, NULL, t, tyaw, 0);
         g_last_pos[0] = t[0];
         g_last_pos[1] = t[1];
@@ -314,7 +427,7 @@ static void move_clone(const Chars *c, const AimpNet *net, uint32_t level, int64
     if (now - g_last_log >= g_freq) {
         float cp[3] = { 0 };
         mem_read(g_chr + CHR_POS, cp, sizeof cp);
-        log_printf("GHOST: clon en (%.2f, %.2f, %.2f), objetivo (%.2f, %.2f, %.2f) [%s], %u teletransportes; %s[%u]",
+        log_printf("GHOST: personaje en (%.2f, %.2f, %.2f), objetivo (%.2f, %.2f, %.2f) [%s], %u teletransportes; %s[%u]",
                    (double)cp[0], (double)cp[1], (double)cp[2], (double)t[0], (double)t[1], (double)t[2], src, g_tps, where,
                    idx);
         g_last_log = now;
@@ -324,8 +437,12 @@ static void move_clone(const Chars *c, const AimpNet *net, uint32_t level, int64
 
 void ghost_frame(int64_t now, const AimpNet *net, uint32_t level)
 {
-    if (!g_ghost || g_state == G_OFF)
+    if (!g_mode || g_state == G_OFF)
         return;
+    if (!g_obs_logged) {
+        g_obs_logged = 1;
+        log_observers();
+    }
     Chars c;
     if (!read_chars(&c))
         return;
@@ -345,8 +462,26 @@ void ghost_frame(int64_t now, const AimpNet *net, uint32_t level)
         }
         break;
     case G_DELAY:
-        if (now - g_t0 >= g_delay_ticks)
+        if (now - g_t0 < g_delay_ticks)
+            break;
+        if (g_mode == 1) {
             do_spawn(&c, now);
+        } else {
+            g_state = G_NPC;
+            pick_npc(&c, now);
+        }
+        break;
+    case G_NPC:
+        if (g_chr)
+            move_chr(&c, net, level, now);
+        if (g_state == G_NPC && now - g_t0 >= g_npc_ticks) {
+            log_printf("GHOST: fin del modo NPC%s", g_mode == 2 ? "; se intenta el clon" : "");
+            g_chr = 0;
+            if (g_mode == 2)
+                do_spawn(&c, now);
+            else
+                g_state = G_DONE;
+        }
         break;
     case G_FIND: {
         for (uint32_t i = 0; i < c.npl; i++)
@@ -367,7 +502,7 @@ void ghost_frame(int64_t now, const AimpNet *net, uint32_t level)
         break;
     }
     case G_ACTIVE:
-        move_clone(&c, net, level, now);
+        move_chr(&c, net, level, now);
         break;
     default:
         break;

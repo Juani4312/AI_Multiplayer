@@ -43,6 +43,7 @@ add_library(aimp_winmm SHARED
   src/trace.c
   src/net.c
   src/ghost.c
+  src/crash.c
   src/log.c
   src/mem.c
   src/fmt.c
@@ -89,7 +90,7 @@ set_target_properties(test_net PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINAR
 
 # test_ghost: fase 4 (ghost.c) contra stubs con los prólogos y el `ret N` reales del spawn
 # de autoridad y del teleport (prueba las convenciones de llamada).
-add_executable(test_ghost test/test_ghost.c src/ghost.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_ghost test/test_ghost.c src/ghost.c src/crash.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_ghost PRIVATE src)
 target_compile_options(test_ghost PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_ghost PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)

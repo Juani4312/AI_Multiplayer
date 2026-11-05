@@ -80,3 +80,5 @@
 - 16:55 net.c: cadencia fija (20/s reales; test con tiempo simulado: 200 envíos en 10 s a 16,5 ms por frame) y descarte del backlog en el primer net_poll (test: 30 descartados, 0 perdidos). Versión 0.2.0. El commit del log se recalcula en cada build (cmake/githash.cmake, '+cambios' si mod/src está sucio). Tests OK.
 - 16:56 mod/dist/winmm.dll actualizada (0.2.0, commit 22c4704, SHA-256 8704ed44…). Instalada también en el juego Linux (runtime_setup.sh install --cfg AIMP_NET=host).
 - 17:12 Fase 4: hallazgo 12 (spawn de autoridad, pedido de 0x130, teleport) y experimento AIMP_GHOST en mod/src/ghost.c con test_ghost (stubs con prólogos y ret reales). Todos los tests OK. Falta la corrida en el juego.
+- 17:15 Corrida 6 (fase 4): runtime_setup.sh install --cfg "AIMP_GHOST=1" (DLL commit 0547e5c), juego lanzado con steam -applaunch 214490.
+- 17:31 Corrida 6: el clon por el spawn de autoridad cerró el juego en el frame siguiente. Hallado: vf[1]/vf[2] vacíos, pedido con posición +0x50 y yaw +0x60, +0xA4 = definición. Agregado crash.c (VEH), hook de SpawnCharacter, modo NPC (AIMP_GHOST=2). Tests OK.
