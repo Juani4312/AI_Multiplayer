@@ -274,7 +274,9 @@ cola->despachando = 0;
 
 ---
 
-# Parte 5 - Registro de endpoints RPC y asignación de ids de tipo
+# Parte 5 - Registro de endpoints RPC de la **sesión** (corregido)
+
+> **Corrección (misma sesión, verificado en asm):** `RegisterAllRPCs` llena la tabla de handlers de la **sesión** (`g_root+0x54`, `+0x08`/`+0x0C`), no la de la cola A. La cola A (`g_root+0x50`) tiene **su propia** tabla en `cola+0x08`: en `FUN_00a2a3f0` el despachador `FUN_00a2a220` se llama con `ECX = cola` (`0xA2A448: mov ecx,edi`). `FUN_007ddae0` hace el flush de `[g_root+0x50]` (`0x7DDAE8`) y después actualiza la sesión `[g_root+0x54]` con `FUN_00a2a5c0` (`0x7DDAF8`). No se sabe todavía quién llena la tabla de la cola A, que es donde viven los tipos de los 70+ productores, como el del spawn `DAT_016361e4`.
 
 - **Evidencia:** `./work/evidence/h10/n22.txt` … `n26.txt`.
 - **Confianza:** alta para `RegisterAllRPCs`. Media para el layout del endpoint (se infiere de esa función y de los globales del spawn).
@@ -297,7 +299,7 @@ for (ep = DAT_01be1bd0; ep; ep = ep->next) {
 - **Layout de un endpoint RPC:** `+0x00` next, `+0x04` fn (handler de recepción), `+0x08` ctx, `+0x0C` tipo (u16).
   - Ejemplo (spawn): endpoint estático en `0x016361D8`. `ctx` = `0x016361E0`, que lo escribe el constructor del `CharacterManager`. `tipo` = `0x016361E4`, que es lo que `FUN_00797490` pasa a la cola. `0x016361F0`/`0x016361F4` son el callback/ctx alternativo.
   - Los endpoints son objetos estáticos con vtable propia (`FUN_007795c0`/`FUN_007879d0` son constructor/destructor de uno). El constructor del `CharacterManager` inicializa varios (vtables `0x012F3410`, `0x012F3424`, `0x012F3438`, `0x012F344C`, `0x012F3460`, …).
-- **Los ids de tipo salen del orden de la lista estática**, así que son **iguales en dos máquinas con el mismo `AI.exe`**. Es un requisito para replicar el buffer de la cola entre host y cliente (parte 4), y otra razón para exigir el mismo hash en las dos máquinas.
+- Los ids de los endpoints de la **sesión** salen del orden de la lista estática, así que son iguales en dos máquinas con el mismo `AI.exe`. Para los tipos de la **cola A** hay que verificar en runtime que también coincidan, porque dependen de un registro todavía no ubicado.
 
 ## Catálogo pendiente
 
@@ -307,5 +309,5 @@ Para mapear id → tipo → handler en runtime: recorrer `DAT_01be1bd0` y loguea
 
 - Escrituras a la cabeza de la lista `DAT_01be1bd0`: **8 inicializadores estáticos** (`FUN_01140c60`, `…ca0`, `…ce0`, `…d20`, `…d60`, `…da0`, `…de0`, `…e00`). Cada uno hace `ep->next = cabeza; cabeza = &ep`.
 - Endpoints: `0x01636534`, `0x01636558`, `0x0163657C`, `0x016365A0`, `0x016365C4`, `0x016365E8`, `0x0163660C`, `0x0163661C` (casi todos separados 0x24).
-- **Inconsistencia a resolver:** el "tipo" que usa el spawn (`DAT_016361e4`, en el descriptor `0x016361D8`…) **no** está entre estos 8, y hay 70+ productores. Hipótesis: el descriptor del spawn pertenece a la **cola B** (`FUN_00a2a810`/`FUN_00a2a760`) o a otro registro con su propia tabla. Es posible que el modelo "un endpoint = un tipo" de arriba esté incompleto. Verificar en runtime (bloque 3.5 de `RUNTIME_PLAN.md`).
+- El tipo que usa el spawn (`DAT_016361e4`) no está entre estos 8. Es coherente con la corrección: pertenece a la tabla de la cola A, no a la de la sesión.
 - Los valores iniciales de esos globales en `.data` son el stub `0x8D21E0`; se inicializan en runtime y su valor final no se puede leer estáticamente.
