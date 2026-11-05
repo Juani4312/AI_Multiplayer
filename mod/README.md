@@ -103,9 +103,19 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_DUMP_KEY` | `0x78` (F9) | tecla de volcado completo de estructuras |
 | `AIMP_DUMP_AT_FRAME` | 0 | volcado automático en ese frame (0 = no) |
 | `AIMP_FIRST_FRAMES` | 3 | cuántos frames iniciales se loguean uno por uno |
+| `AIMP_NET` | (vacío) | fase 3: `host` (escucha) o `join` (se conecta a `AIMP_NET_PEER`); vacío = red apagada |
+| `AIMP_NET_PORT` | 47811 | puerto UDP del host |
+| `AIMP_NET_PEER` | — | `join`: `ip:puerto` del host (p. ej. la IP de Tailscale) |
+| `AIMP_NET_HZ` | 20 | paquetes de estado por segundo |
 | `AIMP_MARK_KEY` | `0x77` (F8) | tecla de marca: una línea `MARCA n` con frame y posición, para cruzar acciones con el log |
 | `AIMP_TRACE_QUEUES` | 0 | 1 = experimento 3.6: hookea los wrappers de encolado de las colas A y B (`FUN_00a2a290`, `FUN_00a2a810`) y registra tipo, tamaño, thread y call site de cada mensaje (líneas `TR`) |
 | `AIMP_TRACE_MS` | 5000 | cada cuánto se escribe el informe del trazado |
+
+## Fase 3: red mínima (UDP)
+
+Protocolo propio v1 (`src/net.h`): un paquete `AimpPkt` de 76 bytes con nivel, posición, yaw, cámara, contador de simulación e id de 8 bytes del personaje, a `AIMP_NET_HZ` por segundo. Sin threads: todo corre en el hook del frame con sockets no bloqueantes; Winsock se resuelve en tiempo de ejecución. El host aprende la dirección del cliente del primer paquete. En el log, líneas `NET` (una por segundo, con lo último que llegó del otro jugador).
+
+Prueba sin un segundo juego: `python3 -I work/scripts/aimp_peer.py --join 127.0.0.1:47811` hace de otro jugador (posición falsa que da vueltas) contra el juego en modo `host`, y muestra lo que manda el juego.
 
 ## Qué hay en el log
 
