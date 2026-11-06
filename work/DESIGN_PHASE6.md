@@ -54,7 +54,8 @@ Recomendación: la opción 3. Primero hay que medir qué despacha CATHODE cuando
   - la reinyección (`FIRE <pid> <pin>`) se propaga por el grafo igual que un disparo natural.
 - Los slots de la vtable de `TriggerSimple` eran un callejón: getters triviales.
 - **Siguiente (paso 4):**
-  1. Identificar las raíces de los disparadores de zona. Caminar con el mando virtual y ver qué (tipo, pin) disparan al entrar a una zona; candidatos: `TriggerSimple`, `TriggerTouch`, zonas.
+  1. ✅ Raíces de zona (corrida 19): `PlayerTriggerBox.on_entered` y `Box.event` → `TriggerVolumeFilter.on_event_entered`.
+     Pendiente: índice pid → entidad en la carga (los `PlayerTriggerBox` no disparan hasta que alguien entra) y un mensaje genérico para inyectar.
   2. Diseñar la política:
      - el host manda (pid, pin) de esas raíces por la red (evento confiable, como el "usar");
      - el cliente bloquea sus propios disparos de esos (pid, pin) (el detour no llama al original) e inyecta los del host.

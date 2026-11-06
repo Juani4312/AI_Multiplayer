@@ -67,7 +67,7 @@
 
 ## Preguntas abiertas
 
-1. ¿Qué disparos son la raíz de una cadena cuando el jugador entra a una zona? Hay que filtrar por tipo (`TriggerSimple`, `TriggerTouch`, zonas) y medir con el jugador caminando.
+1. ✅ Raíces de zona (corrida 19): `PlayerTriggerBox` (`2f3efad3`) `on_entered`, y `Box.event` → `TriggerVolumeFilter` (`f86133d4`) `on_event_entered`. Los `PlayerTriggerBox` no disparan nada en la carga, así que para inyectar en el receptor hace falta un índice pid → entidad armado en la carga.
 2. Bloqueo en el cliente: no llamar al original para los (pid, pin) que decide el host. Hay que ver si los pines de salida alcanzan o si hace falta bloquear también los de entrada.
 3. Los mensajes reinyectados reusan el `msg` del primer disparo visto. Habría que ver si algún destino lee datos del mensaje (instigador, valor) que deberían venir del host.
 4. Verificar que el `pid` sea igual entre papito y la laptop.

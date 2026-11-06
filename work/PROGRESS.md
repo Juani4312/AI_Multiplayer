@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-06, madrugada (fase 6: pasos 1–3 hechos en local; hallazgo 15; mando virtual para pruebas sin nadie al teclado)_
+_Última actualización: 2026-11-06, 04:50 (fase 6: pasos 1–3 hechos en local, raíces de zona identificadas; hallazgo 15; mando virtual con GO; dist actualizada)_
 
 ## Decisiones vigentes
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
@@ -89,7 +89,8 @@ _Última actualización: 2026-11-06, madrugada (fase 6: pasos 1–3 hechos en lo
    ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
 2. **Siguiente** (a elegir con el usuario):
    - **Fase 6, scripts:** pasos 1–3 hechos (hallazgo 15). **Siguiente (paso 4):**
-     - con el mando virtual, identificar las raíces de los disparadores de zona;
+     - raíces de zona identificadas (corrida 19): `PlayerTriggerBox.on_entered`, `Box.event` → `TriggerVolumeFilter.on_event_entered`; diálogos `SpeechScript`/`NPC_Squad_DialogueMonitor`;
+     - falta un índice pid → entidad en la carga, porque los `PlayerTriggerBox` no disparan nada hasta que alguien entra, y un mensaje genérico para inyectar;
      - política: el host manda (pid, pin) y el cliente bloquea los suyos e inyecta los del host;
      - verificar el pid con la laptop.
      Detalle en `work/DESIGN_PHASE6.md`.

@@ -129,3 +129,5 @@
 - 04:34 Corrida 17: pid único (9938 instancias, 0 colisiones; id solo: 763 colisiones; profundidad 1-10). 4 inyecciones FIRE de LogicSwitch.on_true (pid 3a7cb07d): en cada una el destino TriggerSequence (pid 3cc91288) dispara en el frame siguiente con el mismo contador. La reinyección se propaga como un disparo natural.
 - 04:34 Corrida 18: relanzada para comparar pid entre procesos.
 - 04:43 autopad: GO=x/z a lazo cerrado (rumbo = yaw + pi/4, RX>0 sube el yaw; encadenado, detección de traba), con test cinemático; guarda contra doble instalación en la IAT. Tests OK.
+- 04:43 Corrida 19: lanzada (GO).
+- 04:47 Corrida 19: GO con rumbo = yaw (corregido); raíces de zona: PlayerTriggerBox.on_entered, Box.event -> TriggerVolumeFilter.on_event_entered; SpeechScript. Juego cerrado, mod pasivo (AIMP_GHOST=0), dist actualizada. Cierre de la sesión a pedido del usuario (apagar la PC).
