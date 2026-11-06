@@ -124,3 +124,7 @@
 - 04:18 Corrida 15: identidad de entidad = objeto completo +0x0C (ShortGuid en el COMMANDS.PAK, 78/78) y +0x10 = tipo (TriggerSimple, Door...). pins.c: id/tipo en el log, tabla 65536 renovada por nivel, reinyección FIRE (AIMP_PINS_FILE) con copias de handle y mensaje. Tests OK.
 - 04:18 Corrida 16 (local): DLL 577eb81 con FIRE; lanzada.
 - 04:26 Corrida 16: id de entidad no es único (prefabs); padre = objeto+0x08 (handle a CompositeInstance). pid = hash de la ruta de composites. Primera inyección FIRE (LogicSwitch on_true) sin crash. Ventana de 1,5 s post-inyección.
+- 04:26 Corrida 17: lanzada (pid + ventana).
+- 04:30 Corrida 17: el guion a ciegas del menú llegó a 'Start new game' (diálogo de sobrescribir, Cancel seleccionado); B no lo cerró; juego cerrado con pkill sin tocar nada (la partida no se sobrescribe). El arranque pasa a ser verificado por capturas/estado.
+- 04:34 Corrida 17: pid único (9938 instancias, 0 colisiones; id solo: 763 colisiones; profundidad 1-10). 4 inyecciones FIRE de LogicSwitch.on_true (pid 3a7cb07d): en cada una el destino TriggerSequence (pid 3cc91288) dispara en el frame siguiente con el mismo contador. La reinyección se propaga como un disparo natural.
+- 04:34 Corrida 18: relanzada para comparar pid entre procesos.
