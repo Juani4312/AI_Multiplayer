@@ -60,3 +60,12 @@ Recomendación: la opción 3. Primero hay que medir qué despacha CATHODE cuando
      - el host manda (pid, pin) de esas raíces por la red (evento confiable, como el "usar");
      - el cliente bloquea sus propios disparos de esos (pid, pin) (el detour no llama al original) e inyecta los del host.
   3. Probar con dos máquinas que el `pid` coincida (laptop).
+
+## Paso 4 (2026-11-06, tarde): código listo, falta runtime
+- Índice pid → entidad recorriendo el árbol de composites (hallazgo 16). El caché global resultó ser de tablas de links.
+- `AIMP_SYNC_PINS=1` (`mod/src/pins.c`):
+  - reglas por defecto: `PlayerTriggerBox` `on_entered`/`on_exited` y `TriggerVolumeFilter` `on_event_entered`/`on_event_exited`/`triggered`;
+  - el host manda (pid, pin, tipo, id, flags del mensaje);
+  - el cliente bloquea todo disparo de las reglas, salvo el inyectado, y aplica los del host en orden (pendientes si es otro nivel o el pid todavía no está).
+- **Consecuencia de la política:** en el cliente, entrar a una zona no hace nada. Solo cuenta el jugador del host. Si hace falta que el cliente también dispare algo (por ejemplo, zonas de música), se saca esa regla o se agrega una lista de excepciones.
+- **Riesgo abierto:** el mensaje inyectado usa una plantilla local. Si algún destino lee el instigador del mensaje, va a ver al personaje de la plantilla (el jugador local u otro), no al del host.

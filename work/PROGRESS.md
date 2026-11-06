@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-06, 04:50 (fase 6: pasos 1–3 hechos en local, raíces de zona identificadas; hallazgo 15; mando virtual con GO; dist actualizada)_
+_Última actualización: 2026-11-06, 15:25 (fase 6 paso 4: índice pid → entidad y `AIMP_SYNC_PINS` escritos y con tests; hallazgo 16; falta runtime)_
 
 ## Decisiones vigentes
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
@@ -50,6 +50,8 @@ _Última actualización: 2026-11-06, 04:50 (fase 6: pasos 1–3 hechos en local,
 | Mod fase 5 v1 ("usar" compartido) | ✅ **botones en los dos sentidos** (corrida 12): el transit viene en las dos máquinas y el uso remoto lo hace el avatar (`AIMP_SYNC_USE_ACTOR=1`), sin mover al otro jugador. Los lockers y la terminal de guardado no se replican (`AIMP_SYNC_USE_SKIP`). `findings/13-usar-compartido.md` |
 | Hallazgo 14 (armas, arrojables e ítems) | 🟡 `findings/14-armas-e-items.md`: disparar no genera un RPC, pero sus efectos sí (daño 0x18, agresión 0x0C). Bengala, nada. **Levantar un ítem es un "usar" (0x26) y ya se replica** (falta probarlo con dos máquinas) |
 | Hallazgo 15 (pines de CATHODE) | ✅ `findings/15-pines-de-cathode.md`: despacho `FUN_008be0d0` (`vt+0x394`), identidad estable **pid** (ruta de composites; único y determinista entre procesos), reinyección `FIRE` verificada (se propaga como un disparo natural). Traza `AIMP_TRACE_PINS=1` |
+| Hallazgo 16 (árbol de composites) | 🟡 `findings/16-arbol-de-composites.md`: hijos en `CompositeInstance+0x2C`, índice pid → entidad, mensaje de `on_entered` (entró/salió en `msg+0x20`). Código y tests listos; **falta runtime** |
+| Mod fase 6 (disparadores del host) | 🟡 `AIMP_SYNC_PINS=1` en `mod/src/pins.c`: el host manda los pines de zona y el cliente bloquea los suyos y aplica los del host. Tests OK; sin probar en el juego |
 | Mando virtual (pruebas) | ✅ `mod/src/autopad.c`: `AIMP_AUTOPAD_FILE` (pad.txt), IAT de XINPUT1_3. En el menú, verificar cada paso con captura (corrida 17) |
 | Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
@@ -88,11 +90,15 @@ _Última actualización: 2026-11-06, 04:50 (fase 6: pasos 1–3 hechos en local,
 
    ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
 2. **Siguiente** (a elegir con el usuario):
-   - **Fase 6, scripts:** pasos 1–3 hechos (hallazgo 15). **Siguiente (paso 4):**
-     - raíces de zona identificadas (corrida 19): `PlayerTriggerBox.on_entered`, `Box.event` → `TriggerVolumeFilter.on_event_entered`; diálogos `SpeechScript`/`NPC_Squad_DialogueMonitor`;
-     - falta un índice pid → entidad en la carga, porque los `PlayerTriggerBox` no disparan nada hasta que alguien entra, y un mensaje genérico para inyectar;
-     - política: el host manda (pid, pin) y el cliente bloquea los suyos e inyecta los del host;
-     - verificar el pid con la laptop.
+   - **Fase 6, scripts:** pasos 1–3 hechos (hallazgo 15). Paso 4 escrito (hallazgo 16, `AIMP_SYNC_PINS`). **Siguiente, en el juego:**
+     1. **Corrida 20 (local, una máquina)**, con `AIMP_TRACE_PINS=1` y `AIMP_PINS_FILE`:
+        - el `PINIX` automático (10 s después de cargar) tiene que dar "0 faltan" y "0 con otro subobjeto"; ver cuántos ms tarda;
+        - los volcados `PIN mensaje del primer ...` dan el layout del mensaje (¿instigador?);
+        - `FIRE <pid> 98678b2b` de un `TriggerVolumeFilter` que no disparó (pid sacado del índice o de la corrida 19): tiene que propagarse.
+     2. **Corrida 21 (dos máquinas):**
+        - `AIMP_SYNC_PINS=1` en las dos, más `AIMP_TRACE_PINS=1` para comparar pids;
+        - el host entra a la zona del diálogo de la corrida 14: en el cliente tiene que arrancar el mismo diálogo una sola vez;
+        - que el cliente, al entrar, no lo dispare.
      Detalle en `work/DESIGN_PHASE6.md`.
    - **Armas:** hookear el disparo y el lanzamiento (hallazgo 14).
    - **Ítems compartidos:** hoy el botín es por jugador. Si se quiere compartido, sacar el ítem del mundo en la otra máquina.

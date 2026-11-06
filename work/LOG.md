@@ -131,3 +131,4 @@
 - 04:43 autopad: GO=x/z a lazo cerrado (rumbo = yaw + pi/4, RX>0 sube el yaw; encadenado, detección de traba), con test cinemático; guarda contra doble instalación en la IAT. Tests OK.
 - 04:43 Corrida 19: lanzada (GO).
 - 04:47 Corrida 19: GO con rumbo = yaw (corregido); raíces de zona: PlayerTriggerBox.on_entered, Box.event -> TriggerVolumeFilter.on_event_entered; SpeechScript. Juego cerrado, mod pasivo (AIMP_GHOST=0), dist actualizada. Cierre de la sesión a pedido del usuario (apagar la PC).
+- 15:21 Fase 6 paso 4 (estático + código): el caché DAT_0174dfb0 es de tablas de links (no sirve); CompositeInstance+0x2C = hijos (hallazgo 16). pins.c: índice pid -> entidad por el árbol, FIRE sin disparo previo con plantilla de mensaje, volcado de mensajes, AIMP_SYNC_PINS (host manda AIMP_EVT_PIN; cliente bloquea e inyecta). Tests OK. Falta runtime.
