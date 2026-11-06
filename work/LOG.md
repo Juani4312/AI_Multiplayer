@@ -118,3 +118,4 @@
 - 19:14 Cierre de la sesión (límite diario): fase 6 paso 1 en curso (slots de TriggerSimple anotados en DESIGN_PHASE6.md). Todo subido.
 - 03:53 Sesión autónoma (5 h): fase 6 paso 1. Slots de TriggerSimple = getters triviales; despacho de pines = vt+0x394 = FUN_008be0d0 (777 clases).
 - 03:59 Fase 6: pins.c (AIMP_TRACE_PINS: hook de FUN_008be0d0, solo mira) + test_pins; pin_names.py (5851 ShortGuids), MapVtables.java (vtables concretas -> clase), analyze_pins.py. Tests OK.
+- 04:04 autopad.c (AIMP_AUTOPAD / AIMP_AUTOPAD_FILE): mando virtual por la IAT de XINPUT1_3 (ord. 2 y 4) para pruebas sin nadie al teclado; probe_mark. Tests OK.
