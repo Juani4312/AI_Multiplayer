@@ -200,5 +200,20 @@ static const uint8_t AIMP_FIRE_PIN_PROLOGUE[6] __attribute__((unused)) = { 0x55,
 #define ENT_LINKS                 0x04u
 #define ENT_INDEX                 0x08u
 #define AIMP_RVA_ENTITY_TABLE     0x0134DFB0u  /* DAT_0174dfb0: puntero a {+0 array, +4 capacidad (potencia de 2), +8 cantidad} */
+/* Ojo: esa tabla es un caché de tablas de links (FUN_008bd720 "CATHODE:update_cache"; entra quien
+ * ya resolvió sus links), no un registro de todas las entidades (hallazgo 16). */
+#define ENT_VT_FIRE               0x394u       /* slot de la vtable de EntityInterface = FUN_008be0d0 */
+/* Objeto completo de una entidad (hallazgo 15): +0x08 handle al CompositeInstance padre,
+ * +0x0C ShortGuid de la entidad, +0x10 ShortGuid del tipo. Handle: +4 refcount, +0xC objeto. */
+#define OUT_PARENT                0x08u
+#define OUT_ID                    0x0Cu
+#define OUT_TYPE                  0x10u
+#define HANDLE_OBJ                0x0Cu
+/* CATHODE::CompositeInstance (hallazgo 16): vtable primaria 0x013E1D2C (ctor FUN_00965720; la de
+ * EntityInterface, 0x013E196C, en +0x1C). +0x2C = refptr a {+8 cantidad, +0xC handles de los
+ * hijos}; FUN_00964d80 busca un hijo por ShortGuid con FUN_00943bf0(&this->m_2c, &id, FUN_009616f0),
+ * que compara handle->obj->+0x0C con el id. */
+#define AIMP_RVA_VT_COMPOSITE     0x00FE1D2Cu
+#define COMP_CHILDREN             0x2Cu
 
 #endif

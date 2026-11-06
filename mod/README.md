@@ -5,7 +5,8 @@ DLL proxy `winmm.dll` para `AI.exe` (Alien: Isolation, build de Windows). Funcio
 - **fases 1 y 2**: el código del mod corre una vez por frame en el thread del juego (hook en `ModeManager::Run`, hallazgo 02). Lee la posición y el yaw del jugador, la cámara y el estado del juego (hallazgos 03 y 04). Solo lee;
 - **fase 3**: red UDP propia entre dos máquinas (`AIMP_NET`), con el estado del jugador a 20 paquetes/s;
 - **fase 4** (experimental, `AIMP_GHOST=3`): un NPC civil del nivel hace de avatar del otro jugador (hallazgo 12);
-- **fase 5** (experimental, `AIMP_SYNC_USE=1`): los "usar" (botones, cajas, ítems) se replican a la otra máquina, donde los hace el avatar (hallazgo 13).
+- **fase 5** (experimental, `AIMP_SYNC_USE=1`): los "usar" (botones, cajas, ítems) se replican a la otra máquina, donde los hace el avatar (hallazgo 13);
+- **fase 6** (experimental, `AIMP_SYNC_PINS=1`, sin probar con dos máquinas): los disparadores de zona de los scripts los decide el host. El cliente bloquea los suyos y ejecuta los del host (hallazgos 15 y 16).
 
 Sin opciones, el mod **solo lee**: lo único que modifica son los primeros bytes de `ModeManager::Run` (el JMP del hook), y siempre con la build verificada.
 - Los trazados (`AIMP_TRACE_QUEUES`, `AIMP_TRACE_SPAWN`, `AIMP_TRACE_USE`) agregan hooks que solo miran.
@@ -120,6 +121,10 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_SYNC_USE_ACTOR` | 1 | quién hace el uso remoto: 1 = el avatar (el NPC de `AIMP_GHOST=3`), si hay; 0 = el jugador local (se teletransporta a botones y lockers) |
 | `AIMP_SYNC_PENDING_MS` | 60000 | cuánto se guarda un uso remoto que todavía no se puede aplicar (el receptor en otro nivel, o sin avatar todavía) |
 | `AIMP_TRACE_USE` | 0 | 1 = loguea cada uso y sus dos handlers (solo mira) |
+| `AIMP_TRACE_PINS` | 0 | 1 = traza de los pines de salida de CATHODE (líneas `PIN`, hallazgo 15). Solo mira. Con traza, 10 s después de cada cambio de nivel arma y verifica el índice pid → entidad (líneas `PINIX`) |
+| `AIMP_PINS_FILE` | — | archivo de comandos que se relee cuando cambia: `FIRE <pid> <pin> [flags]` (reinyecta un pin) e `INDEX` (rearma el índice) |
+| `AIMP_SYNC_PINS` | 0 | 1 = **fase 6, experimental** (con red): el host manda los disparos de las reglas y el cliente bloquea los suyos y aplica los del host (líneas `PINSYNC`) |
+| `AIMP_SYNC_PINS_LIST` | zona | reglas `tipo:pin,...` en hex (`tipo:*` = todos los pines). Por defecto: `PlayerTriggerBox` `on_entered`/`on_exited` y `TriggerVolumeFilter` `on_event_entered`/`on_event_exited`/`triggered` |
 | `AIMP_CRASHLOG` | 1 | registro de excepciones (VEH): código, módulo+RVA, registros y stack si el juego se cae |
 
 ## Fase 3: red mínima (UDP)
@@ -160,6 +165,15 @@ Los modos 1 y 2 clonan el pedido de spawn del jugador para crear un personaje pr
 - **Resultado:** verificado con el botón del transit en los dos sentidos. El transit viene en las dos máquinas y ningún jugador se teletransporta.
 
 `test_sync` lo prueba contra stubs del productor, los dos handlers y el wrapper de encolado. `test_net` prueba el protocolo de eventos.
+
+## Fase 6 (experimental): disparadores decididos por el host
+
+`AIMP_SYNC_PINS=1` (`src/pins.c`, hallazgos 15 y 16), con red:
+- **Host:** cada disparo natural de un pin que cumple una regla (`AIMP_SYNC_PINS_LIST`) sale como evento `AIMP_EVT_PIN` con el `pid` de la entidad (la ruta de composites, igual en las dos máquinas con los mismos datos), el pin, el tipo, el id y los flags del mensaje.
+- **Cliente:** todo disparo que cumple una regla se bloquea (no se llama al original), salvo el que inyecta el mod. Al llegar un evento del mismo nivel, busca la entidad por `pid` en un índice armado recorriendo el árbol de composites, y dispara el pin con una plantilla de mensaje. La plantilla es el mensaje de un disparo natural visto: del mismo pid y pin, del mismo tipo y pin, del mismo pin o del mismo tipo. Le aplica la clase del host (entró o salió).
+- Los eventos de otro nivel o de entidades que todavía no están quedan pendientes, en orden, hasta `AIMP_SYNC_PENDING_MS`.
+
+`test_pins` lo prueba con un árbol falso: índice, FIRE sin disparo previo, bloqueo, aplicación, bloqueo del disparo en cadena y envío del host.
 
 ## Qué hay en el log
 

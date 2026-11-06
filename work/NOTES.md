@@ -547,3 +547,21 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
     - diálogos: `NPC_Squad_DialogueMonitor` (`9b3cb8fa`) y `SpeechScript` (`bc82235a`) `started`/`on_script_ended`;
     - casi todos salen "desde 4bd944" (el wrapper `FUN_008bd920`).
   - **Problema para inyectar en el receptor:** los `PlayerTriggerBox` no disparan nada en la carga (0 de 6 pids antes de t=70). Si el jugador del receptor nunca entró, no hay handle ni mensaje guardados. Falta un índice pid → entidad armado en la carga (recorrer el caché `DAT_0174dfb0` o los composites) y un mensaje genérico.
+
+## 2026-11-06 (tarde) — Fase 6, paso 4: índice pid → entidad y sincronización de pines (estático + tests; hallazgo 16)
+- **El caché `DAT_0174dfb0` no es un registro de entidades:** es un caché de tablas de links. Entra quien las resolvió (`FUN_008bd720`, "CATHODE:update_cache") y se desaloja (`FUN_008bd3d0`). No sirve para el índice. Evidencia en `work/evidence/h16/c1.txt` y `c2.txt`.
+- **Árbol de composites:** `CompositeInstance+0x2C` = arreglo de handles de los hijos (`{+8 n, +0xC handles}`). `FUN_00964d80` busca un hijo por ShortGuid con `FUN_00943bf0` / `FUN_009616f0`. La vtable primaria es `0x013E1D2C`. Detalle en `findings/16-arbol-de-composites.md`.
+- **Mensaje de `on_entered`:** `FUN_00561c50` reenvía el mismo mensaje que trae al instigador. `msg+0x20 & 0x1000000` → entró, `& 0x2000000` → salió (coincide con los `11000000` / `12000000` de la corrida 19).
+- **Código (`mod/src/pins.c`):**
+  - índice armado recorriendo el árbol desde las raíces (subiendo desde las entidades que dispararon);
+  - el subobjeto `EntityInterface` se busca por vtable con `FUN_008be0d0` en `+0x394`;
+  - verificación contra lo visto (`PINIX`);
+  - `FIRE` funciona sin disparo previo, con plantilla de mensaje;
+  - volcado del primer mensaje natural de cada (tipo, pin);
+  - `AIMP_SYNC_PINS`: el host manda `AIMP_EVT_PIN` y el cliente bloquea e inyecta. En el cliente pasa solo el disparo de arriba de la inyección: lo que dispare en cadena y cumpla una regla también se bloquea, porque el host lo manda aparte.
+  - Los eventos pendientes se aplican en orden.
+- **Tests:** `test_pins` con un árbol falso (composite con la vtable real y dos hijos) prueba el índice, `FIRE` por pid de una entidad que nunca disparó, el bloqueo, la aplicación, el anidado bloqueado, el pendiente de otro nivel y el envío del host. **Todos los tests OK.**
+- **Falta runtime:**
+  1. corrida local con `AIMP_TRACE_PINS=1`: que el `PINIX` automático dé "0 faltan", cuánto tarda, y el layout del mensaje;
+  2. `FIRE` por índice de un `TriggerVolumeFilter` que no disparó;
+  3. dos máquinas con `AIMP_SYNC_PINS=1`.

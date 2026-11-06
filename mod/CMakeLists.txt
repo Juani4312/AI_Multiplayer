@@ -101,8 +101,9 @@ set_target_properties(test_ghost PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BIN
 
 # test_pins: fase 6 (pins.c) contra un stub con el prólogo y el `ret 0x18` reales de
 # FUN_008be0d0 (disparar pin de salida de CATHODE), con entidades y tablas de links falsas.
-add_executable(test_pins test/test_pins.c src/pins.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_pins test/test_pins.c src/pins.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_pins PRIVATE src)
+target_link_libraries(test_pins PRIVATE ws2_32)
 target_compile_options(test_pins PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_pins PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
@@ -114,7 +115,7 @@ set_target_properties(test_autopad PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_B
 
 # test_sync: fase 5 (sync.c) contra stubs con los prólogos reales del productor del "usar",
 # sus dos handlers y el wrapper de encolado A; la red es real (127.0.0.1).
-add_executable(test_sync test/test_sync.c src/sync.c src/ghost.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_sync test/test_sync.c src/sync.c src/ghost.c src/pins.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_sync PRIVATE src)
 target_compile_options(test_sync PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_sync PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)

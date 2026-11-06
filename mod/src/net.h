@@ -18,6 +18,7 @@
 #define AIMP_PKT_EVENT 4    /* evento discreto (fase 5): se manda 3 veces, el receptor descarta repetidos */
 #define AIMP_FLAG_PLAYER 1u /* el emisor tiene jugador en el nivel */
 #define AIMP_EVT_USE 1      /* "usar" del jugador (RPC A 0x26, hallazgo 11): objetivo[8] | personaje[8] | flag[4] */
+#define AIMP_EVT_PIN 2      /* pin de CATHODE decidido por el host (fase 6): pid | pin | tipo | id | flags del mensaje (5 x u32) */
 #define AIMP_EVT_DATA 52
 #define AIMP_EVT_QUEUE 16
 #define AIMP_EVT_REPEAT 3
