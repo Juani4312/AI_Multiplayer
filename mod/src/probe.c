@@ -8,6 +8,7 @@
 #include "probe.h"
 #include "game.h"
 #include "log.h"
+#include "autopad.h"
 #include "pins.h"
 #include "trace.h"
 #include "net.h"
@@ -473,6 +474,19 @@ void probe_request_dump(void) { g_dump_requested = 1; }
 
 AimpNet *probe_net(void) { return &g_net; }
 
+/* MARCA n en el log con la posición del jugador 0 (tecla F8 o AUTOPAD). */
+void probe_mark(const char *why)
+{
+    float pos[3] = { 0 }, yaw = 0;
+    if (g_cur.pl) {
+        mem_read(g_cur.pl + CHR_POS, pos, sizeof pos);
+        mem_f32(g_cur.pl + CHR_YAW, &yaw);
+    }
+    log_printf("MARCA %u (frame %u, contador del juego %u) J0 pos=(%.2f, %.2f, %.2f) yaw=%.3f%s%s", ++g_marks, g_frames,
+               *(volatile uint32_t *)(g_aimp_exe + AIMP_RVA_FRAME_COUNTER), (double)pos[0], (double)pos[1], (double)pos[2],
+               (double)yaw, why ? " " : "", why ? why : "");
+}
+
 void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t now)
 {
     g_frames++;
@@ -545,15 +559,7 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
     if (g_GetAsyncKeyState && g_mark_key > 0) {
         int down = (g_GetAsyncKeyState(g_mark_key) & 0x8000) != 0;
         if (down && !g_mark_was_down) {
-            /* Marca liviana para cruzar acciones del usuario con el log. */
-            float pos[3] = { 0 }, yaw = 0;
-            if (g_cur.pl) {
-                mem_read(g_cur.pl + CHR_POS, pos, sizeof pos);
-                mem_f32(g_cur.pl + CHR_YAW, &yaw);
-            }
-            log_printf("MARCA %u (frame %u, contador del juego %u) J0 pos=(%.2f, %.2f, %.2f) yaw=%.3f", ++g_marks, g_frames,
-                       *(volatile uint32_t *)(g_aimp_exe + AIMP_RVA_FRAME_COUNTER), (double)pos[0], (double)pos[1],
-                       (double)pos[2], (double)yaw);
+            probe_mark(NULL); /* marca liviana para cruzar acciones del usuario con el log */
         }
         g_mark_was_down = down;
     }
@@ -609,6 +615,8 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
     /* Fase 4 (experimental, apagada por defecto): el avatar del otro jugador escribe en
      * el juego; vive en ghost.c para que esta sonda siga siendo de solo lectura. */
     ghost_frame(now, &g_net, g_cur.level_cur);
+    /* Pruebas sin nadie al teclado (AIMP_AUTOPAD): mando virtual con guion. */
+    autopad_frame(now, g_freq, g_cur.pl && g_cur.pl_ok);
     if (status_due) {
         status(&g_cur, now - g_last_status);
         net_status(&g_net, now);
