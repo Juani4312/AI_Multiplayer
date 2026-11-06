@@ -94,7 +94,7 @@ int main(void)
     CHECK(((GS)(uintptr_t)ft[0])(0, &s) == 0 && s.buttons == 0, "estado del mando 0: conectado y en reposo");
     CHECK(((GS)(uintptr_t)ft[0])(2, &s) == ERROR_DEVICE_NOT_CONNECTED, "mando 2 desconectado");
     printf("[GO a lazo cerrado, con un jugador simulado]\n");
-    /* modelo de las corridas 14 y 18: rumbo = yaw + pi/4 = atan2(dx, dz); RX>0 sube el yaw (~3,6 rad/s a fondo) */
+    /* modelo de las corridas 18 y 19: rumbo = yaw = atan2(dx, dz); RX>0 sube el yaw (~3,6 rad/s a fondo) */
     g_aimp_exe = (uintptr_t)img;
     SetEnvironmentVariableW(L"AIMP_AUTOPAD", L"0-60000:GO=5/5,0-60000:GO=5/-4+MARK,0-60000:GO=-3/-4");
     CHECK(autopad_install() == 1, "autopad_install con 3 GO");
@@ -109,7 +109,7 @@ int main(void)
         ((GS)(uintptr_t)ft[0])(0, &st);
         float dt = 0.016f;
         yaw += st.rx / 32767.0f * 3.6f * dt;
-        float h = yaw + 0.785398f, v = st.ly / 32767.0f * 3.0f * dt;
+        float h = yaw, v = st.ly / 32767.0f * 3.0f * dt;
         pos[0] += sinf(h) * v;
         pos[2] += cosf(h) * v;
     }

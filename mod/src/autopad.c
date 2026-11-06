@@ -50,6 +50,7 @@ static int g_had_player;
 static int g_have_pose;
 static float g_px, g_pz, g_yaw;
 static float g_go_best;
+static float g_yaw_off; /* AIMP_AUTOPAD_YAWOFF en milirradianes (0 por defecto) */
 static int64_t g_go_best_ms;
 /* Archivo de comandos (AIMP_AUTOPAD_FILE): se relee cuando cambia su fecha de escritura. */
 static wchar_t g_file[MAX_PATH];
@@ -271,8 +272,9 @@ static void compute(int64_t ms_start, int64_t ms_player, uint16_t *buttons, int1
                 g_go_best_ms = 0;
                 continue;
             }
-            /* rumbo = atan2(dx, dz) = yaw + pi/4 (corrida 14); RX > 0 aumenta el yaw (corrida 18) */
-            float err = wrap_pi(atan2_approx(dx, dz) - (g_yaw + 0.78539816f));
+            /* rumbo = atan2(dx, dz) = yaw (corrida 19, caminando recto: diferencia 0,000; la corrida 14
+             * daba pi/4 porque el usuario caminaba en diagonal). RX > 0 aumenta el yaw (corrida 18). */
+            float err = wrap_pi(atan2_approx(dx, dz) - (g_yaw + g_yaw_off));
             float rx = err * 30000.0f;
             thumbs[2] = (int16_t)(rx > 32767 ? 32767 : rx < -32767 ? -32767 : rx);
             float ae = err < 0 ? -err : err;
@@ -407,6 +409,7 @@ int autopad_install(void)
     LARGE_INTEGER t;
     QueryPerformanceCounter(&t);
     g_t_start = t.QuadPart;
+    g_yaw_off = (float)aimp_env_int(L"AIMP_AUTOPAD_YAWOFF", 0) / 1000.0f;
     g_on = 1;
     char f8[MAX_PATH * 3];
     log_printf("AUTOPAD (pruebas): mando virtual 0 con %d pasos, %d slots de la IAT reemplazados: \"%s\"%s%s", n, p, s,
