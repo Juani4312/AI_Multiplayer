@@ -46,10 +46,16 @@ Recomendación: la opción 3. Primero hay que medir qué despacha CATHODE cuando
 - Avatar: NPC sin IA.
 - Lo que no se sincroniza: la IA y el Alien, el disparo de armas y los scripts.
 
-## Dónde quedó (2026-11-05, cierre de la sesión)
-- Paso 1 en curso. vtable de `TriggerSimple` (`0x013466FC`, `work/evidence/h12/f22.txt`), los 4 slots que la distinguen de una entidad trivial:
-  - `+0x1C` → `FUN_004a25f0`;
-  - `+0x20` → `FUN_005f9680`;
-  - `+0x38` → `FUN_00404000`;
-  - `+0x5C` → `FUN_008d21e0`, el stub de los endpoints RPC (hallazgo 10).
-- Siguiente: decompilar `FUN_004a25f0` y `FUN_005f9680`. El candidato a "recibir o disparar un pin" es `+0x1C`/`+0x20`. Comparar con `Door` (`0x013727DC`).
+## Dónde quedó (2026-11-06, sesión autónoma)
+- **Pasos 1 a 3 hechos** (hallazgo 15):
+  - el despacho de pines es `FUN_008be0d0` (`vt+0x394`, común a todas las entidades);
+  - la traza está en `mod/src/pins.c` (`AIMP_TRACE_PINS=1`);
+  - la identidad estable de una instancia es el `pid` (hash de la ruta de composites): único y determinista entre procesos;
+  - la reinyección (`FIRE <pid> <pin>`) se propaga por el grafo igual que un disparo natural.
+- Los slots de la vtable de `TriggerSimple` eran un callejón: getters triviales.
+- **Siguiente (paso 4):**
+  1. Identificar las raíces de los disparadores de zona. Caminar con el mando virtual y ver qué (tipo, pin) disparan al entrar a una zona; candidatos: `TriggerSimple`, `TriggerTouch`, zonas.
+  2. Diseñar la política:
+     - el host manda (pid, pin) de esas raíces por la red (evento confiable, como el "usar");
+     - el cliente bloquea sus propios disparos de esos (pid, pin) (el detour no llama al original) e inyecta los del host.
+  3. Probar con dos máquinas que el `pid` coincida (laptop).

@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-05, noche (fases 1–5 v1 verificadas con la laptop; avatar sin IA; fase 6 en diseño, `work/DESIGN_PHASE6.md`)_
+_Última actualización: 2026-11-06, madrugada (fase 6: pasos 1–3 hechos en local; hallazgo 15; mando virtual para pruebas sin nadie al teclado)_
 
 ## Decisiones vigentes
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
@@ -49,6 +49,8 @@ _Última actualización: 2026-11-05, noche (fases 1–5 v1 verificadas con la la
 | Mod fase 4 (avatar del otro jugador) | ✅ **v1 por red OK** (corrida 9, Windows nativo ↔ Proton): en cada máquina un NPC humano del nivel sigue al jugador de la otra (`AIMP_GHOST=3`; `mod/src/ghost.c`). Clonar personajes hace caer el juego (hallazgo 12, parte 2) |
 | Mod fase 5 v1 ("usar" compartido) | ✅ **botones en los dos sentidos** (corrida 12): el transit viene en las dos máquinas y el uso remoto lo hace el avatar (`AIMP_SYNC_USE_ACTOR=1`), sin mover al otro jugador. Los lockers y la terminal de guardado no se replican (`AIMP_SYNC_USE_SKIP`). `findings/13-usar-compartido.md` |
 | Hallazgo 14 (armas, arrojables e ítems) | 🟡 `findings/14-armas-e-items.md`: disparar no genera un RPC, pero sus efectos sí (daño 0x18, agresión 0x0C). Bengala, nada. **Levantar un ítem es un "usar" (0x26) y ya se replica** (falta probarlo con dos máquinas) |
+| Hallazgo 15 (pines de CATHODE) | ✅ `findings/15-pines-de-cathode.md`: despacho `FUN_008be0d0` (`vt+0x394`), identidad estable **pid** (ruta de composites; único y determinista entre procesos), reinyección `FIRE` verificada (se propaga como un disparo natural). Traza `AIMP_TRACE_PINS=1` |
+| Mando virtual (pruebas) | ✅ `mod/src/autopad.c`: `AIMP_AUTOPAD_FILE` (pad.txt), IAT de XINPUT1_3. En el menú, verificar cada paso con captura (corrida 17) |
 | Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
 | Hallazgo 10 (NETZ: red del engine) | 🟡 partes 1–7 en `findings/10-netz-red-del-engine.md` (sin transporte ni proveedor; canal por personaje; cola A en loopback; **cola B = salida a la red, descartada en retail**; registro de handlers de la cola A) |
@@ -86,7 +88,11 @@ _Última actualización: 2026-11-05, noche (fases 1–5 v1 verificadas con la la
 
    ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
 2. **Siguiente** (a elegir con el usuario):
-   - **Fase 6, scripts:** cada máquina corre sus propios disparadores (corrida 14: un diálogo se repitió). Es el núcleo del coop. **Diseño y opciones en `work/DESIGN_PHASE6.md`.** Recomendación: replicar los disparadores de zona (diálogos, cinemáticas, objetivos) hookeando el despacho de pines de CATHODE, y sincronizar por checkpoints como respaldo. Primer paso: ubicar el despacho y trazarlo en el diálogo de Tech_Hub.
+   - **Fase 6, scripts:** pasos 1–3 hechos (hallazgo 15). **Siguiente (paso 4):**
+     - con el mando virtual, identificar las raíces de los disparadores de zona;
+     - política: el host manda (pid, pin) y el cliente bloquea los suyos e inyecta los del host;
+     - verificar el pid con la laptop.
+     Detalle en `work/DESIGN_PHASE6.md`.
    - **Armas:** hookear el disparo y el lanzamiento (hallazgo 14).
    - **Ítems compartidos:** hoy el botín es por jugador. Si se quiere compartido, sacar el ítem del mundo en la otra máquina.
    - Hecho en la corrida 14: el avatar no autoritativo no tiene IA (`AIMP_GHOST_NOAUTH`, activado por defecto en el modo 3).

@@ -528,3 +528,14 @@ Evidencia: `work/evidence/runtime/run14-items-noauth-host.log` (gitignored). pap
   - 0 excepciones, salida limpia.
 - Mejora pendiente: guardar los eventos de otro nivel en una cola hasta que el receptor llegue a ese nivel (con un tope de tiempo), en lugar de descartarlos.
 - papito: salida limpia, 0 excepciones (`run14-items-noauth-host.log`).
+
+## 2026-11-06 — Fase 6, pasos 1–3: despacho de pines, pid y reinyección (corridas 15–18, locales)
+Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie al teclado: mando virtual (`mod/src/autopad.c`, archivo de comandos `pad.txt`) y capturas con `grim -o DP-3`. El juego va en pantalla completa en DP-3, workspace 2.
+- **Corrida 15** (Tech_Hub y después HAB_ShoppingCentre; el usuario se movió a una zona sin Alien): hook de `FUN_008be0d0` instalado sin problemas, unos 1000 disparos por segundo. La carga restaura el estado con ~6700 `on_restored`. `externo+0x0C` (id) y `+0x10` (tipo) aparecen siempre en el `COMMANDS.PAK` del nivel (copias en `game/data/pak/`).
+  - La tabla de claves (16 384) se llenó en la carga; se agrandó a 65 536 y ahora se renueva por nivel.
+- **Corrida 16:** el id no es único (prefabs). `externo+0x08` = handle al composite padre, de ahí el `pid`. Primera inyección (`FIRE` por id) sin problemas.
+- **Corrida 17:**
+  - pid único (9938, 0 colisiones);
+  - 4 inyecciones de `LogicSwitch.on_true`: el `TriggerSequence` destino dispara en el frame siguiente con el mismo contador, así que la reinyección se propaga como un disparo natural;
+  - **incidente:** el guion a ciegas del menú (tiempos fijos) llegó al diálogo "Start new game", con Cancel seleccionado. B no lo cerró. Se cerró el juego con `pkill` sin confirmar nada, y la partida no se tocó. Desde entonces el menú se recorre de a un paso, verificando con captura: título "Press A" → A, A, A, DOWN → captura (Continue Game resaltado) → A.
+- **Corrida 18:** pid determinista entre procesos (9901/9901 iguales a la 17). El índice del caché coincide solo en 2201/9901: no sirve como identidad.
