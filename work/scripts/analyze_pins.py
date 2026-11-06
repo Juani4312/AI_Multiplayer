@@ -23,6 +23,10 @@ RE_PIN = re.compile(
     r'^\[\s*([\d.]+)\] PIN f(\d+) ent 0x([0-9a-f]+) vt ([0-9a-f]+) idx (\d+) fl ([0-9a-f]+) \| pin ([0-9a-f]+) n(\d+) \| '
     r'links (\d+) tgt 0x([0-9a-f]+) \| demora ([0-9a-f]{16}) flag ([0-9a-f]+) msg 0x([0-9a-f]+) \| ctx 0x([0-9a-f]+) '
     r'h 0x([0-9a-f]+) o 0x([0-9a-f]+) \(ent([+-]\d+)\) ovt ([0-9a-f]+) \| desde ([0-9a-f]+)(.*)$')
+RE_PIN2 = re.compile(
+    r'^\[\s*([\d.]+)\] PIN f(\d+) ent 0x([0-9a-f]+) vt ([0-9a-f]+) idx (\d+) fl ([0-9a-f]+) \| id ([0-9a-f]+) tipo ([0-9a-f]+) \| '
+    r'pin ([0-9a-f]+) n(\d+) \| links (\d+) tgt 0x([0-9a-f]+) \| demora ([0-9a-f]{16}) flag ([0-9a-f]+) \| msg 0x([0-9a-f]+) '
+    r'm 0x([0-9a-f]+) mfl ([0-9a-f]+) mref (\d+) \| ctx 0x([0-9a-f]+) h 0x([0-9a-f]+) o ([+-]\d+) \| desde ([0-9a-f]+)(.*)$')
 RE_MARK = re.compile(r'^\[\s*([\d.]+)\] MARCA (\d+) .*?pos=\(([^)]*)\)')
 RE_LEVEL = re.compile(r'^\[\s*([\d.]+)\] .*(nivel|level)[^\n]*', re.I)
 RE_TOP = re.compile(r'^\[\s*([\d.]+)\] PIN\s+(\d+) x  ent 0x([0-9a-f]+) vt ([0-9a-f]+) idx (\d+) pin ([0-9a-f]+) links (\d+)')
@@ -80,6 +84,15 @@ def main():
 
     fires, marks, levels, sums = [], [], [], []
     for line in open(a.log, encoding='utf-8', errors='replace'):
+        m = RE_PIN2.match(line)
+        if m:
+            g = m.groups()
+            fires.append(dict(t=float(g[0]), frame=int(g[1]), ent=int(g[2], 16), vt=int(g[3], 16), idx=int(g[4]),
+                              fl=int(g[5], 16), eid=int(g[6], 16), type=int(g[7], 16), pin=int(g[8], 16), n=int(g[9]),
+                              links=int(g[10]), tgt=int(g[11], 16), delay=g[12], flag=int(g[13], 16), msg=int(g[14], 16),
+                              mobj=int(g[15], 16), mfl=int(g[16], 16), ctx=int(g[18], 16), orel=int(g[20]),
+                              frm=int(g[21], 16), extra=g[22].strip()))
+            continue
         m = RE_PIN.match(line)
         if m:
             g = m.groups()
@@ -102,8 +115,13 @@ def main():
     sel = [f for f in fires if f['links'] or not a.links_only]
     print(f'disparos detallados: {len(fires)} (con links: {sum(1 for f in fires if f["links"])}); marcas: {len(marks)}')
     by_pin = collections.Counter((pn(f['pin'])) for f in fires)
-    by_cls = collections.Counter((cn(f['vt'])) for f in fires)
-    by_cp = collections.Counter((cn(f['vt']), pn(f['pin'])) for f in fires)
+    def tn(f):
+        if f.get('type'):
+            return names.get(f['type'], f'?{f["type"]:08x}')
+        return cn(f['vt'])
+
+    by_cls = collections.Counter(tn(f) for f in fires)
+    by_cp = collections.Counter((tn(f), pn(f['pin'])) for f in fires)
     by_from = collections.Counter((f['frm'], pn(f['pin'])) for f in fires)
     print('\nPines más vistos (líneas detalladas):')
     for k, v in by_pin.most_common(30):
@@ -125,7 +143,7 @@ def main():
             print('  ' + s)
 
     def fmt(f):
-        return (f'[{f["t"]:9.3f}] f{f["frame"]:<7} {cn(f["vt"]):28} idx {f["idx"]:<6} {pn(f["pin"]):28} '
+        return (f'[{f["t"]:9.3f}] f{f["frame"]:<7} {tn(f):24} id {f.get("eid", 0):08x} idx {f["idx"]:<6} {pn(f["pin"]):28} '
                 f'n{f["n"]} links {f["links"]} desde 0x{f["frm"]:06x} {f["extra"]}')
 
     if a.around and marks:

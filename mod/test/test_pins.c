@@ -28,11 +28,17 @@ static int g_fail;
 static void *obj(size_t n) { return calloc(1, n); }
 static void put32(void *base, uint32_t off, uint32_t v) { memcpy((uint8_t *)base + off, &v, 4); }
 static void putp(void *base, uint32_t off, void *p) { put32(base, off, (uint32_t)(uintptr_t)p); }
+static uint32_t get32(void *base, uint32_t off)
+{
+    uint32_t v;
+    memcpy(&v, (uint8_t *)base + off, 4);
+    return v;
+}
 
 typedef void(__attribute__((fastcall)) * FireFn)(void *self, void *edx, void *ctx, const uint32_t *pin, void *msg,
                                                  double delay, uint32_t flag);
 
-static uint32_t g_calls, g_last_this, g_last_ctx, g_last_pin;
+static uint32_t g_calls, g_last_this, g_last_ctx, g_last_pin, g_last_outer;
 static FireFn g_fire;
 static void *g_nested_ent, *g_nested_ctx;
 static uint32_t g_nested_pin = 0x71b80569; /* on_finished */
@@ -43,6 +49,9 @@ static void __attribute__((cdecl)) fake_fire(uint32_t self, uint32_t ctx, const 
     g_last_this = self;
     g_last_ctx = ctx;
     g_last_pin = *pin;
+    g_last_outer = 0;
+    if (ctx)
+        memcpy(&g_last_outer, (uint8_t *)(uintptr_t)(*(uint32_t *)(uintptr_t)ctx) + 0xC, 4);
     if (g_nested_ent) { /* un pin que dispara a otro directamente (como FUN_008be0d0 con un link inmediato) */
         void *e = g_nested_ent;
         g_nested_ent = NULL;
@@ -134,11 +143,21 @@ int main(void)
     putp(l1, 8, t1);
     putp(l1, 0xC, l2);
     putp(l2, 8, t1);
-    /* ctx = puntero a un handle refcontado cuyo +0xC es la propia entidad */
+    /* ctx = puntero a un handle refcontado cuyo +0xC es el objeto completo (outer = ent - 0x14),
+     * con el id de la entidad en +0xC y el tipo ("TriggerSimple") en +0x10. */
     uint8_t *h = obj(0x10);
-    putp(h, 0xC, ent);
+    put32(h, 4, 3);
+    putp(h, 0xC, outer);
+    put32(outer, 0xC, 0x73da3779);
+    put32(outer, 0x10, 0xdd5a65d6);
     void *ctx = obj(4);
     putp(ctx, 0, h);
+    /* msg = puntero a un objeto de 0x28 bytes del pool (refcount +0x24, flags +0x20) */
+    uint8_t *mo = obj(0x28);
+    put32(mo, 0x20, 0x01000000);
+    put32(mo, 0x24, 1);
+    void *msg = obj(4);
+    putp(msg, 0, mo);
 
     SetEnvironmentVariableW(L"AIMP_TRACE_PINS", L"1");
     CHECK(pins_install_at(img + AIMP_RVA_FIRE_PIN) == 1, "hook instalado sobre el prólogo real");
@@ -148,20 +167,36 @@ int main(void)
     uint32_t esp0, esp1;
     __asm__ volatile("mov %%esp, %0" : "=r"(esp0));
     for (int i = 0; i < 3; i++)
-        g_fire(ent, NULL, ctx, &trig, NULL, 0.0, 0);
+        g_fire(ent, NULL, ctx, &trig, msg, 0.0, 0);
     __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
     CHECK(esp0 == esp1, "stack balanceado después de 3 disparos (ret 0x18)");
     CHECK(g_calls == 3 && g_last_this == (uint32_t)(uintptr_t)ent && g_last_ctx == (uint32_t)(uintptr_t)ctx &&
               g_last_pin == trig,
           "el original recibió this, ctx y pin intactos (%u llamadas)", g_calls);
-    g_fire(ent, NULL, ctx, &ontrig, NULL, 1.5, 0);
+    g_fire(ent, NULL, ctx, &ontrig, msg, 1.5, 0);
     CHECK(g_calls == 4, "pin sin links también llega al original");
 
     printf("[anidado]\n");
     g_nested_ent = ent;
     g_nested_ctx = ctx;
-    g_fire(ent, NULL, ctx, &ontrig, NULL, 0.0, 0);
+    g_fire(ent, NULL, ctx, &ontrig, msg, 0.0, 0);
     CHECK(g_calls == 6 && g_last_pin == 0x71b80569, "disparo anidado pasa por el hook y por el original");
+
+    printf("[reinyección]\n");
+    CHECK(pins_fire(0x73da3779, 0x12345678) == 1 && g_calls == 7 && g_last_pin == 0x12345678 &&
+              g_last_this == (uint32_t)(uintptr_t)ent && g_last_outer == (uint32_t)(uintptr_t)outer,
+          "FIRE con id de entidad: el original recibe la entidad, el pin pedido y un handle que apunta al objeto completo");
+    CHECK(pins_fire(0xdeadbeef, 0x12345678) == 0 && g_calls == 7, "id desconocido: no dispara");
+    putp(h, 0xC, NULL); /* la entidad "murió": su handle ya no apunta al objeto */
+    CHECK(pins_fire(0x73da3779, trig) == 0 && g_calls == 7, "entidad muerta: no dispara");
+    putp(h, 0xC, outer);
+    CHECK(get32(h, 4) == 3 && get32(mo, 0x24) == 1, "el handle y el mensaje originales no se tocaron");
+
+    printf("[cambio de nivel]\n");
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    pins_frame(now.QuadPart, 16);
+    CHECK(pins_fire(0x73da3779, trig) == 1, "las claves recientes sobreviven al cambio de nivel");
 
     pins_report_totals("test");
     char *log = read_log();
@@ -172,15 +207,20 @@ int main(void)
         expect_n(log, "pin d9d0ca29 n3", 0);
         expect_n(log, "pin 19d97b56 n1 | links 0", 1);
         expect_n(log, "demora 3ff8000000000000", 1);
-        expect_n(log, "vt e61eb8 idx 291 fl 01", 5);
-        expect_n(log, "(ent+0)", 5);
-        expect_n(log, "f77 ", 5);
+        expect_n(log, "vt e61eb8 idx 291 fl 01", 7);
+        expect_n(log, "| id 73da3779 tipo dd5a65d6 | pin", 7);
+        expect_n(log, "o -20 |", 7);
+        expect_n(log, "(INYECTADO)", 2);
+        expect_n(log, "mfl 01000000 mref 1", 4); /* el anidado no tiene msg */
+        expect_n(log, "renovada (3 claves", 0);
+        expect_n(log, "claves de los últimos 3 s conservadas", 1);
+        expect_n(log, "f77 ", 7);
         expect_n(log, "pin 71b80569 n1 | links 0", 1);
         expect_n(log, "(anidado)", 1);
         expect_n(log, "PIN primera instancia de la vtable", 1);
-        expect_n(log, "PIN totales (test): 6 disparos, 3 (entidad, pin) distintos", 1);
-        expect_n(log, "anidamiento máx. 2", 1);
-        expect_n(log, "PIN        3 x  ent", 1);
+        expect_n(log, "PIN totales (test): 8 disparos, 4 (entidad, pin) distintos", 1);
+        expect_n(log, "anidamiento máx. 2", 2); /* resumen del cambio de nivel y el final */
+        expect_n(log, "PIN        4 x  ent", 1);
     }
     printf(g_fail ? "test_pins: %d FALLAS\n" : "test_pins: todo OK\n", g_fail);
     return g_fail ? 1 : 0;
