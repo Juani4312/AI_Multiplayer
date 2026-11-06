@@ -150,6 +150,11 @@ int main(void)
     putp(h, 0xC, outer);
     put32(outer, 0xC, 0x73da3779);
     put32(outer, 0x10, 0xdd5a65d6);
+    /* composite padre: outer+8 = handle -> CompositeInstance con id 11111111 y sin padre */
+    uint8_t *parent = obj(0x40), *hp = obj(0x10);
+    put32(parent, 0xC, 0x11111111);
+    putp(hp, 0xC, parent);
+    putp(outer, 8, hp);
     void *ctx = obj(4);
     putp(ctx, 0, h);
     /* msg = puntero a un objeto de 0x28 bytes del pool (refcount +0x24, flags +0x20) */
@@ -208,8 +213,9 @@ int main(void)
         expect_n(log, "pin 19d97b56 n1 | links 0", 1);
         expect_n(log, "demora 3ff8000000000000", 1);
         expect_n(log, "vt e61eb8 idx 291 fl 01", 7);
-        expect_n(log, "| id 73da3779 tipo dd5a65d6 | pin", 7);
+        expect_n(log, "| id 73da3779 tipo dd5a65d6 pid ", 7);
         expect_n(log, "o -20 |", 7);
+        expect_n(log, " d2 | pin", 7);
         expect_n(log, "(INYECTADO)", 2);
         expect_n(log, "mfl 01000000 mref 1", 4); /* el anidado no tiene msg */
         expect_n(log, "renovada (3 claves", 0);

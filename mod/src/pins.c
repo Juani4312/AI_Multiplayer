@@ -15,7 +15,7 @@
  * AIMP_TRACE_PINS=1: solo mira. Por cada (entidad, pin) loguea las primeras apariciones y cuenta el
  * resto; la tabla se vacía en cada cambio de nivel.
  * AIMP_PINS_FILE=ruta (experimento del paso 3): archivo de comandos que se relee cuando cambia.
- *     FIRE <id de entidad hex> <pin hex>
+ *     FIRE <pid o id de entidad, hex> <pin hex>   (pid = ruta de composites, único en el nivel)
  * vuelve a disparar ese pin sobre la entidad (tiene que haber disparado algún pin desde que cargó el
  * nivel), con copias propias del handle y del mensaje del primer disparo visto (refcount alto: el motor
  * nunca las libera). Corre en el thread principal, entre frames.
@@ -35,6 +35,7 @@ typedef struct {
     uint32_t vt, idx, links;
     uint32_t total, period;
     uint32_t outer, eid, type;
+    uint32_t pid, depth; /* id de la ruta de composites (estable entre máquinas) y profundidad */
     uint32_t h, mobj;
     uint32_t t_first; /* GetTickCount del primer disparo */
     uint32_t hsnap[H_SIZE / 4];
@@ -55,6 +56,7 @@ static uint32_t g_vts[VT_SLOTS], g_nvts;
 static volatile LONG g_depth_max;
 static int t_depth;     /* anidamiento en el thread principal: un pin dispara a otro directamente */
 static int g_injecting; /* el disparo actual lo hizo el mod */
+static volatile uint32_t g_win_until, g_win_lines; /* ventana después de una inyección: se detalla todo */
 static wchar_t g_file[MAX_PATH];
 static FILETIME g_file_time;
 static int64_t g_next_file_check, g_freq;
@@ -143,6 +145,25 @@ static uint32_t outer_of(uint32_t ent, void *ctx, uint32_t *h_out)
     return (rel >= -0x40 && rel <= 0) ? o : 0;
 }
 
+/* Identidad estable de una instancia: hash de los ShortGuids de la entidad y de cada composite
+ * padre (objeto completo +0x08 = handle al CompositeInstance padre; corrida 16: 60 de 124 volcados
+ * apuntan a un handle de CompositeInstance conocido). */
+static uint32_t path_id(uint32_t outer, uint32_t *depth)
+{
+    uint32_t x = 0x811C9DC5u, d = 0;
+    for (; outer && d < 32; d++) {
+        uint32_t eid = 0, h = 0, up = 0;
+        if (!mem_u32(outer + 0xC, &eid))
+            break;
+        x = hash2(x, eid);
+        if (!mem_u32(outer + 0x8, &h) || !h || !mem_u32(h + 0xC, &up) || up == outer)
+            break;
+        outer = up;
+    }
+    *depth = d + (outer ? 1 : 0);
+    return x;
+}
+
 static void note(uint32_t ent, void *ctx, const uint32_t *pinp, void *msg, double delay, uint32_t flag, uint32_t ret)
 {
     uint32_t pin = 0, vt = 0, idx = 0;
@@ -150,10 +171,11 @@ static void note(uint32_t ent, void *ctx, const uint32_t *pinp, void *msg, doubl
         return;
     mem_u32(ent, &vt);
     mem_u32(ent + ENT_INDEX, &idx);
-    uint32_t h = 0, outer = outer_of(ent, ctx, &h), eid = 0, type = 0, mobj = 0;
+    uint32_t h = 0, outer = outer_of(ent, ctx, &h), eid = 0, type = 0, mobj = 0, pid = 0, depth = 0;
     if (outer) {
         mem_u32(outer + 0xC, &eid);
         mem_u32(outer + 0x10, &type);
+        pid = path_id(outer, &depth);
     }
     if (msg)
         mem_u32((uintptr_t)msg, &mobj);
@@ -179,12 +201,17 @@ static void note(uint32_t ent, void *ctx, const uint32_t *pinp, void *msg, doubl
         k->outer = outer;
         k->eid = eid;
         k->type = type;
+        k->pid = pid;
+        k->depth = depth;
         k->h = h;
         k->mobj = mobj;
         k->t_first = GetTickCount();
         k->have_snap = h && mobj && mem_read(h, k->hsnap, H_SIZE) && mem_read(mobj, k->msnap, MSG_SIZE);
     }
-    int detail = (int)k->total <= g_per_key && g_lines < (uint32_t)g_max_lines;
+    int win = g_win_until && (int32_t)(GetTickCount() - g_win_until) < 0 && g_win_lines < 600;
+    int detail = ((int)k->total <= g_per_key && g_lines < (uint32_t)g_max_lines) || win;
+    if (win)
+        g_win_lines++;
     int dumpvt = created && vt_first(vt);
     uint32_t total = k->total;
     if (detail)
@@ -203,11 +230,11 @@ static void note(uint32_t ent, void *ctx, const uint32_t *pinp, void *msg, doubl
         double d;
         uint32_t u[2];
     } dl = { delay };
-    log_printf("PIN f%u ent 0x%08x vt %x idx %u fl %02x | id %08x tipo %08x | pin %08x n%u | links %u tgt 0x%08x | demora %08x%08x flag %x | msg 0x%08x m 0x%08x mfl %08x mref %u | ctx 0x%08x h 0x%08x o %+d | desde %x%s%s%s",
-               frame, ent, rva(vt), idx & 0xFFFFFF, idx >> 24, eid, type, pin, total, links, tgt, dl.u[1], dl.u[0], flag,
+    log_printf("PIN f%u ent 0x%08x vt %x idx %u fl %02x | id %08x tipo %08x pid %08x d%u | pin %08x n%u | links %u tgt 0x%08x | demora %08x%08x flag %x | msg 0x%08x m 0x%08x mfl %08x mref %u | ctx 0x%08x h 0x%08x o %+d | desde %x%s%s%s",
+               frame, ent, rva(vt), idx & 0xFFFFFF, idx >> 24, eid, type, pid, depth, pin, total, links, tgt, dl.u[1], dl.u[0], flag,
                (unsigned)(uintptr_t)msg, mobj, mflags, mref, (unsigned)(uintptr_t)ctx, h, outer ? (int32_t)(outer - ent) : 0,
                rva(ret), other ? " (otro thread)" : "", !other && t_depth > 1 ? " (anidado)" : "",
-               g_injecting ? " (INYECTADO)" : "");
+               g_injecting ? " (INYECTADO)" : win ? " (ventana)" : "");
     if (dumpvt)
         log_dump32("PIN primera instancia de la vtable (desde ent-0x20)", ent - 0x20, 0x80);
 }
@@ -287,9 +314,9 @@ static void top(int period, const char *title)
     log_printf("PIN %s: %u disparos, %u (entidad, pin) distintos, %u líneas detalladas, %u sin lugar, %u en otro thread, anidamiento máx. %ld, nivel %u",
                title, fires, nkeys, g_lines, g_full, g_other_thread, (long)g_depth_max, g_level);
     for (int i = 0; i < nb; i++)
-        log_printf("PIN   %6u x  ent 0x%08x vt %x idx %u id %08x tipo %08x pin %08x links %u",
+        log_printf("PIN   %6u x  ent 0x%08x vt %x idx %u id %08x tipo %08x pid %08x pin %08x links %u",
                    period ? best[i].period : best[i].total, best[i].ent, rva(best[i].vt), best[i].idx, best[i].eid,
-                   best[i].type, best[i].pin, best[i].links);
+                   best[i].type, best[i].pid, best[i].pin, best[i].links);
 }
 
 void pins_report_period(void)
@@ -335,7 +362,7 @@ int pins_fire(uint32_t eid, uint32_t pin)
     EnterCriticalSection(&g_cs);
     for (uint32_t i = 0; i < PK_SLOTS && found < 2; i++) {
         PKey *k = &g_keys[i];
-        if (!k->total || k->eid != eid || !k->have_snap)
+        if (!k->total || (k->pid != eid && k->eid != eid) || !k->have_snap)
             continue;
         if (k->pin == pin) {
             src = *k;
@@ -370,6 +397,8 @@ int pins_fire(uint32_t eid, uint32_t pin)
     uint32_t pin_v = pin;
     log_printf("PIN FIRE %08x %08x: ent 0x%08x (vt %x, tipo %08x), con el handle y el mensaje del primer disparo de %08x%s",
                eid, pin, src.ent, rva(src.vt), src.type, src.pin, found == 2 ? "" : " (otro pin de la misma entidad)");
+    g_win_lines = 0;
+    g_win_until = GetTickCount() + 1500;
     g_injecting = 1;
     det_fire((void *)(uintptr_t)src.ent, NULL, &ctx_slot, &pin_v, &msg_slot, 0.0, 0);
     g_injecting = 0;

@@ -24,7 +24,7 @@ RE_PIN = re.compile(
     r'links (\d+) tgt 0x([0-9a-f]+) \| demora ([0-9a-f]{16}) flag ([0-9a-f]+) msg 0x([0-9a-f]+) \| ctx 0x([0-9a-f]+) '
     r'h 0x([0-9a-f]+) o 0x([0-9a-f]+) \(ent([+-]\d+)\) ovt ([0-9a-f]+) \| desde ([0-9a-f]+)(.*)$')
 RE_PIN2 = re.compile(
-    r'^\[\s*([\d.]+)\] PIN f(\d+) ent 0x([0-9a-f]+) vt ([0-9a-f]+) idx (\d+) fl ([0-9a-f]+) \| id ([0-9a-f]+) tipo ([0-9a-f]+) \| '
+    r'^\[\s*([\d.]+)\] PIN f(\d+) ent 0x([0-9a-f]+) vt ([0-9a-f]+) idx (\d+) fl ([0-9a-f]+) \| id ([0-9a-f]+) tipo ([0-9a-f]+)(?: pid ([0-9a-f]+) d(\d+))? \| '
     r'pin ([0-9a-f]+) n(\d+) \| links (\d+) tgt 0x([0-9a-f]+) \| demora ([0-9a-f]{16}) flag ([0-9a-f]+) \| msg 0x([0-9a-f]+) '
     r'm 0x([0-9a-f]+) mfl ([0-9a-f]+) mref (\d+) \| ctx 0x([0-9a-f]+) h 0x([0-9a-f]+) o ([+-]\d+) \| desde ([0-9a-f]+)(.*)$')
 RE_MARK = re.compile(r'^\[\s*([\d.]+)\] MARCA (\d+) .*?pos=\(([^)]*)\)')
@@ -87,8 +87,11 @@ def main():
         m = RE_PIN2.match(line)
         if m:
             g = m.groups()
+            g = g[:8] + g[10:]
+            pid = int(m.group(9), 16) if m.group(9) else 0
             fires.append(dict(t=float(g[0]), frame=int(g[1]), ent=int(g[2], 16), vt=int(g[3], 16), idx=int(g[4]),
-                              fl=int(g[5], 16), eid=int(g[6], 16), type=int(g[7], 16), pin=int(g[8], 16), n=int(g[9]),
+                              fl=int(g[5], 16), eid=int(g[6], 16), type=int(g[7], 16), pid=pid,
+                              depth=int(m.group(10) or 0), pin=int(g[8], 16), n=int(g[9]),
                               links=int(g[10]), tgt=int(g[11], 16), delay=g[12], flag=int(g[13], 16), msg=int(g[14], 16),
                               mobj=int(g[15], 16), mfl=int(g[16], 16), ctx=int(g[18], 16), orel=int(g[20]),
                               frm=int(g[21], 16), extra=g[22].strip()))
@@ -143,7 +146,7 @@ def main():
             print('  ' + s)
 
     def fmt(f):
-        return (f'[{f["t"]:9.3f}] f{f["frame"]:<7} {tn(f):24} id {f.get("eid", 0):08x} idx {f["idx"]:<6} {pn(f["pin"]):28} '
+        return (f'[{f["t"]:9.3f}] f{f["frame"]:<7} {tn(f):24} id {f.get("eid", 0):08x} pid {f.get("pid", 0):08x} idx {f["idx"]:<6} {pn(f["pin"]):28} '
                 f'n{f["n"]} links {f["links"]} desde 0x{f["frm"]:06x} {f["extra"]}')
 
     if a.around and marks:

@@ -122,3 +122,5 @@
 - 04:04 Corrida 15 (local, sin jugador): AIMP_TRACE_PINS=1 + AIMP_AUTOPAD_FILE; lanzado con steam -applaunch 214490.
 - 04:08 Corrida 15: autopad OK en el juego (menú -> Continue -> Tech_Hub, 12.7k disparos en la carga: on_restored de la restauración del checkpoint). El usuario toma el control para dejar el personaje en una zona sin Alien.
 - 04:18 Corrida 15: identidad de entidad = objeto completo +0x0C (ShortGuid en el COMMANDS.PAK, 78/78) y +0x10 = tipo (TriggerSimple, Door...). pins.c: id/tipo en el log, tabla 65536 renovada por nivel, reinyección FIRE (AIMP_PINS_FILE) con copias de handle y mensaje. Tests OK.
+- 04:18 Corrida 16 (local): DLL 577eb81 con FIRE; lanzada.
+- 04:26 Corrida 16: id de entidad no es único (prefabs); padre = objeto+0x08 (handle a CompositeInstance). pid = hash de la ruta de composites. Primera inyección FIRE (LogicSwitch on_true) sin crash. Ventana de 1,5 s post-inyección.
