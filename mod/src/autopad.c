@@ -33,6 +33,9 @@ typedef struct {
     uint8_t has[4];
     int16_t thumb[4];
     int started;
+    /* GO=x/z: ir caminando hasta (x, z) a lazo cerrado con la posición y el yaw del jugador 0 */
+    uint8_t go, done;
+    float gx, gz;
 } Step;
 
 static Step g_steps[AP_MAX_STEPS];
@@ -43,6 +46,11 @@ static volatile LONG g_packet;
 static int64_t g_t_start, g_t_player;
 static int64_t g_base_ms; /* los pasos sin 'P' cuentan desde acá (0 = el arranque; al leer el archivo, ese momento) */
 static int g_had_player;
+/* Jugador 0 (lo pasa la sonda en cada frame) y progreso del GO activo. */
+static int g_have_pose;
+static float g_px, g_pz, g_yaw;
+static float g_go_best;
+static int64_t g_go_best_ms;
 /* Archivo de comandos (AIMP_AUTOPAD_FILE): se relee cuando cambia su fecha de escritura. */
 static wchar_t g_file[MAX_PATH];
 static FILETIME g_file_time;
@@ -87,8 +95,62 @@ static const char *parse_int(const char *p, int32_t *out)
     return p;
 }
 
+static const char *parse_float(const char *p, float *out)
+{
+    int neg = 0, any = 0;
+    float v = 0, f = 0.1f;
+    if (*p == '-' || *p == '+')
+        neg = *p++ == '-';
+    while (*p >= '0' && *p <= '9') {
+        v = v * 10 + (float)(*p++ - '0');
+        any = 1;
+    }
+    if (*p == '.')
+        for (p++; *p >= '0' && *p <= '9'; p++, f *= 0.1f) {
+            v += (float)(*p - '0') * f;
+            any = 1;
+        }
+    if (!any)
+        return NULL;
+    *out = neg ? -v : v;
+    return p;
+}
+
+/* atan2 aproximado (error < 0,01 rad); el mod no tiene libm. */
+static float atan2_approx(float y, float x)
+{
+    const float pi = 3.14159265f;
+    float ax = x < 0 ? -x : x, ay = y < 0 ? -y : y;
+    if (ax < 1e-9f && ay < 1e-9f)
+        return 0;
+    float a = ax > ay ? ay / ax : ax / ay;
+    float r = a * (0.9998660f + a * a * (-0.3302995f + a * a * (0.1801410f + a * a * (-0.0851330f + a * a * 0.0208351f))));
+    if (ay > ax)
+        r = pi / 2 - r;
+    if (x < 0)
+        r = pi - r;
+    return y < 0 ? -r : r;
+}
+
+static float wrap_pi(float a)
+{
+    const float pi = 3.14159265f;
+    while (a > pi)
+        a -= 2 * pi;
+    while (a < -pi)
+        a += 2 * pi;
+    return a;
+}
+
 static int parse_action(Step *s, const char *a, size_t n)
 {
+    if (n > 5 && streq_n(a, 3, "GO=")) {
+        const char *e = parse_float(a + 3, &s->gx);
+        if (!e || *e != '/' || !(e = parse_float(e + 1, &s->gz)) || (size_t)(e - a) != n)
+            return 0;
+        s->go = 1;
+        return 1;
+    }
     for (size_t i = 0; i < sizeof k_buttons / sizeof k_buttons[0]; i++)
         if (streq_n(a, n, k_buttons[i].name)) {
             s->buttons |= k_buttons[i].bit;
@@ -169,12 +231,53 @@ static void compute(int64_t ms_start, int64_t ms_player, uint16_t *buttons, int1
         int active = t >= 0 && t >= s->t0 && t < s->t1;
         if (!active)
             continue;
+        if (s->go) {
+            /* encadenado: espera a que terminen los GO anteriores que ya empezaron */
+            int wait = 0;
+            for (int j = 0; j < i; j++) {
+                Step *q = &g_steps[j];
+                int64_t tq = q->rel_player ? ms_player : ms_start - g_base_ms;
+                if (q->go && !q->done && tq >= q->t0 && tq < q->t1)
+                    wait = 1;
+            }
+            if (wait || s->done || !g_have_pose)
+                continue;
+        }
         if (fire_marks && !s->started) {
             s->started = 1;
             log_printf("AUTOPAD paso %d activo (%s%ld-%ld ms): botones %04x, LT %u RT %u", i + 1, s->rel_player ? "P" : "",
                        (long)s->t0, (long)s->t1, s->buttons, s->lt, s->rt);
             if (s->mark)
                 probe_mark("AUTOPAD");
+        }
+        if (s->go && fire_marks) {
+            float dx = s->gx - g_px, dz = s->gz - g_pz, d2 = dx * dx + dz * dz;
+            if (d2 < 0.36f) {
+                s->done = 1;
+                g_go_best_ms = 0;
+                log_printf("AUTOPAD GO paso %d: llegó a (%.2f, %.2f) con el jugador en (%.2f, %.2f)", i + 1, (double)s->gx,
+                           (double)s->gz, (double)g_px, (double)g_pz);
+                if (s->mark)
+                    probe_mark("AUTOPAD GO");
+                continue;
+            }
+            if (d2 < g_go_best - 0.04f || g_go_best_ms == 0) {
+                g_go_best = d2;
+                g_go_best_ms = ms_start;
+            } else if (ms_start - g_go_best_ms > 4000) {
+                s->done = 1;
+                log_printf("AUTOPAD GO paso %d: trabado a %.2f m^2 de (%.2f, %.2f) en (%.2f, %.2f); se saltea", i + 1, (double)d2,
+                           (double)s->gx, (double)s->gz, (double)g_px, (double)g_pz);
+                g_go_best_ms = 0;
+                continue;
+            }
+            /* rumbo = atan2(dx, dz) = yaw + pi/4 (corrida 14); RX > 0 aumenta el yaw (corrida 18) */
+            float err = wrap_pi(atan2_approx(dx, dz) - (g_yaw + 0.78539816f));
+            float rx = err * 30000.0f;
+            thumbs[2] = (int16_t)(rx > 32767 ? 32767 : rx < -32767 ? -32767 : rx);
+            float ae = err < 0 ? -err : err;
+            thumbs[1] = ae < 0.35f ? 32767 : ae < 0.8f ? 16000 : 0;
+            *has |= 1 << 1 | 1 << 2;
         }
         *buttons |= s->buttons;
         if (s->lt)
@@ -261,6 +364,10 @@ int autopad_install_on(uintptr_t base)
             void *mine = ord == 2 ? (void *)my_get_state : ord == 4 ? (void *)my_get_caps : NULL;
             if (!mine)
                 continue;
+            if (ft->u1.Function == (DWORD)(uintptr_t)mine) { /* ya instalado: no encadenar con nosotros mismos */
+                patched++;
+                continue;
+            }
             DWORD old;
             if (!VirtualProtect(&ft->u1.Function, 4, PAGE_READWRITE, &old))
                 continue;
@@ -328,6 +435,7 @@ static void check_file(int64_t ms_start)
     buf[got] = 0;
     int n = autopad_parse(buf);
     g_base_ms = ms_start;
+    g_go_best_ms = 0;
     if (n < 0) {
         g_nsteps = 0;
         log_printf("AUTOPAD: archivo de comandos inválido; guion vacío");
@@ -339,10 +447,16 @@ static void check_file(int64_t ms_start)
     }
 }
 
-void autopad_frame(int64_t now, int64_t freq, int have_player)
+void autopad_frame(int64_t now, int64_t freq, int have_player, const float *pos, float yaw)
 {
     if (!g_on)
         return;
+    g_have_pose = have_player && pos;
+    if (g_have_pose) {
+        g_px = pos[0];
+        g_pz = pos[2];
+        g_yaw = yaw;
+    }
     if (have_player && !g_had_player) {
         g_t_player = now;
         for (int i = 0; i < g_nsteps; i++)
