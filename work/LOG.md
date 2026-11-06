@@ -119,3 +119,6 @@
 - 03:53 Sesión autónoma (5 h): fase 6 paso 1. Slots de TriggerSimple = getters triviales; despacho de pines = vt+0x394 = FUN_008be0d0 (777 clases).
 - 03:59 Fase 6: pins.c (AIMP_TRACE_PINS: hook de FUN_008be0d0, solo mira) + test_pins; pin_names.py (5851 ShortGuids), MapVtables.java (vtables concretas -> clase), analyze_pins.py. Tests OK.
 - 04:04 autopad.c (AIMP_AUTOPAD / AIMP_AUTOPAD_FILE): mando virtual por la IAT de XINPUT1_3 (ord. 2 y 4) para pruebas sin nadie al teclado; probe_mark. Tests OK.
+- 04:04 Corrida 15 (local, sin jugador): AIMP_TRACE_PINS=1 + AIMP_AUTOPAD_FILE; lanzado con steam -applaunch 214490.
+- 04:08 Corrida 15: autopad OK en el juego (menú -> Continue -> Tech_Hub, 12.7k disparos en la carga: on_restored de la restauración del checkpoint). El usuario toma el control para dejar el personaje en una zona sin Alien.
+- 04:18 Corrida 15: identidad de entidad = objeto completo +0x0C (ShortGuid en el COMMANDS.PAK, 78/78) y +0x10 = tipo (TriggerSimple, Door...). pins.c: id/tipo en el log, tabla 65536 renovada por nivel, reinyección FIRE (AIMP_PINS_FILE) con copias de handle y mensaje. Tests OK.

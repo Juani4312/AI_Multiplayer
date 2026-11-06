@@ -13,6 +13,10 @@ int pins_enabled(void);
 /* Desde el thread principal, cada AIMP_TRACE_MS: los (entidad, pin) más frecuentes del período. */
 void pins_report_period(void);
 void pins_report_totals(const char *why);
+/* Por frame (thread principal): cambio de nivel y archivo de comandos (AIMP_PINS_FILE). */
+void pins_frame(int64_t now, uint32_t level);
+/* Reinyección experimental: vuelve a disparar `pin` sobre la entidad con ese ShortGuid. */
+int pins_fire(uint32_t eid, uint32_t pin);
 
 /* Para tests: instalar el hook sobre una función con el mismo prólogo. */
 int pins_install_at(void *target);

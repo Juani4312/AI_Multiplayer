@@ -617,6 +617,7 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
     ghost_frame(now, &g_net, g_cur.level_cur);
     /* Pruebas sin nadie al teclado (AIMP_AUTOPAD): mando virtual con guion. */
     autopad_frame(now, g_freq, g_cur.pl && g_cur.pl_ok);
+    pins_frame(now, g_cur.level_cur);
     if (status_due) {
         status(&g_cur, now - g_last_status);
         net_status(&g_net, now);
