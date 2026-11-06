@@ -42,6 +42,7 @@ add_library(aimp_winmm SHARED
   src/probe.c
   src/trace.c
   src/pins.c
+  src/autopad.c
   src/net.c
   src/ghost.c
   src/crash.c
@@ -79,7 +80,7 @@ target_compile_options(test_core PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter
 set_target_properties(test_core PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 # test_probe: la sonda (probe.c + log.c) contra una imagen de AI.exe simulada.
-add_executable(test_probe test/test_probe.c src/probe.c src/trace.c src/pins.c src/net.c src/ghost.c src/sync.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_probe test/test_probe.c src/probe.c src/trace.c src/pins.c src/autopad.c src/net.c src/ghost.c src/sync.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_probe PRIVATE src)
 target_compile_options(test_probe PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_probe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
@@ -104,6 +105,12 @@ add_executable(test_pins test/test_pins.c src/pins.c src/hook.c src/log.c src/me
 target_include_directories(test_pins PRIVATE src)
 target_compile_options(test_pins PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_pins PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+# test_autopad: mando virtual (autopad.c): guion y reemplazo de la IAT de XINPUT1_3.
+add_executable(test_autopad test/test_autopad.c src/autopad.c src/log.c src/mem.c src/fmt.c src/rt.c)
+target_include_directories(test_autopad PRIVATE src)
+target_compile_options(test_autopad PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
+set_target_properties(test_autopad PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 # test_sync: fase 5 (sync.c) contra stubs con los prólogos reales del productor del "usar",
 # sus dos handlers y el wrapper de encolado A; la red es real (127.0.0.1).

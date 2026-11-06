@@ -5,6 +5,7 @@
 #include "sync.h"
 #include "hook.h"
 #include "log.h"
+#include "autopad.h"
 #include "pins.h"
 #include "probe.h"
 #include "trace.h"
@@ -88,5 +89,6 @@ int game_init(void)
     ghost_install(); /* opcional: AIMP_TRACE_SPAWN=1 / AIMP_GHOST=1 (fase 4, experimental) */
     sync_install(probe_net()); /* opcional: AIMP_TRACE_USE=1 / AIMP_SYNC_USE=1 (fase 5, experimental) */
     pins_install(); /* opcional: AIMP_TRACE_PINS=1 (fase 6, solo mira) */
+    autopad_install(); /* opcional: AIMP_AUTOPAD=guion (pruebas sin nadie al teclado) */
     return 1;
 }
