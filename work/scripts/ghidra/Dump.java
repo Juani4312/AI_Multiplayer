@@ -267,6 +267,8 @@ public class Dump extends GhidraScript {
       Address t = toAddr(v);
       Function f = getFunctionAt(t);
       Symbol ts = getSymbolAt(t);
+      Symbol ss = i > 0 ? getSymbolAt(slot) : null;
+      if (ss != null) out.println("  == " + ss.getName(true) + " @ " + slot);
       out.printf("  [%2d] +0x%02x %s -> 0x%08x %s%n", i, 4 * i, slot, v,
           f != null ? f.getName(true) : (ts != null ? "(" + ts.getName(true) + ")" : "?"));
     }

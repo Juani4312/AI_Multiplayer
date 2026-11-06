@@ -5,6 +5,7 @@
 #include "sync.h"
 #include "hook.h"
 #include "log.h"
+#include "pins.h"
 #include "probe.h"
 #include "trace.h"
 
@@ -86,5 +87,6 @@ int game_init(void)
     trace_install(); /* opcional: AIMP_TRACE_QUEUES=1 */
     ghost_install(); /* opcional: AIMP_TRACE_SPAWN=1 / AIMP_GHOST=1 (fase 4, experimental) */
     sync_install(probe_net()); /* opcional: AIMP_TRACE_USE=1 / AIMP_SYNC_USE=1 (fase 5, experimental) */
+    pins_install(); /* opcional: AIMP_TRACE_PINS=1 (fase 6, solo mira) */
     return 1;
 }

@@ -28,6 +28,7 @@ run test_probe test_probe.exe || fail=1
 run test_net test_net.exe || fail=1
 run test_ghost test_ghost.exe || fail=1
 run test_sync test_sync.exe || fail=1
+run test_pins test_pins.exe || fail=1
 run test_host test_host.exe "winmm=n,b" || fail=1
 echo "-- log del proxy en test_host ($TMP/test_host.log):"
 cat "$TMP/test_host.log"
