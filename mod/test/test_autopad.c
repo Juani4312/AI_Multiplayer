@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "aimp.h"
 #include "autopad.h"
 #include "log.h"
@@ -56,6 +57,9 @@ int main(void)
     autopad_state_at(20000, 5500, &b, th, tr);
     CHECK(b == 0 && th[1] == 32000 && tr[1] == 255 && th[0] == -32768, "P+5,5 s: LY=32000, RT, LX recortado a -32768");
 
+    CHECK(autopad_parse("0-30000:GO=12.5/-3.25,0-30000:GO=-1/2") == 2, "GO=x/z parsea (2 pasos)");
+    CHECK(autopad_parse("0-30000:GO=12.5") < 0, "GO sin z -> inválido");
+
     printf("[IAT]\n");
     /* Imagen mínima: DOS + NT + descriptor de import de XINPUT1_3.dll con ordinales 2, 3, 4. */
     uint8_t *img = VirtualAlloc(NULL, 0x2000, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
@@ -86,9 +90,30 @@ int main(void)
     uint8_t caps[20];
     CHECK(((GC)(uintptr_t)ft[2])(0, 1, caps) == 0 && caps[0] == 1, "mando 0 conectado (caps de gamepad)");
     CHECK(((GC)(uintptr_t)ft[2])(1, 1, caps) == ERROR_DEVICE_NOT_CONNECTED, "mando 1 sigue desconectado");
-    autopad_frame(0, 1000, 0); /* sin start: no pasa nada (no está activo: g_on = 0) */
+    autopad_frame(0, 1000, 0, NULL, 0); /* sin start: no pasa nada (no está activo: g_on = 0) */
     CHECK(((GS)(uintptr_t)ft[0])(0, &s) == 0 && s.buttons == 0, "estado del mando 0: conectado y en reposo");
     CHECK(((GS)(uintptr_t)ft[0])(2, &s) == ERROR_DEVICE_NOT_CONNECTED, "mando 2 desconectado");
+    printf("[GO a lazo cerrado, con un jugador simulado]\n");
+    /* modelo de las corridas 14 y 18: rumbo = yaw + pi/4 = atan2(dx, dz); RX>0 sube el yaw (~3,6 rad/s a fondo) */
+    g_aimp_exe = (uintptr_t)img;
+    SetEnvironmentVariableW(L"AIMP_AUTOPAD", L"0-60000:GO=5/5,0-60000:GO=5/-4+MARK,0-60000:GO=-3/-4");
+    CHECK(autopad_install() == 1, "autopad_install con 3 GO");
+    float pos[3] = { 0, 0, 0 }, yaw = -0.785398f;
+    LARGE_INTEGER fq, c0;
+    QueryPerformanceFrequency(&fq);
+    QueryPerformanceCounter(&c0);
+    int64_t t = c0.QuadPart;
+    for (int f = 0; f < 3000; f++, t += fq.QuadPart * 16 / 1000) {
+        autopad_frame(t, fq.QuadPart, 1, pos, yaw);
+        St st;
+        ((GS)(uintptr_t)ft[0])(0, &st);
+        float dt = 0.016f;
+        yaw += st.rx / 32767.0f * 3.6f * dt;
+        float h = yaw + 0.785398f, v = st.ly / 32767.0f * 3.0f * dt;
+        pos[0] += sinf(h) * v;
+        pos[2] += cosf(h) * v;
+    }
+    CHECK(fabsf(pos[0] + 3) < 0.7f && fabsf(pos[2] + 4) < 0.7f, "llegó al tercer punto (%.2f, %.2f)", pos[0], pos[2]);
     printf(g_fail ? "test_autopad: %d FALLAS\n" : "test_autopad: todo OK\n", g_fail);
     return g_fail ? 1 : 0;
 }

@@ -128,3 +128,4 @@
 - 04:30 Corrida 17: el guion a ciegas del menú llegó a 'Start new game' (diálogo de sobrescribir, Cancel seleccionado); B no lo cerró; juego cerrado con pkill sin tocar nada (la partida no se sobrescribe). El arranque pasa a ser verificado por capturas/estado.
 - 04:34 Corrida 17: pid único (9938 instancias, 0 colisiones; id solo: 763 colisiones; profundidad 1-10). 4 inyecciones FIRE de LogicSwitch.on_true (pid 3a7cb07d): en cada una el destino TriggerSequence (pid 3cc91288) dispara en el frame siguiente con el mismo contador. La reinyección se propaga como un disparo natural.
 - 04:34 Corrida 18: relanzada para comparar pid entre procesos.
+- 04:43 autopad: GO=x/z a lazo cerrado (rumbo = yaw + pi/4, RX>0 sube el yaw; encadenado, detección de traba), con test cinemático; guarda contra doble instalación en la IAT. Tests OK.
