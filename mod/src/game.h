@@ -185,4 +185,20 @@ static const uint8_t AIMP_ENQUEUE_PROLOGUE[14] __attribute__((unused)) = {
     0x55, 0x8B, 0xEC, 0x8B, 0x45, 0x10, 0x8B, 0x4D, 0x0C, 0x8B, 0x55, 0x08, 0x50, 0x51
 };
 
+/* ---- Scripts de CATHODE: disparo de pines de salida (hallazgo 15, fase 6) ----
+ * FUN_008be0d0 = EntityInterface::vt[+0x394] (lo heredan 777 clases de entidad con RTTI y las
+ * vtables concretas, p. ej. TriggerSimple 0x01261EB8). Lo llaman los wrappers por pin
+ * (FUN_008bd920: this->vt[0x394](ctx, &pin, msg, 0.0, 0)), p. ej. on_triggered/on_finished.
+ * thiscall(this = subobjeto EntityInterface, ctx*, pin*, msg, double demora, flag), ret 0x18.
+ * Prólogo: 55 push ebp | 8B EC mov ebp,esp | 6A FF push -1 | 68 <imm32 relocado> push SEH. */
+#define AIMP_RVA_FIRE_PIN         0x004BE0D0u
+#define AIMP_FIRE_PIN_STEAL       5
+static const uint8_t AIMP_FIRE_PIN_PROLOGUE[6] __attribute__((unused)) = { 0x55, 0x8B, 0xEC, 0x6A, 0xFF, 0x68 };
+/* EntityInterface: +0x04 MemoryRefPtr a la tabla de links {+8 n, +0xC entradas de 12 bytes:
+ * [0] ShortGuid del pin, [8] primer link}; link: +0x08 destino, +0x0C siguiente.
+ * +0x08: índice (24 bits) en la tabla global de entidades [0x0174DFB0] | flags (8 bits). */
+#define ENT_LINKS                 0x04u
+#define ENT_INDEX                 0x08u
+#define AIMP_RVA_ENTITY_TABLE     0x0134DFB0u  /* DAT_0174dfb0: puntero a {+0 array, +4 capacidad (potencia de 2), +8 cantidad} */
+
 #endif

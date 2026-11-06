@@ -8,6 +8,7 @@
 #include "probe.h"
 #include "game.h"
 #include "log.h"
+#include "pins.h"
 #include "trace.h"
 #include "net.h"
 #include "ghost.h"
@@ -423,6 +424,7 @@ static void dump_detail(const Snap *s)
             log_hexdump("cola B: buffer", s->qb_data, s->qb_size < 0x80 ? s->qb_size : 0x80);
     }
     trace_report_totals("volcado");
+    pins_report_totals("volcado");
     log_printf("==== fin del volcado ====");
 }
 
@@ -612,13 +614,15 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
         net_status(&g_net, now);
         g_last_status = now;
     }
-    if (trace_enabled() && now - g_last_trace >= g_trace_ticks) {
+    if ((trace_enabled() || pins_enabled()) && now - g_last_trace >= g_trace_ticks) {
         trace_report_period();
+        pins_report_period();
         g_last_trace = now;
     }
     if ((ret & 0xFF) == 0) {
         log_printf("ModeManager::Run devolvió 0: el juego sale del loop principal (frames vistos %u)", g_frames);
         trace_report_totals("salida");
+        pins_report_totals("salida");
         net_close(&g_net);
     }
 }
