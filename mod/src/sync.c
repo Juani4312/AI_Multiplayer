@@ -23,6 +23,7 @@
 #include "ghost.h"
 #include "hook.h"
 #include "log.h"
+#include "pins.h"
 
 #define LOG_MAX 64
 
@@ -259,11 +260,18 @@ static int try_apply(Pend *q, uint32_t level)
 void sync_frame(AimpNet *net, uint32_t level)
 {
     g_level = level;
-    if (!g_on || !net || !net->mode)
+    int pins = pins_sync_enabled();
+    if ((!g_on && !pins) || !net || !net->mode)
         return;
     int64_t now = qpc_now();
     AimpEvt e;
     while (net_take_event(net, &e)) {
+        if (e.kind == AIMP_EVT_PIN) { /* fase 6: pines decididos por el host (pins.c) */
+            pins_remote_event(&e);
+            continue;
+        }
+        if (!g_on && e.kind == AIMP_EVT_USE)
+            continue; /* AIMP_SYNC_USE apagado */
         if (e.kind != AIMP_EVT_USE || e.size != 20) {
             log_printf("SYNC: evento remoto desconocido (tipo %u, %u bytes): se ignora", e.kind, e.size);
             continue;
