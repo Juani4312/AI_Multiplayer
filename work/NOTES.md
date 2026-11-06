@@ -539,3 +539,11 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   - 4 inyecciones de `LogicSwitch.on_true`: el `TriggerSequence` destino dispara en el frame siguiente con el mismo contador, así que la reinyección se propaga como un disparo natural;
   - **incidente:** el guion a ciegas del menú (tiempos fijos) llegó al diálogo "Start new game", con Cancel seleccionado. B no lo cerró. Se cerró el juego con `pkill` sin confirmar nada, y la partida no se tocó. Desde entonces el menú se recorre de a un paso, verificando con captura: título "Press A" → A, A, A, DOWN → captura (Continue Game resaltado) → A.
 - **Corrida 18:** pid determinista entre procesos (9901/9901 iguales a la 17). El índice del caché coincide solo en 2201/9901: no sirve como identidad.
+
+- **Corrida 19:** mando virtual con `GO=x/z` a lazo cerrado. Caminando recto, el rumbo es **igual** al yaw (diferencia 0,000). El desvío de π/4 que se dedujo de la corrida 14 salía de que el usuario caminaba en diagonal con WASD; corregido en `autopad.c`, con test cinemático. El primer `GO` terminó contra una puerta del transit, todavía con el modelo viejo.
+  - **Raíces de los disparadores de zona** (8 m de caminata en HAB_ShoppingCentre, `run19-raices-zona.log`):
+    - `PlayerTriggerBox` (`2f3efad3`): pines `on_entered` (`af66ad73`), `7a72fe57`, `90567435` y `00000000`; mensaje con `mfl 10100003`;
+    - `Box` (`51be8134`) `event` → `TriggerVolumeFilter` (`f86133d4`) `on_event_entered` (`98678b2b`) / `triggered`;
+    - diálogos: `NPC_Squad_DialogueMonitor` (`9b3cb8fa`) y `SpeechScript` (`bc82235a`) `started`/`on_script_ended`;
+    - casi todos salen "desde 4bd944" (el wrapper `FUN_008bd920`).
+  - **Problema para inyectar en el receptor:** los `PlayerTriggerBox` no disparan nada en la carga (0 de 6 pids antes de t=70). Si el jugador del receptor nunca entró, no hay handle ni mensaje guardados. Falta un índice pid → entidad armado en la carga (recorrer el caché `DAT_0174dfb0` o los composites) y un mensaje genérico.
