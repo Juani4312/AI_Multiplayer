@@ -74,6 +74,7 @@ _Última actualización: 2026-11-06, 15:25 (fase 6 paso 4: índice pid → entid
 - El mod quedó instalado en el juego con el trazado activo (`aimp.cfg`). `work/scripts/runtime_setup.sh revert` lo saca todo.
 
 ## Pendientes que requieren al usuario
+- **Corrida 20** (local, fase 6 paso 4): el usuario no la autorizó el 2026-11-06; retomar pidiéndola de nuevo. Plan en "Siguiente paso" 2.
 0. ~~Tailscale para cerrar la fase 3~~: hecho con la laptop. papito es 100.126.161.126 y papulaptop, 100.126.159.45. Para el amigo:
    - instala Tailscale y se une a la red del usuario;
    - el host pone `AIMP_NET=host` y el que se une, `AIMP_NET=join` y `AIMP_NET_PEER=<IP de Tailscale del host>:47811` (en `aimp.cfg`);
