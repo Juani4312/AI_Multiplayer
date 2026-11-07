@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-06, 15:25 (fase 6 paso 4: índice pid → entidad y `AIMP_SYNC_PINS` escritos y con tests; hallazgo 16; falta runtime)_
+_Última actualización: 2026-11-07 (mod desinstalado para jugar); antes 2026-11-06, 15:25 (fase 6 paso 4: índice pid → entidad y `AIMP_SYNC_PINS` escritos y con tests; hallazgo 16; falta runtime)_
 
 ## Decisiones vigentes
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
@@ -71,7 +71,7 @@ _Última actualización: 2026-11-06, 15:25 (fase 6 paso 4: índice pid → entid
   - el patrón RPC cliente/servidor funciona en retail: cola A (local) → handler → cola B (red, descartada);
   - 0x29 = spawn (304 bytes) y 0x26 = interacción con un objeto usable (20 bytes con ids de 8 bytes del objetivo y del personaje);
   - el movimiento y la IA no pasan por estas colas.
-- El mod quedó instalado en el juego con el trazado activo (`aimp.cfg`). `work/scripts/runtime_setup.sh revert` lo saca todo.
+- **2026-11-07: mod desinstalado** a pedido del usuario para jugar normal (`runtime_setup.sh revert`: sin `winmm.dll`, sin override en `user.reg`, sin `aimp.cfg`; los logs viejos quedan). Para la corrida 20 hay que reinstalar con `runtime_setup.sh install`.
 
 ## Pendientes que requieren al usuario
 - **Corrida 20** (local, fase 6 paso 4): el usuario no la autorizó el 2026-11-06; retomar pidiéndola de nuevo. Plan en "Siguiente paso" 2.
