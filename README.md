@@ -108,6 +108,11 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 3. Después, en estático: el disparo de las armas de fuego (hallazgo 17, "El equipo del jugador"), y más adelante el Alien.
 4. Pendientes menores: `AIMP_SYNC_PINS` con dos máquinas; una corrida de control para el arranque corto.
 
+**2026-11-15, tarde (corridas 36–38):** primera prueba de la caminata con dos máquinas. El avatar camina y sigue natural en las dos. Hay que tener el mismo guardado: el mod no sincroniza el nivel, así que la laptop tiene que bajar la nube de Steam antes de pasar a sin conexión. Arreglos después de la prueba:
+- el avatar ya no gira raro ni camina cuando el otro solo mueve la cámara: queda "plantado" hasta que el otro se mueve;
+- el avatar es **invencible**, con el mismo flag que `CHR_SetInvincibility`, así matarlo no da game over por civiles;
+- los arrojables caen distinto porque el engine integra el vuelo con el tiempo de cada frame. Ya se sabe dónde está su posición (sonda); falta corregir la réplica.
+
 **2026-11-15, tarde (corrida 35):** el avatar ya vuelve a arrancar con movimientos cortos del otro (1–1,6 m, ≤1 s de retardo). Salió del layout de los parámetros de `MOVE_TOWARDS` (hallazgo 19): el flag `start_instantly`, más una orden nueva si queda quieto a más de 1 m. Los dos están activados por defecto y `mod/dist/winmm.dll` está actualizada (`a88bc1a`).
 
 El detalle completo está en `work/PROGRESS.md` (estado), `work/NOTES.md` y `work/LOG.md` (bitácora) y `work/findings/19-control-de-personajes.md`.
