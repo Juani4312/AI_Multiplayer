@@ -230,6 +230,19 @@ static const uint8_t AIMP_FIRE_PIN_PROLOGUE[6] __attribute__((unused)) = { 0x55,
 #define AIMP_RVA_THROW_POOL       0x012F0DE4u
 #define AIMP_RVA_THROW_SPAWN      0x003B5050u
 #define AIMP_RVA_THROW_PLACE      0x003B5190u
+/* Dónde se asentó el arrojable (corridas 53-54, sonda con caminos; 2026-11-15):
+ *   entrada del pool (pool+4+i*12: flag u8, handle +4) -> handle+0xC = CATHODE::TemporaryEntity (vt 0x13C8024)
+ *   -> TemporaryEntity+0x80 = handle -> +0xC = entidad con vt RVA 0xE5B5C8 (sin RTTI) -> +0x24 = posición (vuelo y reposo).
+ *   Visto igual en 3 bengalas remotas (run54). Se verifica la vtable antes de leer.
+ * Liberar una entrada: FUN_007a10f0 thiscall(pool, id_lo, id_hi), ret 8 (lo que hace el composite con
+ *   "kill_explosive", callback en 0x7ADC00): busca la entrada cuyo objeto da ese id con FUN_008c3360
+ *   thiscall(obj, u32 out[2]) ret 4, la marca libre, pone obj+0x2D |= 1 y suelta el handle. */
+#define TEMPENT_POS_HANDLE        0x80u
+#define THROWN_POS                0x24u
+#define AIMP_RVA_VT_THROWN_POS    0x00E5B5C8u
+#define AIMP_RVA_THROW_RELEASE    0x003A10F0u
+#define AIMP_RVA_ENT_IDS          0x004C3360u
+static const uint8_t AIMP_ENT_IDS_PROLOGUE[] = { 0x55, 0x8B, 0xEC, 0x51, 0x56, 0x8B, 0xF1, 0x8B, 0x46, 0x08 };
 #define AIMP_THROW_STEAL          6
 static const uint8_t AIMP_THROW_PROLOGUE[9] __attribute__((unused)) = {
     0x64, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x6A, 0xFF, 0x68

@@ -276,6 +276,11 @@ void sync_frame(AimpNet *net, uint32_t level)
                 throw_remote_event(&e, level);
             continue;
         }
+        if (e.kind == AIMP_EVT_THROW_REST) { /* dónde se asentó un arrojable del otro (throw.c) */
+            if (throws)
+                throw_rest_event(&e, level);
+            continue;
+        }
         if (!g_on && e.kind == AIMP_EVT_USE)
             continue; /* AIMP_SYNC_USE apagado */
         if (e.kind != AIMP_EVT_USE || e.size != 20) {
