@@ -108,6 +108,11 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 3. Después, en estático: el disparo de las armas de fuego (hallazgo 17, "El equipo del jugador"), y más adelante el Alien.
 4. Pendientes menores: `AIMP_SYNC_PINS` con dos máquinas; una corrida de control para el arranque corto.
 
+**2026-11-15, noche (corridas 39–45), "dos Amandas":** se puede crear una segunda Amanda (`THE_PLAYER`) desde el mod, clonando el pedido de spawn de autoridad del jugador, sin que se caiga el juego y sin que se lleve la cámara. Pero **es invisible**: el juego solo trae modelos de Amanda en primera persona (las cinemáticas son videos). Por eso el avatar sigue siendo un NPC, ahora más responsivo:
+- calcula la velocidad del otro y apunta adonde va a estar;
+- corre cuando el otro corre;
+- detecta cuándo el otro se agacha. Falta que el NPC se agache: se haría con el comando `IDLE` y `desired_stance`.
+
 **2026-11-15, tarde (corridas 36–38):** primera prueba de la caminata con dos máquinas. El avatar camina y sigue natural en las dos. Hay que tener el mismo guardado: el mod no sincroniza el nivel, así que la laptop tiene que bajar la nube de Steam antes de pasar a sin conexión. Arreglos después de la prueba:
 - el avatar ya no gira raro ni camina cuando el otro solo mueve la cámara: queda "plantado" hasta que el otro se mueve;
 - el avatar es **invencible**, con el mismo flag que `CHR_SetInvincibility`, así matarlo no da game over por civiles;
