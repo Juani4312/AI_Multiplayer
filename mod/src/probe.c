@@ -14,6 +14,7 @@
 #include "net.h"
 #include "ghost.h"
 #include "sync.h"
+#include "throw.h"
 #include <tlhelp32.h>
 
 typedef struct {
@@ -594,6 +595,8 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
     }
     /* Fase 3: red (si está activada). El paquete se arma solo cuando toca enviar. */
     net_poll(&g_net, now);
+    /* Objetos arrojados (hallazgo 17): los del jugador local pasan a la red (y a los ecos de prueba). */
+    throw_frame(now, g_freq, g_cur.level_cur);
     /* Fase 5 (experimental, apagada por defecto): usos remotos que llegaron y usos locales por mandar. */
     sync_frame(&g_net, g_cur.level_cur);
     if (net_due(&g_net, now)) {

@@ -178,6 +178,24 @@ public class Dump extends GhidraScript {
               out.printf("  %s %-28s size=%d refs=%d%n", f.getEntryPoint(), f.getName(), f.getBody().getNumAddresses(),
                   getReferencesTo(f.getEntryPoint()).length);
             }
+          } else if (c.startsWith("fstr:")) {
+            // fstr:START:END -> por función del rango: tamaño, callers y strings que referencia (máx. 8)
+            String[] p = c.substring(5).split(":");
+            for (Function f : currentProgram.getFunctionManager().getFunctions(
+                new ghidra.program.model.address.AddressSet(addr(p[0]), addr(p[1])), true)) {
+              StringBuilder sb = new StringBuilder();
+              int ns = 0;
+              for (ghidra.program.model.listing.Instruction x : currentProgram.getListing().getInstructions(f.getBody(), true)) {
+                for (Reference r : x.getReferencesFrom()) {
+                  String sv = stringAt(r.getToAddress().getOffset());
+                  if (sv == null || ns >= 8) continue;
+                  ns++;
+                  sb.append(" \"").append(sv.length() > 48 ? sv.substring(0, 48) : sv).append('"');
+                }
+              }
+              out.printf("  %s size=%d refs=%d%s%n", f.getEntryPoint(), f.getBody().getNumAddresses(),
+                  getReferencesTo(f.getEntryPoint()).length, sb);
+            }
           } else if (c.startsWith("pre:")) {
             String[] p = c.substring(4).split(":");
             pre(addr(p[0]), Integer.parseInt(p[1]));

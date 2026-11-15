@@ -12,14 +12,15 @@
  */
 
 #define AIMP_NET_MAGIC 0x504D4941u /* "AIMP" */
-#define AIMP_NET_VERSION 1
+#define AIMP_NET_VERSION 2 /* v2: eventos de 112 bytes de datos (AIMP_EVT_THROW) */
 #define AIMP_PKT_STATE 2
 #define AIMP_PKT_BYE 3
 #define AIMP_PKT_EVENT 4    /* evento discreto (fase 5): se manda 3 veces, el receptor descarta repetidos */
 #define AIMP_FLAG_PLAYER 1u /* el emisor tiene jugador en el nivel */
 #define AIMP_EVT_USE 1      /* "usar" del jugador (RPC A 0x26, hallazgo 11): objetivo[8] | personaje[8] | flag[4] */
 #define AIMP_EVT_PIN 2      /* pin de CATHODE decidido por el host (fase 6): pid | pin | tipo | id | flags del mensaje (5 x u32) */
-#define AIMP_EVT_DATA 52
+#define AIMP_EVT_THROW 3    /* objeto arrojado o colocado por el jugador (hallazgo 17): ThrowEvt de throw.h (112 bytes) */
+#define AIMP_EVT_DATA 112
 #define AIMP_EVT_QUEUE 16
 #define AIMP_EVT_REPEAT 3
 
@@ -51,7 +52,7 @@ typedef struct {
     uint16_t size;    /* bytes válidos en data */
     uint32_t level;   /* nivel del emisor: el receptor lo aplica solo en el mismo nivel */
     uint8_t data[AIMP_EVT_DATA];
-} AimpEvt;            /* 76 bytes */
+} AimpEvt;            /* 136 bytes */
 #pragma pack(pop)
 
 typedef struct {

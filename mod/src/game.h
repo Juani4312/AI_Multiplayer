@@ -216,4 +216,23 @@ static const uint8_t AIMP_FIRE_PIN_PROLOGUE[6] __attribute__((unused)) = { 0x55,
 #define AIMP_RVA_VT_COMPOSITE     0x00FE1D2Cu
 #define COMP_CHILDREN             0x2Cu
 
+/* ---- Objetos arrojados y colocados (hallazgo 17) ----
+ * Pool de 0x80 entradas de 12 bytes ([0] en uso, [4] handle del composite) en [0x016F0DE4]
+ * (lo crea FUN_007d7650). Tirar: FUN_007b5050 thiscall(pool, float m[16]*, float vel[3]*,
+ * float a3 (15.0), const char *plantilla, float time_left), ret 0x14; un solo caller,
+ * FUN_007b9500 (evento de animación "spawn_projectile"). Colocar: FUN_007b5190 thiscall(pool,
+ * float m[16]*, const char *plantilla, float time_left), ret 0xC (callers FUN_007c7ef0 y
+ * FUN_007d4a00, "place_ied"). Las dos empiezan con el prólogo SEH de MSVC:
+ *   64 A1 00 00 00 00 mov eax,fs:[0] | 6A FF push -1 | 68 <imm32 relocado> push handler
+ * Se pisan los 6 bytes del MOV (sin relocations ni direccionamiento relativo al EIP). */
+#define AIMP_RVA_THROW_POOL       0x012F0DE4u
+#define AIMP_RVA_THROW_SPAWN      0x003B5050u
+#define AIMP_RVA_THROW_PLACE      0x003B5190u
+#define AIMP_THROW_STEAL          6
+static const uint8_t AIMP_THROW_PROLOGUE[9] __attribute__((unused)) = {
+    0x64, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x6A, 0xFF, 0x68
+};
+#define THROW_POOL_SLOTS          0x80
+#define THROW_POOL_STRIDE         0x0C
+
 #endif
