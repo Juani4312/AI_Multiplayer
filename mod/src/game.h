@@ -319,6 +319,12 @@ static const uint8_t AIMP_HAS_MOTIVATION_PROLOGUE[10] __attribute__((unused)) = 
 #define CHR_STRIDE                0x42D0  /* los Character están en un arreglo (corrida 20) */
 #define AIMP_RVA_CMD_MOVE_START   0x0027E980u
 #define AIMP_RVA_CMD_MOVE_UPDATE  0x002797A0u
+/* Comando IDLE con postura (2026-11-15): FUN_0067db10 thiscall(ctrl, a[8]*, b[8]*, desired_stance, float (1,0),
+ * should_face_target, should_raise_gun_while_turning, idle_style, lock_cameras, anchor, start_instantly), ret 0x28.
+ * Lo usa la entidad de script del idle (FUN_0052e570). desired_stance = valor del enum CHARACTER_STANCE (por los
+ * ShortGuids vecinos: DONT_CHANGE, DEFAULT, CROUCHED, IN_COVER...; el orden no está verificado). Mismo prólogo
+ * que FUN_0067e980. */
+#define AIMP_RVA_CMD_IDLE         0x0027DB10u
 static const uint8_t AIMP_CMD_MOVE_START_PROLOGUE[10] __attribute__((unused)) = {
     0x56, 0x8B, 0xF1, 0x8B, 0x4E, 0x04, 0x85, 0xC9, 0x74, 0x0E
 };
