@@ -36,9 +36,10 @@ MAGIC, VERSION, STATE, BYE, FLAG_PLAYER = 0x504D4941, 2, 2, 3, 1
 assert SIZE == 76, SIZE
 
 
-def pack(seq, level, pos, yaw, flags=FLAG_PLAYER, kind=STATE):
+def pack(seq, level, pos, yaw, flags=FLAG_PLAYER, kind=STATE, cam=None):
+    cam = cam or (pos[0], pos[1] + 1.6, pos[2])  # con --replay, la cámara del jugador (agachado = cámara baja)
     return struct.pack(FMT, MAGIC, VERSION, kind, flags, seq, int(time.monotonic() * 1000) & 0xFFFFFFFF,
-                       level, 0, *pos, yaw, 0.0, 0.0, 0.0, 1.0, pos[0], pos[1] + 1.6, pos[2], b"PEERTEST")
+                       level, 0, *pos, yaw, 0.0, 0.0, 0.0, 1.0, *cam, b"PEERTEST")
 
 
 EVT_FMT = "<IBBHIIHHI"  # cabecera de AimpEvt (mod/src/net.h), 24 bytes + 112 de datos
@@ -121,7 +122,7 @@ def main():
                 if t_player is None and f[3] & FLAG_PLAYER:
                     t_player = now
                 if a.replay and f[3] & FLAG_PLAYER:
-                    hist.append((now, tuple(f[8:11]), f[11], f[6]))
+                    hist.append((now, tuple(f[8:11]), f[11], f[6], tuple(f[16:19])))
             if peer and now - last_send >= 1.0 / a.hz:
                 seq += 1
                 if a.replay:
@@ -130,8 +131,9 @@ def main():
                     while len(hist) > 1 and hist[1][0] <= now - a.replay:
                         hist.popleft()
                     if hist and hist[0][0] <= now - a.replay:
-                        _, pos, yaw, lvl = hist[0]
-                        s.sendto(pack(seq, lvl, (pos[0] + ox, pos[1] + oy, pos[2] + oz), yaw), peer)
+                        _, pos, yaw, lvl, cam = hist[0]
+                        s.sendto(pack(seq, lvl, (pos[0] + ox, pos[1] + oy, pos[2] + oz), yaw,
+                                      cam=(cam[0] + ox, cam[1] + oy, cam[2] + oz)), peer)
                     else:
                         s.sendto(pack(seq, a.level, (0.0, 0.0, 0.0), 0.0, 0), peer)
                 else:
