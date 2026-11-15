@@ -775,3 +775,12 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   - **Resultado:** con `start_instantly` el avatar siguió los 5 pasos cortos (3 solo, 2 con la re-orden), con un retardo de ≤1 s. En la corrida 31 (sin el flag) no arrancaba con el objetivo a menos de ~2,8 m. **Falta una corrida de control** (flags 0, sin re-orden) con el mismo guion para atribuir el cambio al flag y no a las condiciones.
   - La captura salió borrosa (desenfoque de pausa: la ventana sin foco), sin valor como evidencia.
   - **Por defecto desde ahora:** `AIMP_GHOST_WALK_FLAGS=2048` y `AIMP_GHOST_WALK_REARM_CM=100`. Mod en pasivo (`AIMP_GHOST=0`).
+
+## 2026-11-15 (tarde) — Corrida 36: caminata y arrojables con dos máquinas (papito host, laptop join)
+- Guardados: la laptop estaba en modo sin conexión y "Continue" cargó su guardado viejo (otro nivel). **El mod no sincroniza guardado ni nivel** (etapa 09): se alinearon por Steam Cloud (laptop en línea un momento). Después, las dos en `HAB_ShoppingCentre` (nivel 10).
+- Red: 20/20 paquetes por segundo, 0 perdidos, 0 excepciones (`run36-dos-maquinas-host.log`, papito).
+- **Lo que vio el usuario:**
+  - el avatar camina y sigue normal, sin huir (bien);
+  - **giro raro:** con el otro quieto moviendo la cámara, el avatar "gira raro, capaz camina". En el log de papito: giros 6–9 cada ~2,5 s al mismo yaw (2,38), sin que el yaw se quede. Causa probable: la orden del giro iba al objetivo (a 1–3 m) y la re-orden en quieto (nueva de la corrida 35) lo volvía a mover. **Arreglo (`98d3bd2`, tests OK, sin probar en el juego):** al girar queda "plantado" (orden y actualizaciones a donde está, sin re-orden ni cambio de paso) hasta que el otro se mueve más de 50 cm; el giro espera a que el yaw del otro esté quieto 500 ms;
+  - **arrojables:** 2 bengalas y 1 noisemaker tirados en papito (eventos 1, 2, 3 = colocar y 5 = tirar). En la laptop, trayectorias iguales pero **caen distinto**: el noisemaker, unos centímetros al costado. Es física no determinista (rebotes). Arreglo posible: mandar la posición final cuando el objeto se asienta y corregir la réplica. Falta ubicar el objeto spawneado y su posición (hallazgo 17);
+  - **muerte del avatar:** el usuario mató desde papito al avatar del jugador de la laptop. En papito murió (`el NPC 0x2bda2950 ya no está en los vectores; se elige otro`, 512 s), el mod eligió otro "Dave" al instante y el juego dio **game over por lastimar civiles**. En la laptop no pasó nada. Arreglo posible: avatar invulnerable (ubicar el camino de daño a un Character).
