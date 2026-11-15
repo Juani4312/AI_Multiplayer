@@ -631,3 +631,14 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   - Quedan 684 volcados `PIN mensaje` para analizar (layout del instigador).
 - **El `FIRE` por índice no se probó.** Con el índice lleno no era concluyente, y disparar un `TriggerVolumeFilter` real podía mover la misión del guardado del usuario.
 - **Lección del monitor:** `cut` al final de un pipe no vacía por línea, así que los eventos no llegaron. Usar `awk '{print substr($0,1,260); fflush()}'`.
+
+## 2026-11-15 — `AIMP_GHOST_WALK` (fase 4b, estático + tests)
+- Con el controlador de comandos ubicado (`Character+0x3820`, corrida 20), el avatar NPC puede caminar en vez de teletransportarse:
+  - `FUN_0067e980` (`MOVE_TOWARDS`: thiscall(ctrl, a[8], b[8], destino 3x4, parámetros 0x1C, never_succeed), ret 0x14) una vez;
+  - después `FUN_006797a0` (misma firma) cada 200 ms, con el destino nuevo.
+  - Ids del comando: `"AIMPWALK"` y el avatar + `"GH"`. Si el comando actual (`ctrl+4`) ya no es el del mod (tipo 5 con esos ids), se lo vuelve a dar, como mucho una vez por segundo.
+  - Teletransporte solo la primera vez, a más de 6 m o en otro piso. Cerca y quieto, se le corrige el yaw en el lugar.
+- **Parámetros:** `move_type` en `+0x00` (1, el valor por defecto de los scripts; no se encontró la tabla del enum MOVE), flags en 0 y `+0x18` = 0,1 (el valor por defecto del engine).
+- Con la caminata, `AIMP_GHOST_NOAUTH` queda apagado por defecto: un NPC sin autoridad no procesa comandos (hipótesis).
+- `test_walk`: stubs con los prólogos y el `ret 0x14` reales. Prueba el inicio, las actualizaciones, el reinicio si la IA cambia el comando, el teletransporte por distancia y el giro en el lugar. **Todos los tests OK.**
+- **Falta runtime (corrida 21, local):** `AIMP_GHOST=3;AIMP_GHOST_WALK=1`. Sin red, el avatar sigue al jugador a 1,5 m en x: tiene que caminar animado detrás.

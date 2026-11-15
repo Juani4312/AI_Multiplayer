@@ -139,3 +139,4 @@
 - 03:40 Hallazgo 19 (control de personajes): comandos (SwitchCommand FUN_00678e20, 20 tipos, READ_GAMEPAD_1 = FUN_0067ffb0), controlador de jugador Character+0x31C (0x4C bytes), "PLAYER_2" = índice de jugador 1, CMD_MoveTowards = FUN_0067e980. ctrl.c (AIMP_TRACE_CTRL / AIMP_TRACE_CMD) + test_ctrl. Tests OK.
 - 02:46 Corrida 20 (local, el usuario jugó): DLL 98bd0f5 con trazas de pines, arrojables (eco 1,5 s) y control.
 - 02:52 Corrida 20 terminada: bengala duplicada con la misma trayectoria (el usuario lo vio); controlador de comandos = Character+0x3820; bloque de locomoción (mm/s, rumbo u8 = yaw·200/2π); índice de pines lleno en 49152 (IX_SLOTS -> 262144). Juego cerrado, mod desinstalado (revert).
+- 03:25 AIMP_GHOST_WALK (fase 4b): MOVE_TOWARDS (FUN_0067e980/FUN_006797a0) sobre Character+0x3820 para que el avatar camine; test_walk. Tests OK. Falta corrida 21.
