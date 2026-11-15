@@ -3,16 +3,16 @@
 Mod de investigación e interoperabilidad, de uso personal, sobre una copia comprada del juego.
 No contiene ni redistribuye binarios, assets ni código del juego.
 
-**Estado (2026-11-15):** experimental. Dos jugadores, uno en Linux (Proton) y otro en Windows 10, conectados por Tailscale, ya se ven y comparten los "usar". En una sola máquina también se verificaron la reinyección de los objetos arrojados y un avatar que camina y corre con su propia animación (también por red, contra un peer de prueba que hace de otro jugador). Todavía no es un coop jugable: no se sincronizan la IA, el Alien, las armas de fuego ni el progreso de la misión. **Dónde quedamos y qué sigue:** sección "Último trabajo y siguiente paso", al final.
+**Estado (2026-11-15):** experimental. Dos jugadores, uno en Linux (Proton) y otro en Windows 10, conectados por Tailscale, ya se ven y comparten los "usar". El avatar del otro jugador es un "títere": un NPC que cada frame se pone en la posición exacta del otro, con animación de caminar o correr (probado con dos máquinas: "responsivo y exacto"). Los objetos arrojados se ven volar del otro lado y terminan donde cayó el original. Todavía no es un coop jugable: no se sincronizan la IA, el Alien, las armas de fuego ni el progreso de la misión. **Dónde quedamos y qué sigue:** sección "Último trabajo y siguiente paso", al final.
 
 | Fase | Qué hace | Estado |
 |------|----------|--------|
 | 1 y 2 | `winmm.dll` proxy, hook en el loop principal, lectura de estado y posición del jugador | ✅ Proton y Windows 10 nativo |
 | 3 | Red UDP propia (20 paquetes/s con el estado del jugador) | ✅ por Tailscale, 0 pérdidas |
 | 4 | Avatar del otro jugador: un NPC civil del nivel, sin IA, teletransportado a su posición | ✅ en los dos sentidos |
-| 4b | Avatar que camina y corre con su animación (`MOVE_TOWARDS`) en vez de teletransportarse | 🟡 verificado en una máquina (corridas 27–34): sigue caminando y corriendo, también por red contra el peer de prueba, y quieto mira hacia donde mira el otro; falta probarlo con dos |
+| 4b | Avatar títere: posición exacta del otro cada frame, con animación de caminar y correr | ✅ dos máquinas (corrida 52); falta que se agache |
 | 5 | "Usar" compartido: botones, cajas e ítems se replican y en la otra máquina los hace el avatar | ✅ botones; los ítems quedan uno por jugador |
-| 5b | Objetos arrojados y colocados (bengala, noisemaker, molotov, minas…): aparecen en la otra máquina con la misma trayectoria | 🟡 inyección verificada en una máquina; falta probar con dos |
+| 5b | Objetos arrojados y colocados (bengala, noisemaker, molotov, minas…): aparecen en la otra máquina con la misma trayectoria y quedan donde cayó el original | 🟡 vuelo ✅ con dos máquinas; corrección de dónde cae verificada en una (corridas 55–64), falta con dos |
 | 6 | Disparadores de los scripts decididos por el host (zonas que arrancan diálogos, eventos…) | 🟡 código y tests; índice de entidades verificado en el juego; falta probar con dos máquinas |
 
 El detalle de cada paso está en `work/PROGRESS.md`. La evidencia de ingeniería inversa está en `work/findings/` (hallazgos 01–19).
@@ -52,7 +52,7 @@ Los dos jugadores **tienen que tener exactamente este hash**, los mismos datos d
    | Host | `AIMP_NET=host`, `AIMP_GHOST=3`, `AIMP_SYNC_USE=1`, `AIMP_SYNC_THROW=1` |
    | El que se une | `AIMP_NET=join`, `AIMP_NET_PEER=<IP de Tailscale del host>:47811`, `AIMP_GHOST=3`, `AIMP_SYNC_USE=1`, `AIMP_SYNC_THROW=1` |
 
-   Opcional y sin probar con dos máquinas: `AIMP_GHOST_WALK=1` en las dos, para que el avatar camine y corra en vez de teletransportarse (es lo próximo a probar), y `AIMP_SYNC_PINS=1` en las dos (los disparadores de zona los decide el host).
+   Recomendado: `AIMP_GHOST_WALK=1` en las dos (el avatar títere, con animación). Opcional y sin probar con dos máquinas: `AIMP_SYNC_PINS=1` en las dos (los disparadores de zona los decide el host).
 
 4. Los dos cargan la misma partida, en el mismo nivel. Unos 8 s después, cada uno ve a un civil del nivel parado donde está el otro jugador. Lo que uno aprieta (por ejemplo, el botón para llamar al transit) también pasa en la otra máquina, y lo que tira (una bengala, un noisemaker) aparece en la otra con la misma curva.
 
@@ -62,7 +62,8 @@ Todo queda en `%LOCALAPPDATA%\AI_Multiplayer\aimp.log` (en Proton, dentro del pr
 
 ## Limitaciones conocidas
 
-- Por defecto, el avatar es un NPC civil sin IA que se teletransporta a la posición del otro: no anima la caminata. La caminata animada (`AIMP_GHOST_WALK=1`, en las dos máquinas) es experimental: anda en una máquina y por red contra el peer de prueba, pero no se probó con dos máquinas. Después de llegar, no vuelve a arrancar hasta que el otro se aleja 1–3 m.
+- El avatar es un NPC civil (no hay modelo de Amanda en tercera persona). Con `AIMP_GHOST_WALK=1` copia la posición exacta del otro cada frame y anima caminar o correr, pero **no se agacha** (el comando `IDLE` con postura no tiene efecto en el civil) y, al caminar para atrás, mira hacia donde va. En la laptop el usuario lo vio "deslizarse" en algún momento: falta revisar la animación.
+- Arrojables: la réplica vuela igual; cuando el original se asienta, la réplica se borra y aparece quieta en ese punto (un "salto" corto). Del lado del que tira, la posición del objeto se encuentra en ~3 de 4 lanzamientos; si no, no se corrige.
 - No se replican la IA ni el Alien, las armas de fuego (el disparo y el lanzallamas no se ven del otro lado), las puertas automáticas, lo que se elige en una terminal ni el progreso de la misión. Cada máquina corre su propia simulación.
 - Los ítems que se levantan quedan uno por jugador: los dos pueden agarrar el mismo.
 - Los lockers y la terminal de guardado no se replican a propósito: son acciones de cada jugador.
@@ -90,6 +91,18 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 5. Al terminar: cerrar el juego (`pkill -TERM -x AI.exe`), guardar el log en `work/evidence/runtime/` y **dejar el mod instalado en pasivo** (`runtime_setup.sh install --cfg "AIMP_GHOST=0"`).
 
 ## Último trabajo y siguiente paso
+
+**2026-11-15, noche (corridas 52–64):**
+- **Títere con dos máquinas (corrida 52):** "funciona perfecto… responsivo y exacto el movimiento". 0,00 m en las dos máquinas, 20 paquetes/s, 0 excepciones.
+- **Agacharse (corrida 53):** el comando `IDLE` con las posturas 0 a 5 no agacha al civil, ni siquiera sin reubicarlo cada frame. Ese camino queda descartado. Pistas: `crouched_or_not`, `ConditionIsCrouching`.
+- **Arrojables que caen igual (corridas 54–64):** la parábola ya salía igual (`ProjectileMotion` calcula la posición en función del tiempo); la diferencia aparece en el choque y los rebotes. Ahora el que tira avisa dónde se asentó su objeto (`AIMP_EVT_THROW_REST`). El otro libera su réplica con la función del juego (`FUN_007a10f0`, la de `kill_explosive`) y crea una quieta en ese punto. Se verificó en una máquina con el peer (4 de 4 réplicas reubicadas, 144 fps).
+- `mod/dist/winmm.dll` = `907e36b5…` (commit `8624e99`). En papito el mod quedó en pasivo.
+
+**Siguiente:**
+1. **Prueba con dos máquinas de los arrojables:** tirar bengalas desde cada una, contra el piso y contra paredes. Ver que la réplica salte al punto del original, y en el log `THROW fijo` de los dos lados (`work/windows/instructions.md`, sección 8b).
+2. Animación del títere: el usuario lo vio "deslizarse" en la laptop. Revisar el `MOVE_TOWARDS` que anima las piernas.
+3. Agacharse: buscar dónde decide la locomoción del NPC si va agachado (`crouched_or_not`, `ConditionIsCrouching`).
+4. Arrojables: un camino determinista hasta el composite, o leer el parámetro de posición por ShortGuid. Hoy se encuentra por búsqueda en ~3 de 4.
 
 **2026-11-15 (sesión larga, corridas 20 a 34):**
 - **Arrojables** (hallazgo 17, corrida 20): la bengala, el noisemaker, etc. se reinyectan con la misma trayectoria (`AIMP_SYNC_THROW=1`, protocolo v2). Verificado en una máquina.
