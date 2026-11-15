@@ -28,6 +28,8 @@ typedef void(__attribute__((fastcall)) * SwitchFn)(void *ctrl, void *edx, void *
 
 static AimpHook g_hk_switch;
 static SwitchFn g_switch_orig;
+static CtrlSwitchFilter g_filter;
+static volatile LONG g_n_blocked;
 static int g_trace_ctrl, g_trace_cmd, g_ctrl_max = 600, g_ctrl_ms = 100;
 static volatile LONG g_n_switch, g_n_logged;
 static CRITICAL_SECTION g_cs;
@@ -97,8 +99,24 @@ static void owner(uint32_t ctrl, char *out, size_t cap)
         aimp_snprintf(out, cap, " (no está cerca de ningún Character ni apunta a uno)");
 }
 
+void ctrl_set_switch_filter(CtrlSwitchFilter fn) { g_filter = fn; }
+
+typedef void(__attribute__((fastcall)) * CancelFn)(void *cmd, void *edx);
+
 __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_switch(void *ctrl, void *edx, void *cmd)
 {
+    if (g_filter && !g_filter((uint32_t)(uintptr_t)ctrl, (uint32_t)(uintptr_t)cmd)) {
+        /* bloqueado: se cancela como hace el engine con un pendiente (FUN_0067e980), así libera su slot */
+        uint32_t vt = 0, fn = 0;
+        InterlockedIncrement(&g_n_blocked);
+        if (cmd && mem_u32((uintptr_t)cmd, &vt) && vt && mem_u32(vt + CMD_VT_CANCEL, &fn) && fn)
+            ((CancelFn)(void *)(uintptr_t)fn)(cmd, NULL);
+        return;
+    }
+    if (!g_trace_cmd) {
+        g_switch_orig(ctrl, edx, cmd);
+        return;
+    }
     LONG n = InterlockedIncrement(&g_n_switch);
     uint32_t c = (uint32_t)(uintptr_t)ctrl, type = 0xFFFFFFFFu;
     uint8_t fl = 0;
@@ -138,19 +156,20 @@ int ctrl_install(void)
     g_trace_cmd = aimp_env_int(L"AIMP_TRACE_CMD", 0);
     g_ctrl_max = aimp_env_int(L"AIMP_TRACE_CTRL_MAX", 600);
     g_ctrl_ms = aimp_env_int(L"AIMP_TRACE_CTRL_MS", 100);
-    if (!g_trace_ctrl && !g_trace_cmd)
+    if (!g_trace_ctrl && !g_trace_cmd && !g_filter)
         return 0;
     if (!g_cs_ok) {
         InitializeCriticalSection(&g_cs);
         g_cs_ok = 1;
     }
     int ok = 1;
-    if (g_trace_cmd)
+    if (g_trace_cmd || g_filter)
         ok = hook_install(&g_hk_switch, "SwitchCommand (FUN_00678e20)", (void *)(g_aimp_exe + AIMP_RVA_SWITCH_COMMAND),
                           AIMP_SWITCH_COMMAND_PROLOGUE, sizeof AIMP_SWITCH_COMMAND_PROLOGUE, AIMP_SWITCH_COMMAND_STEAL,
                           (void *)det_switch, (void **)&g_switch_orig);
-    log_printf("CTRL: AIMP_TRACE_CTRL=%d (cada %d ms, hasta %d líneas) AIMP_TRACE_CMD=%d%s", g_trace_ctrl, g_ctrl_ms, g_ctrl_max,
-               g_trace_cmd, g_trace_cmd && !ok ? " (hook NO instalado)" : "");
+    log_printf("CTRL: AIMP_TRACE_CTRL=%d (cada %d ms, hasta %d líneas) AIMP_TRACE_CMD=%d, filtro de SwitchCommand %s%s", g_trace_ctrl,
+               g_ctrl_ms, g_ctrl_max, g_trace_cmd, g_filter ? "sí (AIMP_GHOST_WALK)" : "no",
+               (g_trace_cmd || g_filter) && !ok ? " (hook NO instalado)" : "");
     return ok;
 }
 

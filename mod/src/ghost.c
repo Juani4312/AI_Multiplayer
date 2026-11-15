@@ -30,11 +30,16 @@
  * vez, si queda a más de AIMP_GHOST_WALK_TP_CM (600) o en otro piso. Si la IA le cambia el comando,
  * se lo vuelve a dar (como mucho una vez por segundo). AIMP_GHOST_WALK_TYPE = move_type (1).
  * Con la caminata, AIMP_GHOST_NOAUTH queda apagado por defecto (un NPC sin autoridad no se mueve).
+ * Corrida 21: camina, pero su IA (con autoridad) lo hacía huir del jugador. Con AIMP_GHOST_WALK_BLOCK=1
+ * (por defecto) se bloquean los SwitchCommand de la IA sobre el controlador del avatar (filtro en
+ * ctrl.c, que cancela el comando bloqueado para liberar su slot). Sin red, el objetivo es 1,2 m detrás
+ * del jugador (adelante = (sin yaw, cos yaw)): "1,5 m en x" podía quedar fuera del navmesh.
  *
  * Esto escribe en el juego y llama a funciones del engine. Cada paso se loguea antes de
  * hacerlo; si el juego se cae, el registro de excepciones (crash.c) dice dónde.
  */
 #include "ghost.h"
+#include "ctrl.h"
 #include "game.h"
 #include "hook.h"
 #include "log.h"
@@ -74,7 +79,9 @@ static uint32_t g_player, g_chr, g_before[2 * MAX_CHARS], g_nbefore, g_attempts,
 static float g_last_pos[3], g_last_yaw;
 /* AIMP_GHOST_WALK */
 static MoveCmdFn g_move_start, g_move_update;
-static int g_walk, g_walk_type = 1, g_walk_tp_cm = 600, g_walk_bad;
+static int g_walk, g_walk_type = 1, g_walk_tp_cm = 600, g_walk_bad, g_walk_block = 1;
+static volatile uint32_t g_walk_ctrl; /* controlador del avatar, para el filtro (corre en otro thread) */
+static volatile LONG g_n_blocked;
 static int64_t g_walk_ticks, g_last_cmd, g_last_restart, g_last_turn;
 static uint32_t g_starts, g_updates;
 static uint8_t g_cmd_a[8] = { 'A', 'I', 'M', 'P', 'W', 'A', 'L', 'K' }, g_cmd_b[8];
@@ -226,6 +233,9 @@ int ghost_install(void)
             float f18 = 0.1f; /* el valor por defecto del engine (DAT_011bb6ac) */
             aimp_memcpy(g_params, &mt, 4);
             aimp_memcpy(g_params + MOVE_PARAMS_F18, &f18, 4);
+            g_walk_block = aimp_env_int(L"AIMP_GHOST_WALK_BLOCK", 1);
+            if (g_walk_block)
+                ctrl_set_switch_filter(ghost_switch_filter); /* ctrl_install (después) instala el hook */
         }
     }
     /* Corrida 14: con el avatar no autoritativo su IA no reacciona (no huye del fuego) y no se mueve
@@ -243,8 +253,8 @@ int ghost_install(void)
         log_printf("AIMP_GHOST=%d (fase 4, experimental: %s): empieza %d ms después de que aparece el jugador; NPC de tipo %d %s",
                    g_mode, names[g_mode], delay, g_npc_type, dur);
         if (g_walk)
-            log_printf("AIMP_GHOST_WALK=1 (fase 4b, experimental): MOVE_TOWARDS con move_type %d, destino cada %d ms, teletransporte a más de %d cm; NOAUTH %d",
-                       g_walk_type, (int)(g_walk_ticks * 1000 / g_freq), g_walk_tp_cm, g_noauth);
+            log_printf("AIMP_GHOST_WALK=1 (fase 4b, experimental): MOVE_TOWARDS con move_type %d, destino cada %d ms, teletransporte a más de %d cm; NOAUTH %d; bloqueo de los comandos de la IA %d",
+                       g_walk_type, (int)(g_walk_ticks * 1000 / g_freq), g_walk_tp_cm, g_noauth, g_walk_block);
     } else {
         log_printf("AIMP_TRACE_SPAWN=1: se loguean los pedidos de spawn (solo mira)");
     }
@@ -361,6 +371,7 @@ static void start_moving(uint32_t p, int64_t now)
     g_last_restart = g_last_cmd = g_last_turn = 0;
     g_starts = g_updates = 0;
     g_walk_bad = 0;
+    g_walk_ctrl = g_walk ? p + CHR_CMDCTRL : 0;
     aimp_memcpy(g_cmd_b, &p, 4); /* el segundo id del comando: el avatar y "GH" */
     g_cmd_b[4] = 'G';
     g_cmd_b[5] = 'H';
@@ -484,6 +495,20 @@ static void on_found(uint32_t p, const char *where, uint32_t idx, int64_t now)
     start_moving(p, now);
 }
 
+static float aimp_sinf(float x)
+{
+    float r;
+    __asm__("fsin" : "=t"(r) : "0"(x));
+    return r;
+}
+
+static float aimp_cosf(float x)
+{
+    float r;
+    __asm__("fcos" : "=t"(r) : "0"(x));
+    return r;
+}
+
 static float aimp_sqrtf(float x)
 {
     float r;
@@ -515,16 +540,47 @@ static void teleport_to(const float *t, float tyaw)
     g_tps++;
 }
 
-/* ¿El comando actual del controlador es el MOVE_TOWARDS que dio el mod? Devuelve el tipo en *type. */
-static int walk_is_ours(uint32_t ctrl, uint32_t *type)
+static int cmd_is_ours(uint32_t cmd, uint32_t *type)
 {
-    uint32_t cmd = 0;
     uint8_t a[8], b[8];
-    *type = 0xFFFFFFFFu;
-    if (!mem_u32(ctrl + CMDCTRL_CURRENT, &cmd) || !cmd || !mem_u32(cmd + CMD_TYPE, type))
+    if (!cmd || !mem_u32(cmd + CMD_TYPE, type))
         return 0;
     return *type == CMD_TYPE_MOVE_TOWARDS && mem_read(cmd + CMD_OWNER_A, a, 8) && mem_read(cmd + CMD_OWNER_B, b, 8) &&
            aimp_memcmp(a, g_cmd_a, 8) == 0 && aimp_memcmp(b, g_cmd_b, 8) == 0;
+}
+
+/* ¿El MOVE_TOWARDS del mod está en el controlador, en ejecución (+0) o pendiente (+4)? (corrida 21: el
+ * engine lo pasa de +4 a +0; mirando solo +4 se lo volvía a dar cada segundo). Devuelve en *type el tipo
+ * del comando en ejecución (o el pendiente, si no hay). */
+static int walk_is_ours(uint32_t ctrl, uint32_t *type)
+{
+    uint32_t ex = 0, pe = 0, t2 = 0xFFFFFFFFu;
+    *type = 0xFFFFFFFFu;
+    mem_u32(ctrl + CMDCTRL_EXEC, &ex);
+    mem_u32(ctrl + CMDCTRL_CURRENT, &pe);
+    int ours = cmd_is_ours(ex, type) || cmd_is_ours(pe, &t2);
+    if (*type == 0xFFFFFFFFu)
+        *type = t2;
+    return ours;
+}
+
+/* Filtro de SwitchCommand (ctrl.c; corre en el thread de la IA): sobre el controlador del avatar solo
+ * pasan el MOVE_TOWARDS del mod y el cambio a ningún comando. */
+int ghost_switch_filter(uint32_t ctrl, uint32_t cmd)
+{
+    uint32_t mine = g_walk_ctrl, type = 0xFFFFFFFFu;
+    if (!mine || ctrl != mine || !cmd || cmd_is_ours(cmd, &type))
+        return 1;
+    LONG n = InterlockedIncrement(&g_n_blocked);
+    if (n <= 20 || (n & 255) == 0) {
+        char nm[32];
+        uint32_t p = 0;
+        if (!(type < COMMAND_TYPES && mem_u32(g_aimp_exe + AIMP_RVA_COMMAND_NAMES + 4 * type, &p) && p && mem_cstr(p, nm, sizeof nm)))
+            aimp_snprintf(nm, sizeof nm, "?%d", (int)type);
+        log_printf("GHOST: caminata: bloqueado el comando %s (0x%08x) que la IA le quería dar al avatar (%ld bloqueados)", nm, cmd,
+                   (long)n);
+    }
+    return 0;
 }
 
 /* AIMP_GHOST_WALK: el NPC camina hacia el objetivo con MOVE_TOWARDS. 0 si no se pudo (se usa el teleport). */
@@ -619,6 +675,13 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
         t[2] = net->remote.pos[2];
         tyaw = net->remote.yaw;
         src = "red";
+    } else if (g_walk && !g_walk_bad) {
+        /* 1,2 m detrás del jugador: adelante = (sin yaw, cos yaw) (corrida 20) */
+        t[0] = lpos[0] - 1.2f * aimp_sinf(lyaw);
+        t[1] = lpos[1];
+        t[2] = lpos[2] - 1.2f * aimp_cosf(lyaw);
+        tyaw = lyaw;
+        src = "local 1,2 m detrás";
     } else {
         t[0] = lpos[0] + 1.5f;
         t[1] = lpos[1];

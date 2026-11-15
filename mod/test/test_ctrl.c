@@ -36,6 +36,22 @@ static void __attribute__((cdecl)) fake_switch(uint32_t ctrl, uint32_t cmd)
     g_seen_cmd = cmd;
 }
 
+/* filtro de prueba: bloquea solo g_block_this */
+static uint32_t g_block_this, g_cancel_this;
+static int g_cancels;
+static int block_filter(uint32_t ctrl, uint32_t cmd)
+{
+    (void)ctrl;
+    return cmd != g_block_this;
+}
+static void __attribute__((fastcall)) fake_cancel(void *self, void *edx)
+{
+    (void)edx;
+    g_cancels++;
+    g_cancel_this = (uint32_t)(uintptr_t)self;
+}
+static void *fake_cancel_stub(void) { return (void *)fake_cancel; }
+
 static void emit(uint8_t **p, const void *b, size_t n)
 {
     memcpy(*p, b, n);
@@ -127,6 +143,25 @@ int main(void)
     for (int i = 0; i < 5; i++)
         ((SwitchFn)(void *)(img + AIMP_RVA_SWITCH_COMMAND))(ctrl, NULL, cmd);
     CHECK(g_calls == 6, "seis llamadas pasan todas por el original");
+
+    printf("[filtro: un cambio bloqueado no llega al original y el comando se cancela (vt+0x24)]\n");
+    static uint8_t *s_blocked;
+    ctrl_set_switch_filter(block_filter);
+    uint8_t *bcmd = calloc(1, 0x40), *bvt = calloc(1, 0x40);
+    putp(bcmd, 0, bvt);
+    putp(bvt, CMD_VT_CANCEL, (void *)fake_cancel_stub());
+    s_blocked = bcmd;
+    g_block_this = (uint32_t)(uintptr_t)bcmd;
+    int calls0 = g_calls;
+    __asm__ volatile("mov %%esp, %0" : "=r"(esp0));
+    ((SwitchFn)(void *)(img + AIMP_RVA_SWITCH_COMMAND))(ctrl, NULL, bcmd);
+    __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
+    CHECK(esp0 == esp1 && g_calls == calls0 && g_cancels == 1 && g_cancel_this == (uint32_t)(uintptr_t)bcmd,
+          "bloqueado: original %d llamadas nuevas, cancelado %d vez con this correcto, stack balanceado", g_calls - calls0, g_cancels);
+    ((SwitchFn)(void *)(img + AIMP_RVA_SWITCH_COMMAND))(ctrl, NULL, cmd);
+    CHECK(g_calls == calls0 + 1, "otro comando pasa por el original (%d)", g_calls - calls0);
+    ctrl_set_switch_filter(NULL);
+    (void)s_blocked;
 
     printf("[controlador del jugador: se loguea solo cuando cambia]\n");
     LARGE_INTEGER f;

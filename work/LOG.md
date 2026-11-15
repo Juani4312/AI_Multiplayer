@@ -140,3 +140,5 @@
 - 02:46 Corrida 20 (local, el usuario jugó): DLL 98bd0f5 con trazas de pines, arrojables (eco 1,5 s) y control.
 - 02:52 Corrida 20 terminada: bengala duplicada con la misma trayectoria (el usuario lo vio); controlador de comandos = Character+0x3820; bloque de locomoción (mm/s, rumbo u8 = yaw·200/2π); índice de pines lleno en 49152 (IX_SLOTS -> 262144). Juego cerrado, mod desinstalado (revert).
 - 03:25 AIMP_GHOST_WALK (fase 4b): MOVE_TOWARDS (FUN_0067e980/FUN_006797a0) sobre Character+0x3820 para que el avatar camine; test_walk. Tests OK. Falta corrida 21.
+- 03:06 Corrida 21 (local): AIMP_GHOST=3;AIMP_GHOST_WALK=1. Índice de pines completo (92897). El NPC caminó hacia el usuario con animación, pero su IA lo hizo huir. Bug: el comando en ejecución está en ctrl+0 (solo miraba +4).
+- 03:30 Arreglos: "es mío" en +0/+4, filtro de SwitchCommand que bloquea la IA del avatar (cancela con vt+0x24), objetivo local 1,2 m detrás. Tests OK. Mod desinstalado.

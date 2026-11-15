@@ -268,7 +268,9 @@ static const uint8_t AIMP_SWITCH_COMMAND_PROLOGUE[9] __attribute__((unused)) = {
  * should_be_aiming, +0x09 use_current_target_as_aim, +0x10 id de AimTarget, +0x18 float (0,1). */
 #define CHR_CMDCTRL               0x3820
 #define CMDCTRL_OWNER             0x34
-#define CMDCTRL_CURRENT           0x04
+#define CMDCTRL_EXEC              0x00  /* comando en ejecución (FUN_00677990 revisa +0 y +4; corrida 21) */
+#define CMDCTRL_CURRENT           0x04  /* comando pendiente: lo pone SwitchCommand */
+#define CMD_VT_CANCEL             0x24  /* vt+0x24: cancelar (FUN_00677ad0: evento 0x100004 al dueño y libera el slot) */
 #define CMD_OWNER_A               0x34
 #define CMD_OWNER_B               0x3C
 #define CMD_TYPE_MOVE_TOWARDS     5

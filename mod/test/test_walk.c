@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "aimp.h"
 #include "game.h"
 #include "ghost.h"
@@ -276,21 +277,25 @@ int main(void)
     int64_t now = 1000000, step = f.QuadPart / 60;
     uint32_t esp0, esp1;
 
+    /* objetivo sin red con la caminata: 1,2 m detrás del jugador (adelante = (sin yaw, cos yaw)) */
+    const float bx = -1.2f * (float)sin(0.25), bz = -1.2f * (float)cos(0.25);
+#define CLOSE(a, b) ((a) > (b) - 0.01f && (a) < (b) + 0.01f)
     printf("[el NPC elegido: un teletransporte y un MOVE_TOWARDS]\n");
     __asm__ volatile("mov %%esp, %0" : "=r"(esp0));
     for (int i = 0; i < 12; i++, now += step) /* 200 ms */
         ghost_frame(now, &net, 16);
     __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
     CHECK(esp0 == esp1, "stack balanceado después de los frames (con las llamadas al engine)");
-    CHECK(g_teleports == 1 && getf(npc, CHR_POS) == 2.5f, "primer teletransporte al objetivo (x=%.2f, %u)", (double)getf(npc, CHR_POS),
-          g_teleports);
+    CHECK(g_teleports == 1 && CLOSE(getf(npc, CHR_POS), 1.0f + bx) && CLOSE(getf(npc, CHR_POS + 8), 3.0f + bz),
+          "primer teletransporte al objetivo, 1,2 m detrás del jugador (%.2f, %.2f; %u)", (double)getf(npc, CHR_POS),
+          (double)getf(npc, CHR_POS + 8), g_teleports);
     CHECK(g_starts == 1 && g_bad_ctrl == 0, "MOVE_TOWARDS sobre el controlador del NPC (%u inicios, %u controladores malos)", g_starts,
           g_bad_ctrl);
     CHECK(memcmp(g_last_a, "AIMPWALK", 8) == 0 && get32(g_last_b, 0) == (uint32_t)(uintptr_t)npc && g_last_b[4] == 'G' &&
               g_last_b[5] == 'H',
           "ids del comando: \"AIMPWALK\" y el avatar + \"GH\"");
-    CHECK(g_last_target[3] == 2.5f && g_last_target[7] == 2.0f && g_last_target[11] == 3.0f && g_last_target[0] == 1.0f &&
-              g_last_target[5] == 1.0f && g_last_target[10] == 1.0f,
+    CHECK(CLOSE(g_last_target[3], 1.0f + bx) && g_last_target[7] == 2.0f && CLOSE(g_last_target[11], 3.0f + bz) &&
+              g_last_target[0] == 1.0f && g_last_target[5] == 1.0f && g_last_target[10] == 1.0f,
           "destino: identidad con la traslación del objetivo (%.2f, %.2f, %.2f)", (double)g_last_target[3],
           (double)g_last_target[7], (double)g_last_target[11]);
     CHECK(get32(g_last_params, 0) == 1 && getf(g_last_params, MOVE_PARAMS_F18) == 0.1f && g_last_flag == 1,
@@ -305,22 +310,39 @@ int main(void)
     }
     CHECK(g_starts == 1 && g_updates >= 4 && g_updates <= 6, "un solo inicio y %u actualizaciones en 1 s", g_updates);
     CHECK(g_teleports == 1, "sin teletransportes mientras camina (%u)", g_teleports);
-    CHECK(g_last_target[3] > 3.2f && g_last_target[3] < 3.6f, "el destino sigue al objetivo (empezó en 2,5) (x=%.2f)", (double)g_last_target[3]);
+    CHECK(g_last_target[3] > 1.4f + bx && g_last_target[3] < 2.0f + bx, "el destino sigue al objetivo (x=%.2f)", (double)g_last_target[3]);
+
+    printf("[el engine pasa el comando de pendiente (+4) a en ejecución (+0): sigue siendo el del mod]\n");
+    uint32_t mine = get32(npc, CHR_CMDCTRL + CMDCTRL_CURRENT);
+    put32(npc, CHR_CMDCTRL + CMDCTRL_EXEC, mine);
+    put32(npc, CHR_CMDCTRL + CMDCTRL_CURRENT, 0);
+    uint32_t up0 = g_updates;
+    for (int i = 0; i < 70; i++, now += step)
+        ghost_frame(now, &net, 16);
+    CHECK(g_starts == 1 && g_updates > up0, "no se lo vuelve a dar (inicios %u) y se le sigue actualizando el destino (%u)", g_starts,
+          g_updates - up0);
 
     printf("[la IA cambió el comando: se lo vuelve a dar]\n");
     uint8_t *other = obj(0x100);
     put32(other, CMD_TYPE, 3);
-    putp(npc, CHR_CMDCTRL + CMDCTRL_CURRENT, other);
+    putp(npc, CHR_CMDCTRL + CMDCTRL_EXEC, other);
     for (int i = 0; i < 70; i++, now += step)
         ghost_frame(now, &net, 16);
     CHECK(g_starts == 2, "otro MOVE_TOWARDS (inicios %u)", g_starts);
+
+    printf("[filtro de SwitchCommand: la IA no puede cambiarle el comando al avatar]\n");
+    uint32_t actrl = (uint32_t)(uintptr_t)npc + CHR_CMDCTRL, ours = get32(npc, CHR_CMDCTRL + CMDCTRL_CURRENT);
+    CHECK(ghost_switch_filter(actrl, (uint32_t)(uintptr_t)other) == 0, "GOTO de la IA sobre el avatar: bloqueado");
+    CHECK(ghost_switch_filter(actrl, ours) == 1, "el MOVE_TOWARDS del mod: pasa");
+    CHECK(ghost_switch_filter(actrl, 0) == 1, "cambiar a ningún comando: pasa");
+    CHECK(ghost_switch_filter((uint32_t)(uintptr_t)local + CHR_CMDCTRL, (uint32_t)(uintptr_t)other) == 1, "otro personaje: pasa");
 
     printf("[el objetivo se fue lejos: teletransporte]\n");
     lp[0] = 20.0f;
     memcpy(local + CHR_POS, lp, 12);
     for (int i = 0; i < 3; i++, now += step)
         ghost_frame(now, &net, 16);
-    CHECK(g_teleports == 2 && getf(npc, CHR_POS) == 21.5f, "teletransporte por distancia (x=%.2f, %u)", (double)getf(npc, CHR_POS),
+    CHECK(g_teleports == 2 && CLOSE(getf(npc, CHR_POS), 20.0f + bx), "teletransporte por distancia (x=%.2f, %u)", (double)getf(npc, CHR_POS),
           g_teleports);
 
     printf("[cerca y quieto, mirando a otro lado: giro en el lugar]\n");
@@ -344,6 +366,9 @@ int main(void)
     expect(log, "el comando actual era GOTO", 1);
     expect(log, "(lejos o en otro piso;", 1);
     expect(log, "comando propio tipo 5", 1);
+    expect(log, "local 1,2 m detrás", 1);
+    expect(log, "bloqueado el comando GOTO", 1);
+    expect(log, "bloqueo de los comandos de la IA 1", 1);
     expect(log, "AIMP_GHOST_NOAUTH", 0);
     free(log);
     printf(g_fail ? "RESULTADO: %d FALLAS\n" : "RESULTADO: OK\n", g_fail);

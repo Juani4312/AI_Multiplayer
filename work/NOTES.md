@@ -642,3 +642,18 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - Con la caminata, `AIMP_GHOST_NOAUTH` queda apagado por defecto: un NPC sin autoridad no procesa comandos (hipótesis).
 - `test_walk`: stubs con los prólogos y el `ret 0x14` reales. Prueba el inicio, las actualizaciones, el reinicio si la IA cambia el comando, el teletransporte por distancia y el giro en el lugar. **Todos los tests OK.**
 - **Falta runtime (corrida 21, local):** `AIMP_GHOST=3;AIMP_GHOST_WALK=1`. Sin red, el avatar sigue al jugador a 1,5 m en x: tiene que caminar animado detrás.
+
+## 2026-11-15 — Corrida 21 (local): el avatar camina con `MOVE_TOWARDS`, pero su IA lo hace huir
+- **Montaje:** DLL `e2e0858`, `aimp.cfg` = `AIMP_GHOST=3;AIMP_GHOST_WALK=1;AIMP_TRACE_PINS=1;AIMP_TRACE_CMD=1`. Log en `work/evidence/runtime/run21-caminata.log`. 0 excepciones. Al final, `runtime_setup.sh revert`.
+- **Pines:** el índice entra completo: 92.897 entidades, 0 sin lugar, 2 colisiones de pid, 772 ms. Contra lo visto: 11.815 ok, 436 con otro subobjeto, 304 faltan. Falta investigar los dos últimos.
+- **Caminata** (NPC "Dave", INNOCENT; controlador `Dave+0x3820`, confirmado):
+  - el `MOVE_TOWARDS` del mod pasa por `SwitchCommand` sin crash;
+  - **el usuario vio al NPC caminar hacia él con animación** (marcas 3 a 5);
+  - antes estuvo 9 s quieto: el objetivo de prueba ("1,5 m en x") quedó al borde de un desnivel (al ponerlo ahí cayó 1,56 m), posiblemente fuera del navmesh;
+  - después **"se volvió loco": quería correr alejándose** y el mod lo volvía a teletransportar a 6 m. Es su IA, con autoridad, huyendo del jugador.
+- **Bug del mod:** el controlador tiene dos punteros, `+0` (en ejecución) y `+4` (pendiente); `FUN_00677990` revisa los dos. El mod miraba solo `+4`. Cuando el engine pasaba el comando a `+0`, el mod creía que se lo habían sacado y lo daba de nuevo cada segundo: caminata a tirones y slots ocupados.
+- **Cambios (tests OK):**
+  - "es mío" mira `+0` y `+4`;
+  - filtro de `SwitchCommand` (`ctrl.c`, `AIMP_GHOST_WALK_BLOCK=1` por defecto): sobre el controlador del avatar solo pasan el `MOVE_TOWARDS` del mod y el cambio a "ninguno". Lo demás se bloquea y se cancela con `vt+0x24` (`FUN_00677ad0`, libera el slot);
+  - sin red, el objetivo es 1,2 m detrás del jugador (adelante = (sin yaw, cos yaw), verificado con la corrida 20).
+- **Siguiente:** corrida 22, igual que la 21. Tiene que caminar detrás del jugador sin huir ni teletransportarse.
