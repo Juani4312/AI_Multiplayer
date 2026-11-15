@@ -49,6 +49,7 @@ static void putf(void *base, uint32_t off, float v) { memcpy((uint8_t *)base + o
 static void *g_cm, *g_parr, *g_narr, *g_this, *g_sc_this;
 static uint32_t g_teleports, g_starts, g_updates, g_misaligned, g_bad_ctrl;
 static float g_last_target[12], g_start_target[12]; /* el último destino (inicio o actualización) y el del último inicio */
+static uint8_t g_start_params[MOVE_PARAMS_SIZE];
 static uint8_t g_last_a[8], g_last_b[8], g_last_params[MOVE_PARAMS_SIZE];
 static uint32_t g_last_flag;
 
@@ -116,6 +117,7 @@ static void __attribute__((cdecl)) fake_move_start(uint32_t ctrl, const uint8_t 
     g_starts++;
     record(ctrl, a, b, t, params, flag);
     memcpy(g_start_target, t, sizeof g_start_target);
+    memcpy(g_start_params, params, MOVE_PARAMS_SIZE);
     uint8_t *cmd = obj(0x100);
     put32(cmd, CMD_TYPE, CMD_TYPE_MOVE_TOWARDS);
     memcpy(cmd + CMD_OWNER_A, a, 8);
@@ -400,6 +402,23 @@ int main(void)
     CHECK(ghost_switch_filter(actrl, 0) == 1, "cambiar a ningún comando: pasa");
     CHECK(ghost_switch_filter((uint32_t)(uintptr_t)local + CHR_SCRIPTCTRL, (uint32_t)(uintptr_t)other) == 1, "otro personaje: pasa");
 
+    printf("[a más de 5 m del objetivo: corre (MOVE RUN) con una orden nueva; a menos de 2,5 m: camina]\n");
+    uint32_t st1 = g_starts;
+    lp[0] = 8.0f;
+    memcpy(local + CHR_POS, lp, 12);
+    for (int i = 0; i < 70; i++, now += step)
+        ghost_frame(now, &net, 16);
+    CHECK(g_starts == st1 + 1 && get32(g_start_params, 0) == MOVE_TYPE_RUN, "corre: orden nueva con move_type %u (inicios +%u)",
+          get32(g_start_params, 0), g_starts - st1);
+    CHECK(get32(g_last_params, 0) == MOVE_TYPE_RUN, "las actualizaciones siguen con move_type %u", get32(g_last_params, 0));
+    lp[0] = 1.0f;
+    memcpy(local + CHR_POS, lp, 12);
+    for (int i = 0; i < 70; i++, now += step)
+        ghost_frame(now, &net, 16);
+    CHECK(g_starts == st1 + 2 && get32(g_start_params, 0) == MOVE_TYPE_WALK, "cerca: camina (move_type %u, inicios +%u)",
+          get32(g_start_params, 0), g_starts - st1);
+    CHECK(g_teleports == 1, "sin teletransportes al cambiar de marcha (%u)", g_teleports);
+
     printf("[lejos más de 1 s: teletransporte y orden nueva en el mismo frame, nunca SwitchCommand(NULL)]\n");
     lp[0] = 20.0f;
     memcpy(local + CHR_POS, lp, 12);
@@ -412,6 +431,7 @@ int main(void)
     CHECK(g_teleports == 2 && CLOSE(getf(npc, CHR_POS), 20.0f + bx), "reubicado (x=%.2f, %u)", (double)getf(npc, CHR_POS), g_teleports);
     CHECK(g_starts > st0 && CLOSE(g_start_target[3], 20.0f + bx), "con una orden nueva detrás del jugador (inicios %u, destino x=%.2f)",
           g_starts, (double)g_start_target[3]);
+    CHECK(get32(g_start_params, 0) == MOVE_TYPE_WALK, "al reubicarlo vuelve a caminar (move_type %u)", get32(g_start_params, 0));
     CHECK(g_null_switches == 0, "nunca SwitchCommand(ctrl, NULL), que hace caer el juego (%u)", g_null_switches);
     CHECK(g_misaligned == 0, "posiciones y destinos alineados a 16 (%u)", g_misaligned);
 
@@ -435,6 +455,9 @@ int main(void)
     expect(log, "comando propio tipo 5", 1);
     expect(log, "local detrás", 1);
     expect(log, "local a distancia", 1);
+    expect(log, "corre: a ", 1);
+    expect(log, "camina: a ", 1);
+    expect(log, "move_type 1 (3 a más de 500 cm del objetivo)", 1);
     expect(log, "orden antes de ubicarlo; controlador de tareas: PLAY_ANIMATION", 1);
     expect(log, "controlador de tareas: ninguno)", 1);
     expect(log, "bloqueado el comando GOTO", 1);

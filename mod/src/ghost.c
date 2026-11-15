@@ -88,7 +88,8 @@ static uint32_t g_player, g_chr, g_before[2 * MAX_CHARS], g_nbefore, g_attempts,
 static float g_last_pos[3], g_last_yaw;
 /* AIMP_GHOST_WALK */
 static MoveCmdFn g_move_start, g_move_update;
-static int g_walk, g_walk_type = 1, g_walk_tp_cm = 600, g_walk_bad, g_walk_block = 1, g_owner_warned;
+static int g_walk, g_walk_type = MOVE_TYPE_WALK, g_walk_tp_cm = 600, g_walk_bad, g_walk_block = 1, g_owner_warned;
+static int g_walk_type_far = MOVE_TYPE_RUN, g_walk_far_cm = 500, g_cur_type = MOVE_TYPE_WALK; /* corre si queda lejos */
 static volatile uint32_t g_walk_ctrl; /* controlador del avatar, para el filtro (corre en otro thread) */
 /* AIMP_GHOST_WALK_CINEMATIC: la motivación cinemática del avatar siempre verdadera (hook de FUN_006d3630) */
 static AimpHook g_hook_motiv;
@@ -262,7 +263,9 @@ int ghost_install(void)
         } else {
             g_move_start = (MoveCmdFn)(void *)ps;
             g_move_update = (MoveCmdFn)(void *)pu;
-            g_walk_type = aimp_env_int(L"AIMP_GHOST_WALK_TYPE", 1);
+            g_walk_type = aimp_env_int(L"AIMP_GHOST_WALK_TYPE", MOVE_TYPE_WALK);
+            g_walk_type_far = aimp_env_int(L"AIMP_GHOST_WALK_TYPE_FAR", MOVE_TYPE_RUN); /* igual a TYPE: no cambia */
+            g_walk_far_cm = aimp_env_int(L"AIMP_GHOST_WALK_FAR_CM", 500);
             int ms = aimp_env_int(L"AIMP_GHOST_WALK_MS", 200);
             g_walk_ticks = g_freq * (ms < 20 ? 20 : ms) / 1000;
             g_walk_tp_cm = aimp_env_int(L"AIMP_GHOST_WALK_TP_CM", 1200);
@@ -277,6 +280,7 @@ int ghost_install(void)
             float f18 = 0.1f; /* el valor por defecto del engine (DAT_011bb6ac) */
             aimp_memcpy(g_params, &mt, 4);
             aimp_memcpy(g_params + MOVE_PARAMS_F18, &f18, 4);
+            g_cur_type = g_walk_type;
             g_walk_block = aimp_env_int(L"AIMP_GHOST_WALK_BLOCK", 1);
             if (g_walk_block)
                 ctrl_set_switch_filter(ghost_switch_filter); /* ctrl_install (después) instala el hook */
@@ -310,8 +314,9 @@ int ghost_install(void)
                               g_walk_restart_ms);
             else
                 aimp_snprintf(rs, sizeof rs, "sin órdenes nuevas cuando el objetivo se mueve");
-            log_printf("AIMP_GHOST_WALK=1 (fase 4b, experimental): MOVE_TOWARDS en el controlador +0x%x con move_type %d, destino cada %d ms, %s, teletransporte a más de %d cm; NOAUTH %d; bloqueo de los comandos de la IA %d; motivación cinemática %d",
-                       g_walk_off, g_walk_type, (int)(g_walk_ticks * 1000 / g_freq), rs, g_walk_tp_cm, g_noauth, g_walk_block, g_walk_cine);
+            log_printf("AIMP_GHOST_WALK=1 (fase 4b, experimental): MOVE_TOWARDS en el controlador +0x%x con move_type %d (%d a más de %d cm del objetivo), destino cada %d ms, %s, teletransporte a más de %d cm; NOAUTH %d; bloqueo de los comandos de la IA %d; motivación cinemática %d",
+                       g_walk_off, g_walk_type, g_walk_type_far, g_walk_far_cm, (int)(g_walk_ticks * 1000 / g_freq), rs, g_walk_tp_cm,
+                       g_noauth, g_walk_block, g_walk_cine);
         }
     } else {
         log_printf("AIMP_TRACE_SPAWN=1: se loguean los pedidos de spawn (solo mira)");
@@ -671,6 +676,13 @@ static int task_playing_anim(char *nm, size_t cap)
     return (int)anim;
 }
 
+static void set_move_type(int type)
+{
+    uint32_t mt = (uint32_t)type;
+    aimp_memcpy(g_params, &mt, 4);
+    g_cur_type = type;
+}
+
 static void walk_start(uint32_t ctrl, const float *t, int64_t now, const char *why)
 {
     g_cmd_t[0] = t[0];
@@ -720,6 +732,7 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
         int anim = task_playing_anim(nm, sizeof nm);
         if (!g_prep_at) {
             log_printf("GHOST: caminata: orden antes de ubicarlo; controlador de tareas: %s", nm);
+            set_move_type(g_walk_type);
             walk_start(ctrl, t, now, "antes de ubicarlo");
             g_prep_at = now;
             break;
@@ -740,6 +753,7 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
          * caía del piso; teletransporte y orden en el mismo frame (como la reubicación) sí se pega. */
         teleport_to(t, tyaw);
         g_last_tp = now;
+        set_move_type(g_walk_type);
         walk_start(ctrl, t, now, "después de ubicarlo");
         g_wstate = W_WALK;
         g_far_since = 0;
@@ -758,10 +772,29 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             teleport_to(t, tyaw);
             g_last_tp = now;
             g_far_since = 0;
+            set_move_type(g_walk_type);
             walk_start(ctrl, t, now, "después de reubicarlo");
             break;
         }
         ours = walk_is_ours(ctrl, &type);
+        /* Corrida 30: caminando (~1,2 m/s) quedaba hasta 8,8 m atrás del jugador (~2,2 m/s). Corre (MOVE RUN) si
+         * queda a más de AIMP_GHOST_WALK_FAR_CM del objetivo y vuelve a caminar 2,5 m más cerca; el tipo se
+         * fija al dar la orden, así que va con una orden nueva (como mucho una por segundo). */
+        float run_at = (float)g_walk_far_cm / 100.0f, walk_at = run_at - 2.5f, dd = aimp_sqrtf(d2);
+        int want = g_cur_type;
+        if (g_walk_type_far != g_walk_type) {
+            if (g_cur_type == g_walk_type && dd > run_at)
+                want = g_walk_type_far;
+            else if (g_cur_type == g_walk_type_far && dd < walk_at)
+                want = g_walk_type;
+        }
+        if (want != g_cur_type && now - g_last_restart >= g_freq) {
+            char why[48];
+            aimp_snprintf(why, sizeof why, "%s: a %.1f m del objetivo", want == g_walk_type_far ? "corre" : "camina", (double)dd);
+            set_move_type(want);
+            walk_start(ctrl, t, now, why);
+            break;
+        }
         float mx = t[0] - g_cmd_t[0], mz = t[2] - g_cmd_t[2], rs = (float)g_walk_restart_cm / 100.0f;
         int moved = g_walk_restart_cm > 0 && mx * mx + mz * mz > rs * rs;
         if (!ours && now - g_last_restart >= g_freq) {
@@ -782,9 +815,9 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
     }
     (void)tyaw;
     if (now - g_last_log >= g_freq) {
-        log_printf("GHOST: caminata (%s): personaje en (%.2f, %.2f, %.2f), objetivo (%.2f, %.2f, %.2f) [%s] a %.2f m; comando %s tipo %d; %u inicios, %u actualizaciones, %u teletransportes, %ld cinemáticas; %s[%u]",
+        log_printf("GHOST: caminata (%s): personaje en (%.2f, %.2f, %.2f), objetivo (%.2f, %.2f, %.2f) [%s] a %.2f m; comando %s tipo %d, move_type %d; %u inicios, %u actualizaciones, %u teletransportes, %ld cinemáticas; %s[%u]",
                    g_wnames[g_wstate], (double)cur[0], (double)cur[1], (double)cur[2], (double)t[0], (double)t[1], (double)t[2], src,
-                   (double)aimp_sqrtf(d2), ours ? "propio" : "ajeno", (int)type, g_starts, g_updates, g_tps,
+                   (double)aimp_sqrtf(d2), ours ? "propio" : "ajeno", (int)type, g_cur_type, g_starts, g_updates, g_tps,
                    (long)InterlockedExchange(&g_n_cine, 0), where, idx);
         g_last_log = now;
         g_tps = 0;
