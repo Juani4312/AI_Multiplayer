@@ -764,4 +764,14 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **Los 15 campos** salen de mapear cada getter a su global (`push 0x17509xx`) y cada global a su cadena (inicializadores en 0x01158400..0x01158900, `objdump`): tabla en el hallazgo 19, "Parámetros de `MOVE_TOWARDS`". Todos los bool valen 0 por defecto.
 - Las funciones de la vtable de `MOVE_TOWARDS` (`PTR_FUN_012b18d8`) propias del comando son de guardado y carga (`FUN_0067e720`/`FUN_0067e760`: serializan `+0x80`, `+0x50` y `+0x9C`); la ejecución usa los slots genéricos (`vt+0x28` desde `FUN_00679150`). No encontré todavía el código que lee `start_instantly` (+0x8F del comando).
 - **Mod (tests OK):** `AIMP_GHOST_WALK_FLAGS` (bitmask decimal sobre `+0x04..+0x0F`), `AIMP_GHOST_WALK_RADIUS_CM` (10) y `AIMP_GHOST_WALK_REARM_CM` (orden nueva si está quieto 1 s lejos del objetivo; como mucho cada 2 s). Por defecto no cambian nada.
-- **Pendiente, corrida 35 (local, mando virtual):** `AIMP_GHOST=3;AIMP_GHOST_WALK=1;AIMP_GHOST_WALK_FLAGS=2048;AIMP_GHOST_WALK_REARM_CM=100`. Guion: girar 180° y pasos cortos de ~0,7 s cada 5 s. Ver si el avatar arranca con el objetivo a 1–2 m.
+- **Corrida 35** (local, mando virtual; autorizada por el usuario; `run35-start-instantly.log`, 0 excepciones, 0 comandos bloqueados). Config: `AIMP_GHOST=3;AIMP_GHOST_WALK=1;AIMP_GHOST_WALK_FLAGS=2048;AIMP_GHOST_WALK_REARM_CM=100`. Guion: girar 180° y 5 pasos cortos (0,5–0,7 s con `LY=-32000`, cada 5 s). En cada paso el objetivo se movió 1,1–1,6 m:
+  | Paso | Objetivo a | Arranque | Terminó a |
+  |---|---|---|---|
+  | 1 (~86,5 s) | 0,81 m | solo, ~1 s después | 0,36 m |
+  | 2 (~91,5 s) | 1,0 m | re-orden "quieto a 1.0 m" (91,9 s) | 0,18 m |
+  | 3 (~96,5 s) | 1,14 m | solo, en el mismo segundo | 0,07 m |
+  | 4 (~101,5 s) | 0,87 m | solo | 0,59 m |
+  | 5 (~106,5 s) | 1,0 m | re-orden (106,8 s) | 0,21 m |
+  - **Resultado:** con `start_instantly` el avatar siguió los 5 pasos cortos (3 solo, 2 con la re-orden), con un retardo de ≤1 s. En la corrida 31 (sin el flag) no arrancaba con el objetivo a menos de ~2,8 m. **Falta una corrida de control** (flags 0, sin re-orden) con el mismo guion para atribuir el cambio al flag y no a las condiciones.
+  - La captura salió borrosa (desenfoque de pausa: la ventana sin foco), sin valor como evidencia.
+  - **Por defecto desde ahora:** `AIMP_GHOST_WALK_FLAGS=2048` y `AIMP_GHOST_WALK_REARM_CM=100`. Mod en pasivo (`AIMP_GHOST=0`).
