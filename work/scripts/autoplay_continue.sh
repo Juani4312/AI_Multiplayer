@@ -13,8 +13,17 @@ w() { local end=$((SECONDS+$1)); until [ $SECONDS -ge $end ]; do sleep 0.5; done
 # Captura solo la ventana del juego (Hyprland), nunca un monitor entero: en el otro puede haber cosas privadas.
 shot_game() {
   local g
-  g=$(hyprctl clients -j 2>/dev/null | python3 -c "import json,sys; c=[c for c in json.load(sys.stdin) if c['class']=='steam_app_214490']; print('%d,%d %dx%d'%(c[0]['at'][0],c[0]['at'][1],c[0]['size'][0],c[0]['size'][1])) if c else None" 2>/dev/null)
-  [ -n "$g" ] && [ "$g" != "None" ] || { echo "no se encontró la ventana del juego; sin captura"; return 1; }
+  # 2026-11-15: con el juego en un workspace que no se ve, su geometría cae sobre lo que muestra el monitor
+  # y la captura agarra otras ventanas. Solo se captura si su workspace es el activo de su monitor.
+  local mons
+  mons=$(hyprctl monitors -j 2>/dev/null)
+  g=$(hyprctl clients -j 2>/dev/null | MONS="$mons" python3 -c "
+import json,os,sys
+m={x['id']:x['activeWorkspace']['id'] for x in json.loads(os.environ['MONS'] or '[]')}
+c=[c for c in json.load(sys.stdin) if c['class']=='steam_app_214490']
+ok=c and c[0]['mapped'] and not c[0]['hidden'] and m.get(c[0]['monitor'])==c[0]['workspace']['id']
+print('%d,%d %dx%d'%(c[0]['at'][0],c[0]['at'][1],c[0]['size'][0],c[0]['size'][1]) if ok else 'None')" 2>/dev/null)
+  [ -n "$g" ] && [ "$g" != "None" ] || { echo "la ventana del juego no está visible (workspace no activo) o no existe; sin captura"; return 1; }
   grim -g "$g" -s 0.5 "$1"
 }
 case "${1:-menu}" in
