@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Peer de prueba del protocolo de la fase 3 del mod (AIMP v1, UDP).
+"""Peer de prueba del protocolo del mod (AIMP v2, UDP).
 
 Hace de "otro jugador": manda un estado falso (una posición que da vueltas en un
 círculo) y muestra, una vez por segundo, lo que recibe del juego.
@@ -8,7 +8,13 @@ círculo) y muestra, una vez por segundo, lo que recibe del juego.
   python3 -I work/scripts/aimp_peer.py --host 47811             (el juego hace join)
 
 Opciones: --hz 20, --center x,y,z (centro del círculo), --level N, --seconds S (0 = sin fin).
+--replay S: en vez del círculo, repite el recorrido del jugador del juego con S segundos de
+retraso (posición, yaw y nivel que manda el juego). Sirve para probar el avatar que camina
+(AIMP_GHOST_WALK) en una sola máquina: el "otro jugador" pisa siempre lugares transitables.
+--offset dx,dy,dz: corrimiento de las posiciones repetidas (para que el avatar no termine
+encima del jugador).
 """
+import collections
 import argparse
 import functools
 import math
@@ -22,7 +28,7 @@ print = functools.partial(print, flush=True)
 
 FMT = "<IBBHIIII3ff4f3f8s"  # tiene que coincidir con AimpPkt (mod/src/net.h), 76 bytes
 SIZE = struct.calcsize(FMT)
-MAGIC, VERSION, STATE, BYE, FLAG_PLAYER = 0x504D4941, 1, 2, 3, 1
+MAGIC, VERSION, STATE, BYE, FLAG_PLAYER = 0x504D4941, 2, 2, 3, 1
 assert SIZE == 76, SIZE
 
 
@@ -40,6 +46,8 @@ def main():
     ap.add_argument("--center", default="40,14.5,-25")
     ap.add_argument("--level", type=int, default=10)
     ap.add_argument("--seconds", type=float, default=0)
+    ap.add_argument("--replay", type=float, default=0, help="segundos de retraso para repetir el recorrido del juego")
+    ap.add_argument("--offset", default="0,0,0", help="corrimiento dx,dy,dz de las posiciones repetidas")
     a = ap.parse_args()
     # SIGTERM (y SIGINT, que en segundo plano viene ignorado) terminan ordenado: BYE + resumen.
     def stop(*_):
@@ -47,6 +55,7 @@ def main():
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
     cx, cy, cz = (float(v) for v in a.center.split(","))
+    ox, oy, oz = (float(v) for v in a.offset.split(","))
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.setblocking(False)
     peer = None
@@ -59,6 +68,7 @@ def main():
         print(f"mandando a {peer}")
     seq, t0, last_print, last_send = 0, time.monotonic(), 0.0, 0.0
     got, lost, last_seq, last = 0, 0, None, None
+    hist = collections.deque()  # (t, pos, yaw, nivel) del jugador del juego, para --replay
     try:
         while not a.seconds or time.monotonic() - t0 < a.seconds:
             now = time.monotonic()
@@ -83,11 +93,24 @@ def main():
                 if last_seq is not None and f[4] > last_seq + 1:
                     lost += f[4] - last_seq - 1
                 last_seq, last, got = f[4], f, got + 1
+                if a.replay and f[3] & FLAG_PLAYER:
+                    hist.append((now, tuple(f[8:11]), f[11], f[6]))
             if peer and now - last_send >= 1.0 / a.hz:
-                ang = (now - t0) * 0.5
-                pos = (cx + 3 * math.cos(ang), cy, cz + 3 * math.sin(ang))
                 seq += 1
-                s.sendto(pack(seq, a.level, pos, math.atan2(math.cos(ang), -math.sin(ang))), peer)
+                if a.replay:
+                    # el estado de hace a.replay segundos; mientras no haya historia, sin jugador (el host
+                    # igual aprende la dirección del peer con este paquete)
+                    while len(hist) > 1 and hist[1][0] <= now - a.replay:
+                        hist.popleft()
+                    if hist and hist[0][0] <= now - a.replay:
+                        _, pos, yaw, lvl = hist[0]
+                        s.sendto(pack(seq, lvl, (pos[0] + ox, pos[1] + oy, pos[2] + oz), yaw), peer)
+                    else:
+                        s.sendto(pack(seq, a.level, (0.0, 0.0, 0.0), 0.0, 0), peer)
+                else:
+                    ang = (now - t0) * 0.5
+                    pos = (cx + 3 * math.cos(ang), cy, cz + 3 * math.sin(ang))
+                    s.sendto(pack(seq, a.level, pos, math.atan2(math.cos(ang), -math.sin(ang))), peer)
                 last_send = now
             if now - last_print >= 1.0:
                 if last:
