@@ -48,7 +48,7 @@ static void putf(void *base, uint32_t off, float v) { memcpy((uint8_t *)base + o
 
 static void *g_cm, *g_parr, *g_narr, *g_this, *g_sc_this;
 static uint32_t g_teleports, g_starts, g_updates, g_misaligned, g_bad_ctrl;
-static float g_last_target[12];
+static float g_last_target[12], g_start_target[12]; /* el último destino (inicio o actualización) y el del último inicio */
 static uint8_t g_last_a[8], g_last_b[8], g_last_params[MOVE_PARAMS_SIZE];
 static uint32_t g_last_flag;
 
@@ -115,6 +115,7 @@ static void __attribute__((cdecl)) fake_move_start(uint32_t ctrl, const uint8_t 
 {
     g_starts++;
     record(ctrl, a, b, t, params, flag);
+    memcpy(g_start_target, t, sizeof g_start_target);
     uint8_t *cmd = obj(0x100);
     put32(cmd, CMD_TYPE, CMD_TYPE_MOVE_TOWARDS);
     memcpy(cmd + CMD_OWNER_A, a, 8);
@@ -273,7 +274,7 @@ int main(void)
     g_this = obj(0x40);
     g_sc_this = obj(0x40);
     putp(img, AIMP_RVA_G_ROOT, root);
-    static const char *names[COMMAND_TYPES] = { "NONE", "IDLE", "DIE", "GOTO", "GOTO_COVER", "MOVE_TOWARDS" };
+    static const char *names[COMMAND_TYPES] = { "NONE", "IDLE", "DIE", "GOTO", "GOTO_COVER", "MOVE_TOWARDS", "FOLLOW", "PLAY_ANIMATION" };
     for (int i = 0; i < COMMAND_TYPES; i++)
         putp(img, AIMP_RVA_COMMAND_NAMES + 4 * i, (void *)(names[i] ? names[i] : "X"));
     putp(root, ROOT_CHARMGR, g_cm);
@@ -306,20 +307,28 @@ int main(void)
     /* objetivo sin red con la caminata: 2,5 m detrás del jugador (adelante = (sin yaw, cos yaw)) */
     const float bx = -2.5f * (float)sin(0.25), bz = -2.5f * (float)cos(0.25);
 #define CLOSE(a, b) ((a) > (b) - 0.01f && (a) < (b) + 0.01f)
-    printf("[el NPC elegido: se lo ubica y en el mismo frame MOVE_TOWARDS]\n");
+    printf("[el NPC elegido: primero la orden; se lo ubica cuando su controlador de tareas no tiene un PLAY_ANIMATION]\n");
+    uint8_t *anim = obj(0x100);
+    put32(anim, CMD_TYPE, CMD_TYPE_PLAY_ANIMATION);
+    putp(npc, CHR_CMDCTRL + CMDCTRL_EXEC, anim);
     __asm__ volatile("mov %%esp, %0" : "=r"(esp0));
-    for (int i = 0; i < 12; i++, now += step) /* 200 ms: elegido y ubicado */
+    for (int i = 0; i < 12; i++, now += step) /* 200 ms: elegido, con la orden y sin ubicar */
         ghost_frame(now, &net, 16);
-    CHECK(g_teleports == 1 && g_starts == 1, "ubicado (teletransportes %u) y con la orden en el mismo frame (inicios %u)", g_teleports,
-          g_starts);
-    for (int i = 0; i < 30; i++, now += step) /* 500 ms más */
+    CHECK(g_teleports == 0 && g_starts == 1, "orden antes de ubicarlo (inicios %u, teletransportes %u)", g_starts, g_teleports);
+    for (int i = 0; i < 42; i++, now += step) /* 700 ms más: sigue el PLAY_ANIMATION */
         ghost_frame(now, &net, 16);
+    CHECK(g_teleports == 0, "con PLAY_ANIMATION en el controlador de tareas no se lo ubica (teletransportes %u)", g_teleports);
+    put32(npc, CHR_CMDCTRL + CMDCTRL_EXEC, 0);
+    for (int i = 0; i < 2; i++, now += step)
+        ghost_frame(now, &net, 16);
+    CHECK(g_teleports == 1 && g_starts == 2, "terminó: ubicado y con una orden nueva en el mismo frame (teletransportes %u, inicios %u)",
+          g_teleports, g_starts);
     __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
     CHECK(esp0 == esp1, "stack balanceado después de los frames (con las llamadas al engine)");
     CHECK(g_teleports == 1 && CLOSE(getf(npc, CHR_POS), 1.0f + bx) && CLOSE(getf(npc, CHR_POS + 8), 3.0f + bz),
           "teletransporte al objetivo, 2,5 m detrás del jugador (%.2f, %.2f; %u)", (double)getf(npc, CHR_POS),
           (double)getf(npc, CHR_POS + 8), g_teleports);
-    CHECK(g_starts == 1 && g_bad_ctrl == 0, "MOVE_TOWARDS sobre el controlador del NPC (%u inicios, %u controladores malos)", g_starts,
+    CHECK(g_starts == 2 && g_bad_ctrl == 0, "MOVE_TOWARDS sobre el controlador del NPC (%u inicios, %u controladores malos)", g_starts,
           g_bad_ctrl);
     CHECK(memcmp(g_last_a, "AIMPWALK", 8) == 0 && get32(g_last_b, 0) == (uint32_t)(uintptr_t)npc && g_last_b[4] == 'G' &&
               g_last_b[5] == 'H',
@@ -332,16 +341,21 @@ int main(void)
           "parámetros: move_type 1, +0x18 = 0,1; never_succeed = 1");
     CHECK(blk[BLOCK_AUTHORITY] == 1, "con la caminata el NPC conserva la autoridad (NOAUTH apagado)");
 
-    printf("[siguiendo: se actualiza el destino cada 200 ms, sin teletransportes]\n");
+    printf("[siguiendo a 2 m del jugador, del lado del NPC: se actualiza el destino cada 200 ms, sin teletransportes]\n");
     for (int i = 0; i < 60; i++, now += step) { /* 1 s; el jugador se corre 1 m */
         lp[0] = 1.0f + (float)i / 60.0f;
         memcpy(local + CHR_POS, lp, 12);
         ghost_frame(now, &net, 16);
     }
-    CHECK(g_starts == 1 && g_updates >= 4, "sin órdenes nuevas: se le actualiza el destino (inicios %u; actualizaciones %u)", g_starts,
+    CHECK(g_starts == 2 && g_updates >= 4, "sin órdenes nuevas: se le actualiza el destino (inicios %u; actualizaciones %u)", g_starts,
           g_updates);
     CHECK(g_teleports == 1, "sin teletransportes mientras camina (%u)", g_teleports);
-    CHECK(g_last_target[3] > 1.4f + bx && g_last_target[3] < 2.0f + bx, "el destino sigue al objetivo (x=%.2f)", (double)g_last_target[3]);
+    {
+        float tx = g_last_target[3] - lp[0], tz = g_last_target[11] - lp[2], nx = getf(npc, CHR_POS) - lp[0],
+              nz = getf(npc, CHR_POS + 8) - lp[2], d = (float)sqrt(tx * tx + tz * tz);
+        CHECK(d > 1.9f && d < 2.15f && tx * nx + tz * nz > 0.0f, "destino a %.2f m del jugador, del lado del NPC (%.2f, %.2f)", (double)d,
+              (double)g_last_target[3], (double)g_last_target[11]);
+    }
 
     printf("[el engine pasa el comando de pendiente (+4) a en ejecución (+0): sigue siendo el del mod]\n");
     uint32_t mine = get32(npc, CHR_SCRIPTCTRL + CMDCTRL_CURRENT);
@@ -350,7 +364,7 @@ int main(void)
     uint32_t up0 = g_updates;
     for (int i = 0; i < 70; i++, now += step)
         ghost_frame(now, &net, 16);
-    CHECK(g_starts == 1 && g_updates > up0, "no se lo vuelve a dar (inicios %u) y se le sigue actualizando el destino (%u)", g_starts,
+    CHECK(g_starts == 2 && g_updates > up0, "no se lo vuelve a dar (inicios %u) y se le sigue actualizando el destino (%u)", g_starts,
           g_updates - up0);
 
     printf("[la IA cambió el comando: se lo vuelve a dar]\n");
@@ -359,7 +373,7 @@ int main(void)
     putp(npc, CHR_SCRIPTCTRL + CMDCTRL_EXEC, other);
     for (int i = 0; i < 70; i++, now += step)
         ghost_frame(now, &net, 16);
-    CHECK(g_starts == 2, "otro MOVE_TOWARDS (inicios %u)", g_starts);
+    CHECK(g_starts == 3, "otro MOVE_TOWARDS (inicios %u)", g_starts);
 
     printf("[motivación cinemática: verdadera solo para el agente del avatar]\n");
     {
@@ -396,8 +410,8 @@ int main(void)
     for (int i = 0; i < 60; i++, now += step) /* 1 s más */
         ghost_frame(now, &net, 16);
     CHECK(g_teleports == 2 && CLOSE(getf(npc, CHR_POS), 20.0f + bx), "reubicado (x=%.2f, %u)", (double)getf(npc, CHR_POS), g_teleports);
-    CHECK(g_starts > st0 && CLOSE(g_last_target[3], 20.0f + bx), "con una orden nueva al objetivo (inicios %u, destino x=%.2f)", g_starts,
-          (double)g_last_target[3]);
+    CHECK(g_starts > st0 && CLOSE(g_start_target[3], 20.0f + bx), "con una orden nueva detrás del jugador (inicios %u, destino x=%.2f)",
+          g_starts, (double)g_start_target[3]);
     CHECK(g_null_switches == 0, "nunca SwitchCommand(ctrl, NULL), que hace caer el juego (%u)", g_null_switches);
     CHECK(g_misaligned == 0, "posiciones y destinos alineados a 16 (%u)", g_misaligned);
 
@@ -420,6 +434,9 @@ int main(void)
     expect(log, "caminata (caminando)", 1);
     expect(log, "comando propio tipo 5", 1);
     expect(log, "local detrás", 1);
+    expect(log, "local a distancia", 1);
+    expect(log, "orden antes de ubicarlo; controlador de tareas: PLAY_ANIMATION", 1);
+    expect(log, "controlador de tareas: ninguno)", 1);
     expect(log, "bloqueado el comando GOTO", 1);
     expect(log, "bloqueo de los comandos de la IA 1; motivación cinemática 1", 1);
     expect(log, "hook ConditionHasMotivation (FUN_006d3630): instalado", 1);

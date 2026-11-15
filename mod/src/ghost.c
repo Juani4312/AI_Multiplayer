@@ -97,8 +97,8 @@ static int g_walk_cine = 1;
 static volatile uint32_t g_walk_chr; /* el avatar, para el hook (corre en el thread de la IA) */
 static volatile LONG g_n_cine, g_cine_logged;
 static volatile LONG g_n_blocked;
-static int64_t g_walk_ticks, g_last_cmd, g_last_restart, g_far_since;
-static int g_wstate, g_walk_behind_cm = 250, g_walk_restart_cm, g_walk_restart_ms = 500;
+static int64_t g_walk_ticks, g_last_cmd, g_last_restart, g_far_since, g_prep_at;
+static int g_wstate, g_walk_behind_cm = 250, g_walk_restart_cm, g_walk_restart_ms = 500, g_walk_follow_cm = 200, g_walk_prep_ms = 4000;
 static uint32_t g_walk_off = CHR_SCRIPTCTRL; /* controlador al que se le dan las órdenes (AIMP_GHOST_WALK_CTRL) */
 static float g_cmd_t[3]; /* objetivo de la última orden (FUN_0067e980) */
 
@@ -269,6 +269,8 @@ int ghost_install(void)
             g_walk_behind_cm = aimp_env_int(L"AIMP_GHOST_WALK_BEHIND_CM", 250);
             g_walk_restart_cm = aimp_env_int(L"AIMP_GHOST_WALK_RESTART_CM", 0); /* 0: solo actualizaciones (corrida 28) */
             g_walk_restart_ms = aimp_env_int(L"AIMP_GHOST_WALK_RESTART_MS", 500);
+            g_walk_follow_cm = aimp_env_int(L"AIMP_GHOST_WALK_FOLLOW_CM", 200); /* 0: punto fijo detrás del jugador */
+            g_walk_prep_ms = aimp_env_int(L"AIMP_GHOST_WALK_PREP_MS", 4000);
             g_walk_off = (uint32_t)aimp_env_int(L"AIMP_GHOST_WALK_CTRL", CHR_SCRIPTCTRL); /* 0x3820 = el de tareas */
             aimp_memset(g_params, 0, sizeof g_params);
             uint32_t mt = (uint32_t)g_walk_type;
@@ -425,7 +427,8 @@ static void start_moving(uint32_t p, int64_t now)
     g_last_tp = 0;
     g_tps = 0;
     g_last_restart = g_last_cmd = g_far_since = 0;
-    g_wstate = 0; /* W_PLACE */
+    g_wstate = 0; /* W_PREP */
+    g_prep_at = 0;
     g_starts = g_updates = 0;
     g_walk_bad = 0;
     g_walk_ctrl = g_walk ? p + g_walk_off : 0;
@@ -636,8 +639,37 @@ int ghost_switch_filter(uint32_t ctrl, uint32_t cmd)
  * lejos 1 s (como mucho cada 3 s). Corrida 23 (en el controlador de tareas) las actualizaciones no lo hacían
  * caminar; en el de scripts sí (corrida 28), así que por defecto no se reinicia la orden. Nunca
  * SwitchCommand(ctrl, NULL): el juego se cae. */
-enum { W_PLACE, W_WALK };
-static const char *const g_wnames[] = { "ubicando", "caminando" };
+enum { W_PREP, W_PLACE, W_WALK };
+static const char *const g_wnames[] = { "preparando", "ubicando", "caminando" };
+
+static void cmd_name(uint32_t type, char *nm, size_t cap)
+{
+    uint32_t p = 0;
+    if (!(type < COMMAND_TYPES && mem_u32(g_aimp_exe + AIMP_RVA_COMMAND_NAMES + 4 * type, &p) && p && mem_cstr(p, nm, cap)))
+        aimp_snprintf(nm, cap, "%s", type == 0xFFFFFFFFu ? "ninguno" : "?");
+}
+
+/* ¿El otro controlador del avatar (el de tareas, si la orden va al de scripts) tiene un PLAY_ANIMATION en
+ * ejecución o pendiente? Devuelve en nm el nombre del comando en ejecución (o del pendiente). */
+static int task_playing_anim(char *nm, size_t cap)
+{
+    uint32_t c[2] = { 0, 0 }, type, anim = 0, shown = 0xFFFFFFFFu;
+    if (g_walk_off == CHR_CMDCTRL) {
+        aimp_snprintf(nm, cap, "-");
+        return 0;
+    }
+    mem_u32(g_chr + CHR_CMDCTRL + CMDCTRL_EXEC, &c[0]);
+    mem_u32(g_chr + CHR_CMDCTRL + CMDCTRL_CURRENT, &c[1]);
+    for (int i = 0; i < 2; i++) {
+        if (!c[i] || !mem_u32(c[i] + CMD_TYPE, &type))
+            continue;
+        if (shown == 0xFFFFFFFFu)
+            shown = type;
+        anim |= type == CMD_TYPE_PLAY_ANIMATION;
+    }
+    cmd_name(shown, nm, cap);
+    return (int)anim;
+}
 
 static void walk_start(uint32_t ctrl, const float *t, int64_t now, const char *why)
 {
@@ -679,6 +711,27 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
     g_target[11] = t[2];
     int ours = 0;
     switch (g_wstate) {
+    case W_PREP: {
+        /* Corrida 29: al recibir la orden, la IA del avatar arranca un PLAY_ANIMATION en su controlador de tareas,
+         * y si se lo teletransporta mientras dura, cae del piso (3 de 3 corridas; la reubicación 3 s después
+         * funcionó). Primero la orden desde donde está; se lo ubica cuando no hay PLAY_ANIMATION (al menos
+         * 500 ms, como mucho AIMP_GHOST_WALK_PREP_MS). */
+        char nm[32];
+        int anim = task_playing_anim(nm, sizeof nm);
+        if (!g_prep_at) {
+            log_printf("GHOST: caminata: orden antes de ubicarlo; controlador de tareas: %s", nm);
+            walk_start(ctrl, t, now, "antes de ubicarlo");
+            g_prep_at = now;
+            break;
+        }
+        int64_t el = now - g_prep_at;
+        if (el < g_freq / 2 || (anim && el < g_freq * g_walk_prep_ms / 1000))
+            break;
+        log_printf("GHOST: caminata: se lo ubica a los %d ms de la orden (controlador de tareas: %s%s)", (int)(el * 1000 / g_freq), nm,
+                   anim ? "; se agotó la espera" : "");
+        g_wstate = W_PLACE;
+    }
+        __attribute__((fallthrough));
     case W_PLACE:
         log_printf("GHOST: caminata: teletransporte de 0x%08x a (%.2f, %.2f, %.2f) [%s] (%s; estaba a %.2f m en horizontal, %.2f m en vertical)",
                    g_chr, (double)t[0], (double)t[1], (double)t[2], src, g_last_tp ? "lejos o en otro piso" : "primera vez",
@@ -713,9 +766,7 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
         int moved = g_walk_restart_cm > 0 && mx * mx + mz * mz > rs * rs;
         if (!ours && now - g_last_restart >= g_freq) {
             char nm[32], why[48];
-            uint32_t p = 0;
-            if (!(type < COMMAND_TYPES && mem_u32(g_aimp_exe + AIMP_RVA_COMMAND_NAMES + 4 * type, &p) && p && mem_cstr(p, nm, sizeof nm)))
-                aimp_snprintf(nm, sizeof nm, "%s", type == 0xFFFFFFFFu ? "ninguno" : "?");
+            cmd_name(type, nm, sizeof nm);
             aimp_snprintf(why, sizeof why, "el comando actual era %s", nm);
             walk_start(ctrl, t, now, why);
         } else if (moved && now - g_last_restart >= g_freq * g_walk_restart_ms / 1000) {
@@ -768,13 +819,29 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
         src = "red";
     } else if (g_walk && !g_walk_bad) {
         /* AIMP_GHOST_WALK_BEHIND_CM (250) detrás del jugador: adelante = (sin yaw, cos yaw) (corrida 20). Con
-         * 1,2 m, caminar hacia atrás metía al jugador contra el NPC (corrida 22). */
-        float b = (float)g_walk_behind_cm / 100.0f;
-        t[0] = lpos[0] - b * aimp_sinf(lyaw);
+         * 1,2 m, caminar hacia atrás metía al jugador contra el NPC (corrida 22). Corrida 29: si el jugador se da
+         * vuelta, ese punto queda del otro lado y el NPC se le pega al ir en línea recta. Con
+         * AIMP_GHOST_WALK_FOLLOW_CM (200) el objetivo es el punto a esa distancia del jugador del lado donde ya
+         * está el NPC (como un acompañante); la primera vez y si quedó lejos, detrás. */
+        float b = (float)g_walk_behind_cm / 100.0f, f = (float)g_walk_follow_cm / 100.0f, cur[3], vx = 0.0f, vz = 0.0f, n2 = 0.0f;
+        if (f > 0.0f && g_wstate == W_WALK && mem_read(g_chr + CHR_POS, cur, sizeof cur)) {
+            vx = cur[0] - lpos[0];
+            vz = cur[2] - lpos[2];
+            n2 = vx * vx + vz * vz;
+        }
+        float tp = (float)g_walk_tp_cm / 100.0f;
+        if (n2 > 0.01f && n2 < tp * tp) { /* lejos: se lo reubica detrás (del otro lado podría haber una pared) */
+            float k = f / aimp_sqrtf(n2);
+            t[0] = lpos[0] + vx * k;
+            t[2] = lpos[2] + vz * k;
+            src = "local a distancia";
+        } else {
+            t[0] = lpos[0] - b * aimp_sinf(lyaw);
+            t[2] = lpos[2] - b * aimp_cosf(lyaw);
+            src = "local detrás";
+        }
         t[1] = lpos[1];
-        t[2] = lpos[2] - b * aimp_cosf(lyaw);
         tyaw = lyaw;
-        src = "local detrás";
     } else {
         t[0] = lpos[0] + 1.5f;
         t[1] = lpos[1];

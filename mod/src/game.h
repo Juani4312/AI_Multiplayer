@@ -278,6 +278,10 @@ static const uint8_t AIMP_SWITCH_COMMAND_PROLOGUE[9] __attribute__((unused)) = {
 #define CMD_OWNER_A               0x34
 #define CMD_OWNER_B               0x3C
 #define CMD_TYPE_MOVE_TOWARDS     5
+/* Índices de la tabla de nombres (AIMP_RVA_COMMAND_NAMES, hallazgo 19): NONE, IDLE, DIE, GOTO, GOTO_COVER,
+ * MOVE_TOWARDS, FOLLOW, PLAY_ANIMATION... Corrida 29: la IA del avatar arranca un PLAY_ANIMATION en su
+ * controlador de tareas al recibir la orden, y si se lo teletransporta mientras dura, cae del piso. */
+#define CMD_TYPE_PLAY_ANIMATION   7
 #define MOVE_PARAMS_SIZE          0x1C
 #define MOVE_PARAMS_F18           0x18
 /* Árbol de comportamiento del civil (DATA/BEHAVIOR/NPC_INNOCENT_BEHAVE.XML): los comandos de script solo se
