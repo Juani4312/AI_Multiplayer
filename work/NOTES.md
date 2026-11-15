@@ -585,3 +585,13 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **Falta runtime** (cuando el usuario lo autorice):
   1. en una sola máquina, `AIMP_TRACE_THROW=1;AIMP_THROW_ECHO=1500`: tirar una bengala y ver si aparece la copia con la misma curva, y que no se caiga;
   2. con dos máquinas, `AIMP_SYNC_THROW=1`. La laptop necesita la DLL nueva (protocolo v2).
+
+## 2026-11-15 — Armas de fuego (estático) y replicación de personajes de NETZ (hallazgo 18)
+- **Disparo del jugador** (para un bloque futuro; detalle en `findings/17-arrojables.md`, "El equipo del jugador"):
+  - `FUN_007c3b10` (por frame, desde `FUN_007ccfb0`) decide el disparo. Pone `equipo+0xA0 = 1` y encola un evento 0x13 en la lista `+0x3BAC` (zona de IA: ¿estímulo?). Avisa al arma: `FUN_00784a50`/`ac0` = eventos `0x100029`/`0x10002A` (empezar y parar), y `FUN_00784b30`/`ba0` = `0x10002F`/`0x100030` (fuego continuo, lanzallamas). Se mandan con `FUN_00930640` a `arma+0x14` y al listener de arriba del personaje.
+  - La instancia del arma es la entidad `AIMED_WEAPON` (subobjeto `EntityInterface` en `+0x14`, dueño en `+0x28`).
+  - `FUN_007c92e0` ejecuta el disparo: con `+0xA0 && +0xA4 && !+0xA8`, recorre los resultados de los rayos de cada perdigón (`+0xCC`…; los calcula `FUN_007c8510`) y aplica el daño. Los impactos sobre un personaje de tipo 1 tienen un tratamiento aparte.
+  - `trigger_pulled` (`FUN_006647d0`) consume `+0xA8` (picana).
+- **Hallazgo 18:** cada personaje tiene un replicador (pool `[g_root+0x4C]`, apilado como listener del personaje) que codifica 11 tipos de mensaje: acciones y animación, posición, armas, salud…
+  - La capa de canales es un **stub** en retail: `FUN_00a2abb0` no escribe nada y `FUN_00a2ab80` devuelve vacío. Por eso el dispatch nunca llama a un transporte.
+  - La opción C queda descartada como camino corto. La animación del avatar y del Alien títere va a mano; lo que codificaba el replicador sirve de guía.
