@@ -3,14 +3,14 @@
 Mod de investigación e interoperabilidad, de uso personal, sobre una copia comprada del juego.
 No contiene ni redistribuye binarios, assets ni código del juego.
 
-**Estado (2026-11-15):** experimental. Dos jugadores, uno en Linux (Proton) y otro en Windows 10, conectados por Tailscale, ya se ven y comparten los "usar". En una sola máquina también se verificaron la reinyección de los objetos arrojados y un avatar que camina y corre con su propia animación. Todavía no es un coop jugable: no se sincronizan la IA, el Alien, las armas de fuego ni el progreso de la misión.
+**Estado (2026-11-15):** experimental. Dos jugadores, uno en Linux (Proton) y otro en Windows 10, conectados por Tailscale, ya se ven y comparten los "usar". En una sola máquina también se verificaron la reinyección de los objetos arrojados y un avatar que camina y corre con su propia animación (también por red, contra un peer de prueba que hace de otro jugador). Todavía no es un coop jugable: no se sincronizan la IA, el Alien, las armas de fuego ni el progreso de la misión. **Dónde quedamos y qué sigue:** sección "Último trabajo y siguiente paso", al final.
 
 | Fase | Qué hace | Estado |
 |------|----------|--------|
 | 1 y 2 | `winmm.dll` proxy, hook en el loop principal, lectura de estado y posición del jugador | ✅ Proton y Windows 10 nativo |
 | 3 | Red UDP propia (20 paquetes/s con el estado del jugador) | ✅ por Tailscale, 0 pérdidas |
 | 4 | Avatar del otro jugador: un NPC civil del nivel, sin IA, teletransportado a su posición | ✅ en los dos sentidos |
-| 4b | Avatar que camina y corre con su animación (`MOVE_TOWARDS`) en vez de teletransportarse | 🟡 verificado en una máquina (corridas 27–31: sigue al jugador caminando y corriendo); falta probarlo con dos |
+| 4b | Avatar que camina y corre con su animación (`MOVE_TOWARDS`) en vez de teletransportarse | 🟡 verificado en una máquina (corridas 27–34): sigue caminando y corriendo, también por red contra el peer de prueba, y quieto mira hacia donde mira el otro; falta probarlo con dos |
 | 5 | "Usar" compartido: botones, cajas e ítems se replican y en la otra máquina los hace el avatar | ✅ botones; los ítems quedan uno por jugador |
 | 5b | Objetos arrojados y colocados (bengala, noisemaker, molotov, minas…): aparecen en la otra máquina con la misma trayectoria | 🟡 inyección verificada en una máquina; falta probar con dos |
 | 6 | Disparadores de los scripts decididos por el host (zonas que arrancan diálogos, eventos…) | 🟡 código y tests; índice de entidades verificado en el juego; falta probar con dos máquinas |
@@ -35,7 +35,8 @@ Los dos jugadores **tienen que tener exactamente este hash**, los mismos datos d
 - `work/PROGRESS.md`: estado y siguiente paso. `work/NOTES.md` y `work/LOG.md` son la bitácora.
 - `work/findings/`: un `.md` por hallazgo de RE, con direcciones, evidencia y verificación en runtime.
 - `work/windows/`: instrucciones y script de PowerShell para probar en Windows (`instructions.md`, `aimp_check.ps1`). Ahí también van los reportes de la laptop de pruebas.
-- `work/scripts/`: `runtime_setup.sh` (instalar y revertir el mod en Proton), `aimp_peer.py` (peer de prueba del protocolo), análisis de logs y scripts de Ghidra (`work/scripts/ghidra/`).
+- `work/scripts/`: `runtime_setup.sh` (instalar y revertir el mod en Proton), `autoplay_continue.sh` (llega a "Continue Game" con el mando virtual), `aimp_peer.py` (peer de prueba del protocolo v2; con `--replay` hace de otro jugador), análisis de logs y scripts de Ghidra (`work/scripts/ghidra/`).
+- `work/evidence/runtime/`: los logs de cada corrida (`runNN-*.log`) y capturas en `shots/` (locales, ignorados por git).
 - `game/` y `work/evidence/`: locales, ignorados por git.
 
 ## Cómo jugar (experimental)
@@ -51,7 +52,7 @@ Los dos jugadores **tienen que tener exactamente este hash**, los mismos datos d
    | Host | `AIMP_NET=host`, `AIMP_GHOST=3`, `AIMP_SYNC_USE=1`, `AIMP_SYNC_THROW=1` |
    | El que se une | `AIMP_NET=join`, `AIMP_NET_PEER=<IP de Tailscale del host>:47811`, `AIMP_GHOST=3`, `AIMP_SYNC_USE=1`, `AIMP_SYNC_THROW=1` |
 
-   Opcional y sin probar con dos máquinas: `AIMP_SYNC_PINS=1` en las dos (los disparadores de zona los decide el host), y `AIMP_GHOST_WALK=1` en las dos para que el avatar camine y corra en vez de teletransportarse.
+   Opcional y sin probar con dos máquinas: `AIMP_GHOST_WALK=1` en las dos, para que el avatar camine y corra en vez de teletransportarse (es lo próximo a probar), y `AIMP_SYNC_PINS=1` en las dos (los disparadores de zona los decide el host).
 
 4. Los dos cargan la misma partida, en el mismo nivel. Unos 8 s después, cada uno ve a un civil del nivel parado donde está el otro jugador. Lo que uno aprieta (por ejemplo, el botón para llamar al transit) también pasa en la otra máquina, y lo que tira (una bengala, un noisemaker) aparece en la otra con la misma curva.
 
@@ -61,7 +62,7 @@ Todo queda en `%LOCALAPPDATA%\AI_Multiplayer\aimp.log` (en Proton, dentro del pr
 
 ## Limitaciones conocidas
 
-- Por defecto, el avatar es un NPC civil sin IA que se teletransporta a la posición del otro: no anima la caminata. La caminata animada (`AIMP_GHOST_WALK=1`, en las dos máquinas) es experimental: anda en una máquina, todavía no se probó por red, se detiene a 1–3 m del punto exacto y, quieto, no copia hacia dónde mira el otro.
+- Por defecto, el avatar es un NPC civil sin IA que se teletransporta a la posición del otro: no anima la caminata. La caminata animada (`AIMP_GHOST_WALK=1`, en las dos máquinas) es experimental: anda en una máquina y por red contra el peer de prueba, pero no se probó con dos máquinas. Después de llegar, no vuelve a arrancar hasta que el otro se aleja 1–3 m.
 - No se replican la IA ni el Alien, las armas de fuego (el disparo y el lanzallamas no se ven del otro lado), las puertas automáticas, lo que se elige en una terminal ni el progreso de la misión. Cada máquina corre su propia simulación.
 - Los ítems que se levantan quedan uno por jugador: los dos pueden agarrar el mismo.
 - Los lockers y la terminal de guardado no se replican a propósito: son acciones de cada jugador.
@@ -77,3 +78,34 @@ Todo queda en `%LOCALAPPDATA%\AI_Multiplayer\aimp.log` (en Proton, dentro del pr
 ## Tests
 
 `mod/test/run_tests.sh` corre con wine, sin el juego: `test_core`, `test_probe`, `test_net`, `test_ghost`, `test_walk`, `test_sync`, `test_throw`, `test_ctrl`, `test_pins`, `test_autopad` y `test_host`. Los de las fases 4 a 6 usan stubs de código máquina con los prólogos y el `ret N` reales del juego, para validar las convenciones de llamada.
+
+## Pruebas automáticas en una máquina
+
+Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, Proton, Hyprland):
+
+1. `work/scripts/runtime_setup.sh install --cfg "...;AIMP_AUTOPAD_FILE=C:\users\steamuser\AppData\Local\AI_Multiplayer\pad.txt"` y `setsid -f steam -applaunch 214490`.
+2. `work/scripts/autoplay_continue.sh menu`: espera el menú, lo navega con el mando virtual y saca una captura **solo de la ventana del juego** (con la geometría de `hyprctl`; nunca un monitor entero). Hay que ver "Continue Game" resaltado antes de `autoplay_continue.sh go`.
+3. El mando virtual (`mod/src/autopad.c`) lee un guion de `pad.txt`: una línea por acción, por ejemplo `P8000-10000:LY=32000` (adelante 2 s) o `P12000-13260:RX=24000` (girar unos 180°; ~143°/s con 24000). Los tiempos `P` son relativos a la aparición del jugador. `MARK` deja una marca en el log.
+4. **Otro jugador sin otra máquina:** el juego con `AIMP_NET=host` y `python3 -I work/scripts/aimp_peer.py --join 127.0.0.1:47811 --replay 3 --offset 0,0,2`. El peer repite el recorrido del jugador 3 s después, corrido 2 m, así que el "otro" siempre pisa lugares transitables.
+5. Al terminar: cerrar el juego (`pkill -TERM -x AI.exe`), guardar el log en `work/evidence/runtime/` y **dejar el mod instalado en pasivo** (`runtime_setup.sh install --cfg "AIMP_GHOST=0"`).
+
+## Último trabajo y siguiente paso
+
+**2026-11-15 (sesión larga, corridas 20 a 34):**
+- **Arrojables** (hallazgo 17, corrida 20): la bengala, el noisemaker, etc. se reinyectan con la misma trayectoria (`AIMP_SYNC_THROW=1`, protocolo v2). Verificado en una máquina.
+- **Avatar que camina y corre** (hallazgo 19, corridas 21 a 34):
+  - Cada personaje tiene **dos controladores de comandos**: el de tareas (`Character+0x3820`, donde manda su IA) y el de scripts (`Character+0x3570`). El árbol de comportamiento del civil solo ejecuta los comandos de script en la rama cinemática.
+  - El mod le da un `MOVE_TOWARDS` en el controlador de scripts, fuerza la motivación cinemática del avatar (hook de `FUN_006d3630`, `ret 8`) y le actualiza el destino cada 200 ms.
+  - **Corre** si queda a más de 5 m. El enum `MOVE` (`SLOW_WALK`, `WALK`, `FAST_WALK`, `RUN`…) salió de una tabla de nombres del propio `AI.exe`.
+  - Antes de ubicarlo espera a que termine el `PLAY_ANIMATION` de su IA (si no, se caía del piso). Sin red sigue al jugador a 2 m; por red va a la posición del otro y, quieto, mira hacia donde mira el otro.
+  - Lecciones: nunca `SwitchCommand(ctrl, NULL)` (se cae) y verificar siempre el `ret N` en el asm antes de hookear (un `ret 8` declarado como `ret 4` hizo caer el juego).
+- **Herramientas:** corridas automáticas con el mando virtual y capturas de la ventana del juego; `aimp_peer.py` en v2 con `--replay` y `--offset`.
+- `mod/dist/winmm.dll` está actualizada (commit `85c21ff`). En papito el mod quedó instalado en pasivo (`AIMP_GHOST=0`).
+
+**Siguiente (mañana):**
+1. **Prueba con dos máquinas** (papito host + laptop join). La laptop necesita la DLL nueva de `mod/dist/`, porque el protocolo cambió a v2. Config de las dos: `AIMP_GHOST=3`, `AIMP_GHOST_WALK=1`, `AIMP_SYNC_USE=1`, `AIMP_SYNC_THROW=1`, más `AIMP_NET=host` en papito y `AIMP_NET=join` con `AIMP_NET_PEER=<IP de Tailscale de papito>:47811` en la laptop. Ver que cada avatar camine y corra hacia el otro jugador, que gire cuando el otro está quieto, y que las bengalas y los noisemakers aparezcan del otro lado.
+2. Si anda, dejar `AIMP_GHOST_WALK=1` por defecto con `AIMP_GHOST=3`.
+3. Después, en estático: el disparo de las armas de fuego (hallazgo 17, "El equipo del jugador"), y más adelante el Alien.
+4. Pendientes menores: que el avatar vuelva a arrancar con movimientos cortos del otro; `AIMP_SYNC_PINS` con dos máquinas.
+
+El detalle completo está en `work/PROGRESS.md` (estado), `work/NOTES.md` y `work/LOG.md` (bitácora) y `work/findings/19-control-de-personajes.md`.

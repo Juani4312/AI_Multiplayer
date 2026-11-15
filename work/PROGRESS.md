@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-15, 05:10 (corridas 23–34 automáticas con el mando virtual: el avatar camina y corre con `MOVE_TOWARDS` en el controlador de scripts, también por red contra `aimp_peer.py --replay`, y quieto mira hacia donde mira el otro; mod instalado en pasivo). Antes: 2026-11-15, 03:00 (corrida 20)_
+_Última actualización: 2026-11-15, 05:20, cierre de sesión; se sigue con la prueba con dos máquinas (ver README, "Último trabajo y siguiente paso") (corridas 23–34 automáticas con el mando virtual: el avatar camina y corre con `MOVE_TOWARDS` en el controlador de scripts, también por red contra `aimp_peer.py --replay`, y quieto mira hacia donde mira el otro; mod instalado en pasivo). Antes: 2026-11-15, 03:00 (corrida 20)_
 
 ## Decisiones vigentes
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
