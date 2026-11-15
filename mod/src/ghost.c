@@ -105,6 +105,11 @@ static volatile LONG g_n_cine, g_cine_logged;
 static volatile LONG g_n_blocked;
 static int64_t g_walk_ticks, g_last_cmd, g_last_restart, g_far_since, g_prep_at;
 static int g_wstate, g_walk_behind_cm = 250, g_walk_restart_cm, g_walk_restart_ms = 500, g_walk_follow_cm = 200, g_walk_prep_ms = 4000;
+/* AIMP_GHOST_WALK_REARM_CM: orden nueva si está quieto lejos del objetivo */
+static int g_walk_rearm_cm;
+static float g_rearm_p[3];
+static int64_t g_rearm_since;
+static uint32_t g_rearms;
 static uint32_t g_walk_off = CHR_SCRIPTCTRL; /* controlador al que se le dan las órdenes (AIMP_GHOST_WALK_CTRL) */
 static float g_cmd_t[3]; /* objetivo de la última orden (FUN_0067e980) */
 
@@ -283,9 +288,19 @@ int ghost_install(void)
             g_walk_off = (uint32_t)aimp_env_int(L"AIMP_GHOST_WALK_CTRL", CHR_SCRIPTCTRL); /* 0x3820 = el de tareas */
             aimp_memset(g_params, 0, sizeof g_params);
             uint32_t mt = (uint32_t)g_walk_type;
-            float f18 = 0.1f; /* el valor por defecto del engine (DAT_011bb6ac) */
+            /* arrived_radius: 0,1 es el valor por defecto de FUN_0067e980 (DAT_011bb6ac); los scripts usan 0,6 */
+            float f18 = (float)aimp_env_int(L"AIMP_GHOST_WALK_RADIUS_CM", 10) / 100.0f;
             aimp_memcpy(g_params, &mt, 4);
             aimp_memcpy(g_params + MOVE_PARAMS_F18, &f18, 4);
+            /* AIMP_GHOST_WALK_FLAGS: los bool de los parámetros (bit i = byte +0x04+i; 2048 = start_instantly,
+             * 8 = continue_from_previous_move, 4 = use_stopping_anim; game.h) */
+            int fl = aimp_env_int(L"AIMP_GHOST_WALK_FLAGS", 0);
+            for (int i = 0; i < MOVE_PARAMS_NFLAGS; i++)
+                g_params[MOVE_PARAMS_FLAGS + i] = (uint8_t)((fl >> i) & 1);
+            g_walk_rearm_cm = aimp_env_int(L"AIMP_GHOST_WALK_REARM_CM", 0);
+            if (fl || g_walk_rearm_cm)
+                log_printf("AIMP_GHOST_WALK: flags de MOVE_TOWARDS 0x%03x (bytes +0x04..+0x0F), arrived_radius %.2f m; orden nueva si está quieto a más de %d cm del objetivo",
+                           fl, (double)f18, g_walk_rearm_cm);
             g_cur_type = g_walk_type;
             g_walk_block = aimp_env_int(L"AIMP_GHOST_WALK_BLOCK", 1);
             if (g_walk_block)
@@ -443,6 +458,7 @@ static void start_moving(uint32_t p, int64_t now)
     g_still_since = g_last_face = g_settle_since = 0;
     g_starts = g_updates = 0;
     g_walk_bad = 0;
+    g_rearm_since = 0;
     g_walk_ctrl = g_walk ? p + g_walk_off : 0;
     g_walk_chr = g_walk && g_walk_cine ? p : 0;
     aimp_memcpy(g_cmd_b, &p, 4); /* el segundo id del comando: el avatar y "GH" */
@@ -824,6 +840,24 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                     walk_start(ctrl, t, now, "gira hacia donde mira el otro");
                     break;
                 }
+            }
+        }
+        /* AIMP_GHOST_WALK_REARM_CM: después de llegar no vuelve a arrancar hasta que el objetivo se aleja ~1-3 m
+         * (corridas 31-34). Si está quieto (no se movió más de 10 cm en 1 s) y a más de eso del objetivo, orden
+         * nueva (como mucho cada 2 s). */
+        if (g_walk_rearm_cm > 0) {
+            float qx = cur[0] - g_rearm_p[0], qz = cur[2] - g_rearm_p[2], ra = (float)g_walk_rearm_cm / 100.0f;
+            if (qx * qx + qz * qz > 0.01f || !g_rearm_since) {
+                g_rearm_p[0] = cur[0];
+                g_rearm_p[2] = cur[2];
+                g_rearm_since = now;
+            } else if (now - g_rearm_since >= g_freq && d2 > ra * ra && now - g_last_restart >= 2 * g_freq) {
+                char why[48];
+                g_rearms++;
+                aimp_snprintf(why, sizeof why, "quieto a %.1f m del objetivo (%u)", (double)aimp_sqrtf(d2), g_rearms);
+                walk_start(ctrl, t, now, why);
+                g_rearm_since = now;
+                break;
             }
         }
         /* Corrida 30: caminando (~1,2 m/s) quedaba hasta 8,8 m atrás del jugador (~2,2 m/s). Corre (MOVE RUN) si

@@ -288,7 +288,18 @@ static const uint8_t AIMP_SWITCH_COMMAND_PROLOGUE[9] __attribute__((unused)) = {
 #define MOVE_TYPE_WALK            1
 #define MOVE_TYPE_RUN             3
 #define MOVE_PARAMS_SIZE          0x1C
-#define MOVE_PARAMS_F18           0x18
+/* Layout de los parámetros (0x1C bytes), de la entidad de script CMD_MoveTowards: FUN_0052d600 los llena con
+ * los getters FUN_008e23f0..FUN_008e2660, cada uno con el ShortGuid de su nombre (globals 0x01750950..0x01750988,
+ * inicializados en 0x011586xx..0x011587xx). Los bool valen 0 por defecto y arrived_radius, 0,6 (DAT_011c6824).
+ *   +0x00 move_type (u32)          +0x08 should_be_aiming          +0x0C always_stop_at_radius
+ *   +0x04 disallow_traversal       +0x09 use_current_target_as_aim +0x0D stop_at_radius_if_lined_up
+ *   +0x05 enable_lookaround        +0x0A DestinationIsBackstage    +0x0E maintain_current_facing
+ *   +0x06 use_stopping_anim        +0x0B allow_to_use_vents        +0x0F start_instantly
+ *   +0x07 continue_from_previous_move                              +0x10 AimTarget (8 bytes)
+ *   +0x18 arrived_radius (float) */
+#define MOVE_PARAMS_FLAGS         0x04  /* 12 bool, +0x04..+0x0F (AIMP_GHOST_WALK_FLAGS: bit i = byte +0x04+i) */
+#define MOVE_PARAMS_NFLAGS        12
+#define MOVE_PARAMS_F18           0x18  /* arrived_radius */
 /* Árbol de comportamiento del civil (DATA/BEHAVIOR/NPC_INNOCENT_BEHAVE.XML): los comandos de script solo se
  * ejecutan en la rama ConditionHasMotivation(CINEMATIC_MOTIVATION) -> ConditionHasScript -> ActionScript.
  * Evaluación de ConditionHasMotivation: FUN_006d3630 thiscall(nodo, agente, x) -> bool, **ret 8** (x no se usa;

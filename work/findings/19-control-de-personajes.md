@@ -74,11 +74,30 @@
 - **Comando `MOVE_TOWARDS`** (constructor `FUN_0067e660`): ids en `cmd+0x34`/`+0x3C`, tipo en `+0x28`, destino (solo la traslación) en `+0x50..+0x58`, parámetros en `+0x80` (0x1C bytes, `move_type` primero) y `never_succeed` en `+0x9C`; la actualización escribe el destino en `+0x60..+0x68`. **No guarda la rotación del destino**: para orientar al avatar quieto, el mod lo teletransporta en su lugar con el yaw del otro y le da una orden nueva en el mismo frame (corrida 34: el yaw queda).
 - Resultado (corrida 31): sigue al jugador a ~2 m, sin trabarse ni pegársele; corre si queda a más de 5 m. Por red, en una máquina con `aimp_peer.py --replay` (corridas 32–34): sigue el recorrido del otro y, quieto, mira hacia donde mira el otro. Capturas en `work/evidence/runtime/shots/` (locales).
 
+## Parámetros de `MOVE_TOWARDS` (2026-11-15, estático)
+
+La entidad de script `CMD_MoveTowards` arma los 0x1C bytes de parámetros en `FUN_0052d600` (llamada desde `FUN_0054b540`/`FUN_0054b5d0`). Cada campo sale de un getter (`FUN_008e23f0`..`FUN_008e2660`) que busca el parámetro por el ShortGuid de su nombre. Los ShortGuid son globals en `0x01750950..0x01750988`, inicializados en `0x011586xx..0x011587xx` con `push "<nombre>"; mov ecx,<global>; call FUN_008bf7f0`. Los bool valen 0 por defecto (`mov byte [ebp-1],0` en cada getter) y `arrived_radius`, 0,6 (`DAT_011c6824`). El `FUN_0067e980` que usa el mod pone 0,1 (`DAT_011bb6ac`).
+
+| Offset | Campo | Offset | Campo |
+|---|---|---|---|
+| `+0x00` | `move_type` (u32, enum `MOVE`) | `+0x0A` | `DestinationIsBackstage` |
+| `+0x04` | `disallow_traversal` | `+0x0B` | `allow_to_use_vents` |
+| `+0x05` | `enable_lookaround` | `+0x0C` | `always_stop_at_radius` |
+| `+0x06` | `use_stopping_anim` | `+0x0D` | `stop_at_radius_if_lined_up` |
+| `+0x07` | `continue_from_previous_move` | `+0x0E` | `maintain_current_facing` |
+| `+0x08` | `should_be_aiming` | `+0x0F` | `start_instantly` |
+| `+0x09` | `use_current_target_as_aim` | `+0x10` | `AimTarget` (8 bytes, referencia a entidad) |
+| | | `+0x18` | `arrived_radius` (float, m) |
+
+En el mod: `AIMP_GHOST_WALK_FLAGS` (bit i = byte `+0x04+i`; 2048 = `start_instantly`, 8 = `continue_from_previous_move`) y `AIMP_GHOST_WALK_RADIUS_CM` (10). `AIMP_GHOST_WALK_REARM_CM` le da una orden nueva si está quieto 1 s a más de esa distancia del objetivo (como mucho cada 2 s). Las tres están sin probar en runtime y por defecto no cambian nada.
+
+Evidencia: `FUN_0052d600` decompilado y `objdump` de los getters y de los inicializadores (comandos en `work/NOTES.md`, 2026-11-15).
+
 ## Preguntas abiertas
 
 1. ~~¿Dónde vive el controlador de comandos?~~ En `Character+0x3820` (corrida 20); el de scripts, en `Character+0x3570` (corrida 26).
 2. Layout del controlador de jugador: bit de movimiento y rumbo (corrida 20). La entrada cruda está en otro lado: ¿dónde? ¿Quién la escribe para el jugador 0?
 3. ¿Qué hace el resto de la vtable de `READ_GAMEPAD_1` (`0x012B19F0`: `+0x50` `FUN_00682830`, `+0x58` `FUN_00680990`, `+0x60` `FUN_00682b50`, `+0x68` `FUN_006816a0`, `+0x78` `FUN_00682560`, `+0x80` `FUN_00682b10`)?
 4. ¿Cómo se spawnea un personaje con la definición del jugador sin el crash de recursos (reutilizar los recursos del jugador 0)?
-5. ¿Qué controla el `+0x18` de los parámetros de `MOVE_TOWARDS` (0,1 por defecto) y cuál es el radio de llegada? Con el objetivo a menos de ~2,8 m el avatar no arranca (corrida 31).
+5. ~~¿Qué controla el `+0x18` de los parámetros de `MOVE_TOWARDS`?~~ Es `arrived_radius` (ver "Parámetros de `MOVE_TOWARDS`"). Sigue abierto por qué con el objetivo a menos de ~2,8 m el avatar no arranca (corrida 31). Hipótesis: la animación de arranque necesita esa distancia; probar `start_instantly` (`AIMP_GHOST_WALK_FLAGS=2048`).
 6. ~~¿Se puede hacer que el avatar mire hacia donde mira el otro cuando está quieto?~~ Sí, con teletransporte en el lugar más una orden nueva (corrida 34).

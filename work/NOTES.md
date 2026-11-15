@@ -757,3 +757,11 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   - **Corrida 33** (`run33-giro-contra-pared.log`): con `--offset 1,5,0,0` el objetivo quedó contra la pared del pasillo; el avatar se detuvo a 2,08 m y el giro no se disparó (pedía menos de 1,5 m). De ahí la condición de "asentado".
   - **Corrida 34** (`run34-giro.log`, 0 excepciones; `--offset 0,0,2`): `gira de -3.11 a 0.05 rad, hacia donde mira el otro (1)`. El yaw quedó (0,07 durante los 9 s siguientes) y giró una sola vez. En la captura se lo ve de espaldas, mirando hacia donde mira el jugador (`shots/run34-giro-de-espaldas.png`, local).
 - Mod reinstalado en pasivo (`AIMP_GHOST=0`).
+
+## 2026-11-15 (tarde) — Parámetros de `MOVE_TOWARDS` (estático) y opciones para el re-arranque
+- **Pregunta:** por qué el avatar no vuelve a arrancar con movimientos cortos del otro (objetivo a menos de ~2,8 m; corridas 31–34).
+- **`params+0x18` = `arrived_radius`.** `"arrived_radius"` (0x013d65d4) → ShortGuid en el global 0x01750970 (inicializador `FUN_01158660`: `push 0x13d65d4; mov ecx,0x1750970; call FUN_008bf7f0`) → getter `FUN_008e2540` (por defecto `DAT_011c6824` = 0,6) → `FUN_0052d600`, que arma los parámetros de la entidad de script `CMD_MoveTowards` y lo guarda en `puVar4[6]` (+0x18).
+- **Los 15 campos** salen de mapear cada getter a su global (`push 0x17509xx`) y cada global a su cadena (inicializadores en 0x01158400..0x01158900, `objdump`): tabla en el hallazgo 19, "Parámetros de `MOVE_TOWARDS`". Todos los bool valen 0 por defecto.
+- Las funciones de la vtable de `MOVE_TOWARDS` (`PTR_FUN_012b18d8`) propias del comando son de guardado y carga (`FUN_0067e720`/`FUN_0067e760`: serializan `+0x80`, `+0x50` y `+0x9C`); la ejecución usa los slots genéricos (`vt+0x28` desde `FUN_00679150`). No encontré todavía el código que lee `start_instantly` (+0x8F del comando).
+- **Mod (tests OK):** `AIMP_GHOST_WALK_FLAGS` (bitmask decimal sobre `+0x04..+0x0F`), `AIMP_GHOST_WALK_RADIUS_CM` (10) y `AIMP_GHOST_WALK_REARM_CM` (orden nueva si está quieto 1 s lejos del objetivo; como mucho cada 2 s). Por defecto no cambian nada.
+- **Pendiente, corrida 35 (local, mando virtual):** `AIMP_GHOST=3;AIMP_GHOST_WALK=1;AIMP_GHOST_WALK_FLAGS=2048;AIMP_GHOST_WALK_REARM_CM=100`. Guion: girar 180° y pasos cortos de ~0,7 s cada 5 s. Ver si el avatar arranca con el objetivo a 1–2 m.
