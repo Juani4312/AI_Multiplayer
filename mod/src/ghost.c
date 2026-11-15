@@ -110,7 +110,12 @@ static int g_walk_rearm_cm;
 static float g_rearm_p[3];
 static int64_t g_rearm_since;
 static uint32_t g_rearms;
-static uint32_t g_walk_off = CHR_SCRIPTCTRL; /* controlador al que se le dan las órdenes (AIMP_GHOST_WALK_CTRL) */
+static uint32_t g_walk_off = CHR_SCRIPTCTRL;
+/* plantado después de girar (no camina hasta que el otro se mueve) */
+static int g_hold;
+static float g_hold_p[4] __attribute__((aligned(16)));
+static float g_still_yaw;
+static int64_t g_yaw_since; /* controlador al que se le dan las órdenes (AIMP_GHOST_WALK_CTRL) */
 static float g_cmd_t[3]; /* objetivo de la última orden (FUN_0067e980) */
 
 static uint32_t g_starts, g_updates;
@@ -459,6 +464,8 @@ static void start_moving(uint32_t p, int64_t now)
     g_starts = g_updates = 0;
     g_walk_bad = 0;
     g_rearm_since = 0;
+    g_hold = 0;
+    g_yaw_since = 0;
     g_walk_ctrl = g_walk ? p + g_walk_off : 0;
     g_walk_chr = g_walk && g_walk_cine ? p : 0;
     aimp_memcpy(g_cmd_b, &p, 4); /* el segundo id del comando: el avatar y "GH" */
@@ -809,6 +816,23 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             break;
         }
         ours = walk_is_ours(ctrl, &type);
+        /* Prueba con dos máquinas (2026-11-15): con el otro quieto girando la cámara, el avatar giraba y caminaba
+         * (la orden del giro iba al objetivo, a 1-3 m, y la re-orden en quieto lo volvía a mover). Después de girar
+         * queda "plantado": la orden y las actualizaciones van a donde está parado, sin re-orden ni cambio de
+         * paso, hasta que el objetivo se aleja más de 50 cm de donde estaba quieto. */
+        if (g_hold && !g_tgt_net)
+            g_hold = 0;
+        if (g_hold) {
+            float hx = t[0] - g_still_t[0], hz = t[2] - g_still_t[2];
+            if (hx * hx + hz * hz > 0.25f) {
+                g_hold = 0;
+                log_printf("GHOST: caminata: el otro se movió; deja de estar plantado");
+            } else {
+                g_target[3] = g_hold_p[0];
+                g_target[7] = g_hold_p[1];
+                g_target[11] = g_hold_p[2];
+            }
+        }
         /* AIMP_GHOST_WALK_FACE: con red, si el otro está quieto hace 1 s y el avatar se asentó (no se movió más de
          * 10 cm en 1 s, a menos de 3 m: corrida 33, el punto exacto puede no ser alcanzable), se lo gira hacia donde
          * mira el otro. MOVE_TOWARDS no guarda la rotación del destino (FUN_0067e660 copia solo la traslación), así
@@ -822,12 +846,18 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                 g_settle_p[2] = cur[2];
                 g_settle_since = now;
             }
+            float dty = wrap_pi(tyaw - g_still_yaw);
+            if (dty > 0.1f || dty < -0.1f || !g_yaw_since) { /* el giro espera a que el otro deje de rotar 500 ms */
+                g_still_yaw = tyaw;
+                g_yaw_since = now;
+            }
             if (sx * sx + sz * sz > 0.0025f || !g_still_since) {
                 g_still_t[0] = t[0];
                 g_still_t[1] = t[1];
                 g_still_t[2] = t[2];
                 g_still_since = now;
-            } else if (now - g_still_since >= g_freq && now - g_settle_since >= g_freq && d2 < 9.0f && now - g_last_face >= 2 * g_freq &&
+            } else if (now - g_still_since >= g_freq && (g_hold || now - g_settle_since >= g_freq) && (g_hold || d2 < 9.0f) &&
+                       now - g_yaw_since >= g_freq / 2 && now - g_last_face >= g_freq &&
                        mem_f32(g_chr + CHR_YAW, &yaw)) {
                 float dyaw = wrap_pi(tyaw - yaw);
                 if (dyaw > 0.35f || dyaw < -0.35f) {
@@ -835,9 +865,18 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                     if (g_faces <= 10 || g_faces % 50 == 0)
                         log_printf("GHOST: caminata: gira de %.2f a %.2f rad, hacia donde mira el otro (%u)", (double)yaw, (double)tyaw,
                                    g_faces);
-                    teleport_to(cur, tyaw);
+                    if (!g_hold) {
+                        g_hold = 1;
+                        g_hold_p[0] = cur[0];
+                        g_hold_p[1] = cur[1];
+                        g_hold_p[2] = cur[2];
+                    }
+                    g_target[3] = g_hold_p[0];
+                    g_target[7] = g_hold_p[1];
+                    g_target[11] = g_hold_p[2];
+                    teleport_to(g_hold_p, tyaw);
                     g_last_tp = g_last_face = now;
-                    walk_start(ctrl, t, now, "gira hacia donde mira el otro");
+                    walk_start(ctrl, g_hold_p, now, "gira en el lugar hacia donde mira el otro");
                     break;
                 }
             }
@@ -845,7 +884,7 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
         /* AIMP_GHOST_WALK_REARM_CM: después de llegar no vuelve a arrancar hasta que el objetivo se aleja ~1-3 m
          * (corridas 31-34). Si está quieto (no se movió más de 10 cm en 1 s) y a más de eso del objetivo, orden
          * nueva (como mucho cada 2 s). */
-        if (g_walk_rearm_cm > 0) {
+        if (g_walk_rearm_cm > 0 && !g_hold) {
             float qx = cur[0] - g_rearm_p[0], qz = cur[2] - g_rearm_p[2], ra = (float)g_walk_rearm_cm / 100.0f;
             if (qx * qx + qz * qz > 0.01f || !g_rearm_since) {
                 g_rearm_p[0] = cur[0];
@@ -865,7 +904,7 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
          * fija al dar la orden, así que va con una orden nueva (como mucho una por segundo). */
         float run_at = (float)g_walk_far_cm / 100.0f, walk_at = run_at - 2.5f, dd = aimp_sqrtf(d2);
         int want = g_cur_type;
-        if (g_walk_type_far != g_walk_type) {
+        if (g_walk_type_far != g_walk_type && !g_hold) {
             if (g_cur_type == g_walk_type && dd > run_at)
                 want = g_walk_type_far;
             else if (g_cur_type == g_walk_type_far && dd < walk_at)
@@ -884,7 +923,7 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             char nm[32], why[48];
             cmd_name(type, nm, sizeof nm);
             aimp_snprintf(why, sizeof why, "el comando actual era %s", nm);
-            walk_start(ctrl, t, now, why);
+            walk_start(ctrl, g_hold ? g_hold_p : t, now, why);
         } else if (moved && now - g_last_restart >= g_freq * g_walk_restart_ms / 1000) {
             /* Corrida 23: actualizar el destino (FUN_006797a0) no lo hace caminar; una orden nueva sí (corrida 21). */
             walk_start(ctrl, t, now, "el objetivo se movió");
