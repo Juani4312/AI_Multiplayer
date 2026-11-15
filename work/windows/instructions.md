@@ -194,6 +194,35 @@ Requisitos: los del paso 6, con `git pull` (hay DLL nueva), y la sesión Linux e
    - cualquier `EXCEPCIÓN`, copiada con sus 3 líneas;
    - lo que vio el usuario en cada pantalla. Es lo más importante: sin eso no se sabe si tuvo efecto.
 
+## 8. Avatar que camina y arrojables por red (fases 4b y 5b, experimental; 2026-11-15)
+
+El civil que hace de avatar ya no se teletransporta: **camina y corre** hasta donde está el jugador de la otra máquina y, cuando el otro está quieto, gira hacia donde mira. Además, las bengalas, noisemakers, molotovs y minas que tira un jugador aparecen en la otra máquina con la misma trayectoria. Las dos cosas se probaron solo en una máquina.
+
+Requisitos: los del paso 6, con `git pull` (hay DLL nueva en `mod/dist`, protocolo v2: con la DLL vieja no se entienden) y la sesión Linux en host. En `papito` el jugador lo mueve la sesión Linux con un mando virtual; el usuario juega en la laptop. **Las dos partidas tienen que estar en el mismo nivel** (`papito` está en `HAB_ShoppingCentre`): si la laptop carga otro nivel, anotarlo y avisar.
+
+1. Instalar:
+   ```
+   powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Net join -Peer <IP_de_papito>:47811 -Ghost 3 -Extra AIMP_GHOST_WALK=1,AIMP_SYNC_USE=1,AIMP_SYNC_THROW=1
+   ```
+   Verificar antes que el SHA-256 de `mod\dist\winmm.dll` coincida con `mod\dist\SHA256SUMS`.
+2. Steam sin conexión, arrancar el juego y cargar la partida. Avisarle al usuario que le diga a la sesión Linux "la laptop está en la partida".
+3. Qué mirar en la pantalla de la laptop (el usuario aprieta **F8** en cada momento interesante):
+   - un civil aparece cerca y **camina** (no salta) hacia donde está el jugador de `papito`, que se mueve solo;
+   - si el de `papito` se aleja más de 5 m, el civil **corre**;
+   - cuando el de `papito` se queda quieto, el civil se para y gira hacia donde mira el otro;
+   - el usuario **tira una bengala** (y si tiene, un noisemaker) en la laptop: la sesión Linux mira si aparece en `papito`.
+4. Recolectar y subir:
+   ```
+   powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action collect -Tag caminata
+   ```
+5. Qué buscar en el log:
+   - `GHOST: caminata: MOVE_TOWARDS ...` y líneas `GHOST: caminata (caminando): ... [red] a N m`, con N chico la mayor parte del tiempo;
+   - `move_type 3` cuando corre;
+   - `gira de ... hacia donde mira el otro`;
+   - `THROW` del lado que tiró (mandado) y, si `papito` tiró algo, la inyección recibida;
+   - cualquier `EXCEPCIÓN`, con sus 3 líneas.
+   - Y lo que vio el usuario: ¿camina con animación? ¿se traba, atraviesa paredes o cae del piso?
+
 ## Problemas conocidos
 
 - **No aparece `aimp.log`:** el proxy no cargó. Revisar KnownDLLs, que `winmm.dll` esté al lado de `AI.exe` (no en una subcarpeta) y que el juego haya llegado a arrancar.
