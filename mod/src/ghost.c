@@ -111,6 +111,20 @@ static float g_rearm_p[3];
 static int64_t g_rearm_since;
 static uint32_t g_rearms;
 static uint32_t g_walk_off = CHR_SCRIPTCTRL;
+/* Corrida 38: con el objetivo inalcanzable (contra una pared) la re-orden se repetía cada 2 s. Como mucho 3 por
+ * objetivo (se renueva cuando el objetivo se mueve más de 50 cm). */
+static float g_rearm_tgt[2];
+static int g_rearm_n;
+static int rearm_allowed(const float *t)
+{
+    float x = t[0] - g_rearm_tgt[0], z = t[2] - g_rearm_tgt[1];
+    if (x * x + z * z > 0.25f) {
+        g_rearm_tgt[0] = t[0];
+        g_rearm_tgt[1] = t[2];
+        g_rearm_n = 0;
+    }
+    return g_rearm_n++ < 3;
+}
 /* AIMP_GHOST_INVINCIBLE */
 static int g_invincible = 1, g_inv_bad;
 static uint32_t g_inv_chr;
@@ -900,7 +914,7 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                 g_rearm_p[0] = cur[0];
                 g_rearm_p[2] = cur[2];
                 g_rearm_since = now;
-            } else if (now - g_rearm_since >= g_freq && d2 > ra * ra && now - g_last_restart >= 2 * g_freq) {
+            } else if (now - g_rearm_since >= g_freq && d2 > ra * ra && now - g_last_restart >= 2 * g_freq && rearm_allowed(t)) {
                 char why[48];
                 g_rearms++;
                 aimp_snprintf(why, sizeof why, "quieto a %.1f m del objetivo (%u)", (double)aimp_sqrtf(d2), g_rearms);
