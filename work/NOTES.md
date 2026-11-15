@@ -618,3 +618,16 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   - `AIMP_TRACE_CTRL`: el controlador de jugador del jugador 0 y su acción, cuando cambian;
   - `AIMP_TRACE_CMD`: hook de `SwitchCommand` con el dueño del controlador de comandos.
   - `test_ctrl`, con stub de prólogo y `ret 4` reales. **Todos los tests OK.**
+
+## 2026-11-15 — Corrida 20 (local, papito): arrojables OK, controlador de comandos, locomoción, índice de pines lleno
+- **Montaje:** DLL `98bd0f5`, `aimp.cfg` = `AIMP_GHOST=0;AIMP_TRACE_PINS=1;AIMP_PINS_FILE=…\pins.txt;AIMP_TRACE_THROW=1;AIMP_THROW_ECHO=1500;AIMP_TRACE_CTRL=1;AIMP_TRACE_CMD=1`. HAB_ShoppingCentre; el usuario jugó. Log en `work/evidence/runtime/run20-arrojables-control.log`. Al final, `runtime_setup.sh revert`.
+- **Arrojables: OK.** Una bengala real (`Thrown\flare`, `|v|` = 20, `time_left` 117,56) y el eco 1,52 s después, 75 cm al costado. **El usuario vio la segunda bengala con la misma trayectoria.** 0 excepciones (hallazgo 17).
+- **Controlador de comandos = `Character+0x3820`** (`ctrl+0x34` = el personaje; 4 NPCs; `Character` cada 0x42D0). Los NPCs se dieron vuelta a mirar al jugador sin caminar, solo con `PLAY_ANIMATION`.
+- **Controlador de jugador:** bit de movimiento y rumbo en `+4`; no tiene la entrada cruda.
+- **Bloque de locomoción** de la acción principal: velocidades en mm/s (caminar 2457, correr 4403, agachado 1331) y rumbo en u8 = yaw·200/2π (hallazgo 19).
+- **`+0x2E4` es la facción, no un índice de jugador** (el jugador 0 tiene 1). Corregido en el hallazgo 19.
+- **Pines:** el índice se armó en 775 ms pero se llenó en 49.152 entradas (tope del 75 % de 65.536; el nivel tiene ~93 mil nodos). Por eso "6389 faltan" y "184 con otro subobjeto".
+  - Arreglado: `IX_SLOTS` = 262.144 y contador "sin lugar" en la línea `PINIX`. Tests OK.
+  - Quedan 684 volcados `PIN mensaje` para analizar (layout del instigador).
+- **El `FIRE` por índice no se probó.** Con el índice lleno no era concluyente, y disparar un `TriggerVolumeFilter` real podía mover la misión del guardado del usuario.
+- **Lección del monitor:** `cut` al final de un pipe no vacía por línea, así que los eventos no llegaron. Usar `awk '{print substr($0,1,260); fflush()}'`.

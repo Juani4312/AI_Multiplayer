@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-15, 02:20 (hallazgo 17: arrojables; `AIMP_SYNC_THROW` escrito y con tests; protocolo v2; falta runtime). Antes: 2026-11-07 (mod desinstalado para jugar)_
+_Última actualización: 2026-11-15, 03:00 (corrida 20: arrojables verificados; controlador de comandos `Character+0x3820`; índice de pines agrandado; mod desinstalado otra vez). Antes: 2026-11-07 (mod desinstalado para jugar)_
 
 ## Decisiones vigentes
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
@@ -55,7 +55,7 @@ _Última actualización: 2026-11-15, 02:20 (hallazgo 17: arrojables; `AIMP_SYNC_
 | Hallazgo 17 (arrojables y equipo) | 🟡 `findings/17-arrojables.md`: tirar = `FUN_007b5050` (pool `0x16F0DE4`, composite `Thrown\X` + `spawn_explosive`; el vuelo lo simula `ProjectileMotion` con la posición y la velocidad dadas), colocar = `FUN_007b5190`. Las armas de fuego son composites (`Weapons\…`); su disparo no se siguió |
 | Hallazgo 18 (replicación de personajes de NETZ) | 🟡 `findings/18-replicacion-de-personajes.md`: replicador por personaje con 11 tipos de mensaje (acciones, animación, armas, salud), pero la capa de canales es un **stub** en retail (`FUN_00a2abb0`/`FUN_00a2ab80`). La opción C no es camino corto; la animación va a mano |
 | Hallazgo 19 (control de personajes) | 🟡 `findings/19-control-de-personajes.md`: el jugador se mueve con el comando `READ_GAMEPAD_1` (controlador de jugador `Character+0x31C`, 0x4C bytes); el engine reconoce un `"PLAYER_2"` (índice de jugador 1); `CMD_MoveTowards` = `FUN_0067e980`. Trazas `AIMP_TRACE_CTRL` / `AIMP_TRACE_CMD` (tests OK) para la próxima corrida |
-| Arrojables compartidos | 🟡 `AIMP_SYNC_THROW=1` en `mod/src/throw.c` (evento `AIMP_EVT_THROW`, **protocolo v2**), `AIMP_TRACE_THROW`, `AIMP_THROW_ECHO` (prueba local). Tests OK; sin probar en el juego |
+| Arrojables compartidos | ✅ **inyección verificada en una máquina** (corrida 20: la bengala se duplicó con la misma trayectoria). `AIMP_SYNC_THROW=1` en `mod/src/throw.c` (evento `AIMP_EVT_THROW`, **protocolo v2**). Falta la prueba con dos máquinas |
 | Mando virtual (pruebas) | ✅ `mod/src/autopad.c`: `AIMP_AUTOPAD_FILE` (pad.txt), IAT de XINPUT1_3. En el menú, verificar cada paso con captura (corrida 17) |
 | Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
 | Hallazgo 04 (cámara y frame) | ✅ `findings/04-camara-y-frame.md` (mapa de tareas, cámara `g_root+0x58`, timer) |
@@ -78,10 +78,8 @@ _Última actualización: 2026-11-15, 02:20 (hallazgo 17: arrojables; `AIMP_SYNC_
 - **2026-11-07: mod desinstalado** a pedido del usuario para jugar normal (`runtime_setup.sh revert`: sin `winmm.dll`, sin override en `user.reg`, sin `aimp.cfg`; los logs viejos quedan). Para la corrida 20 hay que reinstalar con `runtime_setup.sh install`.
 
 ## Pendientes que requieren al usuario
-- **Corrida 20** (local, una máquina): el 2026-11-15 el usuario pidió seguir en estático y probar "cuando haga falta para avanzar". Pedirla cuando haya que validar. Junta tres cosas, todas en papito:
-  1. pines (fase 6 paso 4): plan en "Siguiente paso" 2;
-  2. arrojables: `AIMP_TRACE_THROW=1;AIMP_THROW_ECHO=1500`. Al tirar una bengala tiene que aparecer una copia al costado con la misma curva;
-  3. control: `AIMP_TRACE_CTRL=1;AIMP_TRACE_CMD=1`. Con marcas F8, caminar, correr, agacharse y girar unos segundos cada cosa; si hay NPCs, dejarlos moverse.
+- ~~Corrida 20~~: hecha el 2026-11-15 (arrojables OK, controlador de comandos, locomoción; el índice de pines se llenó y ya está agrandado). El mod quedó desinstalado.
+- **Corrida 21** (local): pines con el índice agrandado (`PINIX` sin "sin lugar" ni "faltan") y, si está listo, el avatar caminando con `MOVE_TOWARDS`. Pedirla cuando haga falta.
 - **Protocolo v2** (2026-11-15): la laptop necesita la DLL nueva de `mod/dist/` para hablar con papito.
 0. ~~Tailscale para cerrar la fase 3~~: hecho con la laptop. papito es 100.126.161.126 y papulaptop, 100.126.159.45. Para el amigo:
    - instala Tailscale y se une a la red del usuario;

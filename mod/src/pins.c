@@ -80,14 +80,14 @@ static int64_t g_next_file_check, g_freq;
 static volatile uint32_t g_inj_ent, g_inj_pin;
 
 /* ---- Índice pid -> entidad (hallazgo 16) ---- */
-#define IX_SLOTS 65536
+#define IX_SLOTS 262144 /* corrida 20: HAB_ShoppingCentre llenó 65536 (tope del 75 %: 49152 de ~93 mil nodos) */
 #define VC_SLOTS 8192
 #define MAX_DEPTH 32
 typedef struct {
     uint32_t pid, outer, ent, h, vt, eid, type, depth;
 } IxEnt;
 static IxEnt g_ix[IX_SLOTS];
-static uint32_t g_nix, g_ix_coll, g_ix_ms, g_ix_builds, g_ix_at;
+static uint32_t g_nix, g_ix_coll, g_ix_full, g_ix_ms, g_ix_builds, g_ix_at;
 static int g_ix_dirty = 1;
 static uint32_t g_vc_key[VC_SLOTS];
 static uint8_t g_vc_val[VC_SLOTS]; /* 1 = vtable de EntityInterface, 2 = no */
@@ -602,8 +602,10 @@ static IxEnt *ix_find(uint32_t pid)
 
 static void ix_add(const IxEnt *e)
 {
-    if (g_nix >= IX_SLOTS * 3 / 4)
+    if (g_nix >= IX_SLOTS * 3 / 4) {
+        g_ix_full++;
         return;
+    }
     uint32_t hsh = hash2(e->pid, 0x1D) & (IX_SLOTS - 1);
     for (uint32_t i = 0; i < IX_SLOTS; i++, hsh = (hsh + 1) & (IX_SLOTS - 1)) {
         IxEnt *s = &g_ix[hsh];
@@ -732,6 +734,7 @@ uint32_t pins_index_build(const char *why)
     aimp_memset(g_ix, 0, sizeof g_ix);
     g_nix = 0;
     g_ix_coll = 0;
+    g_ix_full = 0;
     uint32_t ncomp = 0, maxd = 1, bad_parent = 0, nodes = 0;
     for (uint32_t r = 0; r < nroots; r++)
         nodes += walk(roots[r], &ncomp, &maxd, &bad_parent);
@@ -766,8 +769,8 @@ uint32_t pins_index_build(const char *why)
             ok++;
     }
     LeaveCriticalSection(&g_cs);
-    log_printf("PINIX índice (%s, nivel %u): %u entidades (%u nodos, %u composites, %u raíces, prof. máx. %u) en %u ms; %u colisiones de pid, %u con otro padre; contra lo visto: %u ok, %u con otro subobjeto, %u faltan",
-               why, g_level, g_nix, nodes, ncomp, nroots, maxd, g_ix_ms, g_ix_coll, bad_parent, ok, bad_ent, missing);
+    log_printf("PINIX índice (%s, nivel %u): %u entidades (%u nodos, %u composites, %u raíces, prof. máx. %u) en %u ms; %u colisiones de pid, %u con otro padre, %u sin lugar; contra lo visto: %u ok, %u con otro subobjeto, %u faltan",
+               why, g_level, g_nix, nodes, ncomp, nroots, maxd, g_ix_ms, g_ix_coll, bad_parent, g_ix_full, ok, bad_ent, missing);
     return g_nix;
 }
 
