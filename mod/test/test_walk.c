@@ -189,6 +189,12 @@ static void build_stubs(uint8_t *img)
     emit_call(&p, (void *)fake_move_start);
     emit(&p, "\x83\xC4\x18\x5E\xC2\x14\x00", 7); /* add esp,0x18; pop esi; ret 0x14 */
 
+    /* FUN_006d3630 (ConditionHasMotivation): mov eax,[esp+4]; mov eax,[eax+0x31EC] | xor eax,eax; ret 4 (falso) */
+    p = img + AIMP_RVA_HAS_MOTIVATION;
+    VirtualProtect(p, 0x100, PAGE_EXECUTE_READWRITE, &old);
+    emit(&p, AIMP_HAS_MOTIVATION_PROLOGUE, sizeof AIMP_HAS_MOTIVATION_PROLOGUE);
+    emit(&p, "\x31\xC0\xC2\x04\x00", 5);
+
     /* SwitchCommand: sub esp,0x100; push esi; mov esi,ecx | ret 4 */
     p = img + AIMP_RVA_SWITCH_COMMAND;
     VirtualProtect(p, 0x100, PAGE_EXECUTE_READWRITE, &old);
@@ -353,6 +359,24 @@ int main(void)
         ghost_frame(now, &net, 16);
     CHECK(g_starts == 3, "otro MOVE_TOWARDS (inicios %u)", g_starts);
 
+    printf("[motivación cinemática: verdadera solo para el agente del avatar]\n");
+    {
+        typedef uint32_t(__attribute__((fastcall)) * MotivFn)(void *node, void *edx, void *agent);
+        MotivFn motiv = (MotivFn)(void *)(img + AIMP_RVA_HAS_MOTIVATION);
+        uint8_t *cine = obj(0x40), *follow = obj(0x40);
+        put32(cine, BTNODE_MOTIVATION_TYPE, MOTIVATION_CINEMATIC);
+        put32(follow, BTNODE_MOTIVATION_TYPE, 5);
+        uint32_t r1, r2, r3;
+        __asm__ volatile("mov %%esp, %0" : "=r"(esp0));
+        r1 = motiv(cine, NULL, npc + 0x2B0);
+        r2 = motiv(cine, NULL, local + 0x2B0);
+        r3 = motiv(follow, NULL, npc + 0x2B0);
+        __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
+        CHECK(esp0 == esp1 && (r1 & 0xFF) == 1 && (r2 & 0xFF) == 0 && (r3 & 0xFF) == 0,
+              "avatar + CINEMATIC: %u; jugador + CINEMATIC: %u; avatar + FOLLOW: %u (stack balanceado)", r1 & 0xFF, r2 & 0xFF,
+              r3 & 0xFF);
+    }
+
     printf("[filtro de SwitchCommand: la IA no puede cambiarle el comando al avatar]\n");
     uint32_t actrl = (uint32_t)(uintptr_t)npc + CHR_CMDCTRL, ours = get32(npc, CHR_CMDCTRL + CMDCTRL_CURRENT);
     CHECK(ghost_switch_filter(actrl, (uint32_t)(uintptr_t)other) == 0, "GOTO de la IA sobre el avatar: bloqueado");
@@ -394,7 +418,10 @@ int main(void)
     expect(log, "comando propio tipo 5", 1);
     expect(log, "local detrás", 1);
     expect(log, "bloqueado el comando GOTO", 1);
-    expect(log, "bloqueo de los comandos de la IA 1", 1);
+    expect(log, "bloqueo de los comandos de la IA 1; motivación cinemática 1", 1);
+    expect(log, "hook ConditionHasMotivation (FUN_006d3630): instalado", 1);
+    expect(log, "motivación cinemática forzada para el avatar", 1);
+    expect(log, "(agente = personaje + 0x2b0)", 1);
     expect(log, "AIMP_GHOST_NOAUTH", 0);
     free(log);
     printf(g_fail ? "RESULTADO: %d FALLAS\n" : "RESULTADO: OK\n", g_fail);
