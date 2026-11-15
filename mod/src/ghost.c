@@ -85,7 +85,7 @@ static uint32_t g_player, g_chr, g_before[2 * MAX_CHARS], g_nbefore, g_attempts,
 static float g_last_pos[3], g_last_yaw;
 /* AIMP_GHOST_WALK */
 static MoveCmdFn g_move_start, g_move_update;
-static int g_walk, g_walk_type = 1, g_walk_tp_cm = 600, g_walk_bad, g_walk_block = 1;
+static int g_walk, g_walk_type = 1, g_walk_tp_cm = 600, g_walk_bad, g_walk_block = 1, g_owner_warned;
 static volatile uint32_t g_walk_ctrl; /* controlador del avatar, para el filtro (corre en otro thread) */
 /* AIMP_GHOST_WALK_CINEMATIC: la motivación cinemática del avatar siempre verdadera (hook de FUN_006d3630) */
 static AimpHook g_hook_motiv;
@@ -96,6 +96,7 @@ static volatile LONG g_n_cine, g_cine_logged;
 static volatile LONG g_n_blocked;
 static int64_t g_walk_ticks, g_last_cmd, g_last_restart, g_wstate_at, g_far_since;
 static int g_wstate, g_walk_behind_cm = 250, g_walk_restart_cm = 75;
+static uint32_t g_walk_off = CHR_SCRIPTCTRL; /* controlador al que se le dan las órdenes (AIMP_GHOST_WALK_CTRL) */
 static float g_cmd_t[3]; /* objetivo de la última orden (FUN_0067e980) */
 
 static uint32_t g_starts, g_updates;
@@ -264,6 +265,7 @@ int ghost_install(void)
             g_walk_tp_cm = aimp_env_int(L"AIMP_GHOST_WALK_TP_CM", 1200);
             g_walk_behind_cm = aimp_env_int(L"AIMP_GHOST_WALK_BEHIND_CM", 250);
             g_walk_restart_cm = aimp_env_int(L"AIMP_GHOST_WALK_RESTART_CM", 75);
+            g_walk_off = (uint32_t)aimp_env_int(L"AIMP_GHOST_WALK_CTRL", CHR_SCRIPTCTRL); /* 0x3820 = el de tareas */
             aimp_memset(g_params, 0, sizeof g_params);
             uint32_t mt = (uint32_t)g_walk_type;
             float f18 = 0.1f; /* el valor por defecto del engine (DAT_011bb6ac) */
@@ -415,7 +417,7 @@ static void start_moving(uint32_t p, int64_t now)
     g_wstate = 0; /* W_PLACE */
     g_starts = g_updates = 0;
     g_walk_bad = 0;
-    g_walk_ctrl = g_walk ? p + CHR_CMDCTRL : 0;
+    g_walk_ctrl = g_walk ? p + g_walk_off : 0;
     g_walk_chr = g_walk && g_walk_cine ? p : 0;
     aimp_memcpy(g_cmd_b, &p, 4); /* el segundo id del comando: el avatar y "GH" */
     g_cmd_b[4] = 'G';
@@ -641,12 +643,17 @@ static void walk_start(uint32_t ctrl, const float *t, int64_t now, const char *w
 
 static int walk_chr(const float *t, float tyaw, const char *src, const char *where, uint32_t idx, int64_t now)
 {
-    uint32_t ctrl = g_chr + CHR_CMDCTRL, owner = 0, type = 0xFFFFFFFFu;
-    if (!mem_u32(ctrl + CMDCTRL_OWNER, &owner) || owner != g_chr) {
-        log_printf("GHOST: el avatar 0x%08x no tiene su controlador de comandos en +0x%x (+0x%x = 0x%08x); se vuelve al teletransporte",
-                   g_chr, CHR_CMDCTRL, CMDCTRL_OWNER, owner);
+    uint32_t ctrl = g_chr + g_walk_off, owner = 0, type = 0xFFFFFFFFu;
+    if (!mem_u32(ctrl + CMDCTRL_OWNER, &owner)) {
+        log_printf("GHOST: no se pudo leer el controlador de comandos del avatar 0x%08x (+0x%x); se vuelve al teletransporte", g_chr,
+                   g_walk_off);
         g_walk_bad = 1;
         return 0;
+    }
+    if (owner != g_chr && !g_owner_warned) {
+        log_printf("GHOST: caminata: el controlador +0x%x del avatar 0x%08x tiene +0x%x = 0x%08x (no es el personaje); se sigue igual",
+                   g_walk_off, g_chr, CMDCTRL_OWNER, owner);
+        g_owner_warned = 1;
     }
     float cur[3];
     if (!mem_read(g_chr + CHR_POS, cur, sizeof cur))
