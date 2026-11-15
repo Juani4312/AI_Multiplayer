@@ -294,10 +294,10 @@ int ghost_install(void)
             aimp_memcpy(g_params + MOVE_PARAMS_F18, &f18, 4);
             /* AIMP_GHOST_WALK_FLAGS: los bool de los parámetros (bit i = byte +0x04+i; 2048 = start_instantly,
              * 8 = continue_from_previous_move, 4 = use_stopping_anim; game.h) */
-            int fl = aimp_env_int(L"AIMP_GHOST_WALK_FLAGS", 0);
+            int fl = aimp_env_int(L"AIMP_GHOST_WALK_FLAGS", 2048) /* corrida 35 */;
             for (int i = 0; i < MOVE_PARAMS_NFLAGS; i++)
                 g_params[MOVE_PARAMS_FLAGS + i] = (uint8_t)((fl >> i) & 1);
-            g_walk_rearm_cm = aimp_env_int(L"AIMP_GHOST_WALK_REARM_CM", 0);
+            g_walk_rearm_cm = aimp_env_int(L"AIMP_GHOST_WALK_REARM_CM", 100) /* corrida 35 */;
             if (fl || g_walk_rearm_cm)
                 log_printf("AIMP_GHOST_WALK: flags de MOVE_TOWARDS 0x%03x (bytes +0x04..+0x0F), arrived_radius %.2f m; orden nueva si está quieto a más de %d cm del objetivo",
                            fl, (double)f18, g_walk_rearm_cm);

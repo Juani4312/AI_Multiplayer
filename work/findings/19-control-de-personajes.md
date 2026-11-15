@@ -89,7 +89,7 @@ La entidad de script `CMD_MoveTowards` arma los 0x1C bytes de parámetros en `FU
 | `+0x09` | `use_current_target_as_aim` | `+0x10` | `AimTarget` (8 bytes, referencia a entidad) |
 | | | `+0x18` | `arrived_radius` (float, m) |
 
-En el mod: `AIMP_GHOST_WALK_FLAGS` (bit i = byte `+0x04+i`; 2048 = `start_instantly`, 8 = `continue_from_previous_move`) y `AIMP_GHOST_WALK_RADIUS_CM` (10). `AIMP_GHOST_WALK_REARM_CM` le da una orden nueva si está quieto 1 s a más de esa distancia del objetivo (como mucho cada 2 s). Las tres están sin probar en runtime y por defecto no cambian nada.
+En el mod: `AIMP_GHOST_WALK_FLAGS` (bit i = byte `+0x04+i`; 2048 = `start_instantly`, 8 = `continue_from_previous_move`) y `AIMP_GHOST_WALK_RADIUS_CM` (10). `AIMP_GHOST_WALK_REARM_CM` le da una orden nueva si está quieto 1 s a más de esa distancia del objetivo (como mucho cada 2 s). **Corrida 35:** con `start_instantly` (2048) y la re-orden a 100 cm, el avatar siguió 5 pasos cortos de 1,1–1,6 m (3 arrancó solo y 2 con la re-orden), con ≤1 s de retardo; desde entonces son los valores por defecto. Falta una corrida de control sin el flag.
 
 Evidencia: `FUN_0052d600` decompilado y `objdump` de los getters y de los inicializadores (comandos en `work/NOTES.md`, 2026-11-15).
 
@@ -99,5 +99,5 @@ Evidencia: `FUN_0052d600` decompilado y `objdump` de los getters y de los inicia
 2. Layout del controlador de jugador: bit de movimiento y rumbo (corrida 20). La entrada cruda está en otro lado: ¿dónde? ¿Quién la escribe para el jugador 0?
 3. ¿Qué hace el resto de la vtable de `READ_GAMEPAD_1` (`0x012B19F0`: `+0x50` `FUN_00682830`, `+0x58` `FUN_00680990`, `+0x60` `FUN_00682b50`, `+0x68` `FUN_006816a0`, `+0x78` `FUN_00682560`, `+0x80` `FUN_00682b10`)?
 4. ¿Cómo se spawnea un personaje con la definición del jugador sin el crash de recursos (reutilizar los recursos del jugador 0)?
-5. ~~¿Qué controla el `+0x18` de los parámetros de `MOVE_TOWARDS`?~~ Es `arrived_radius` (ver "Parámetros de `MOVE_TOWARDS`"). Sigue abierto por qué con el objetivo a menos de ~2,8 m el avatar no arranca (corrida 31). Hipótesis: la animación de arranque necesita esa distancia; probar `start_instantly` (`AIMP_GHOST_WALK_FLAGS=2048`).
+5. ~~¿Qué controla el `+0x18` de los parámetros de `MOVE_TOWARDS`?~~ Es `arrived_radius` (ver "Parámetros de `MOVE_TOWARDS`"). Sigue abierto por qué con el objetivo a menos de ~2,8 m el avatar no arranca (corrida 31). Con `start_instantly` arranca con 1–1,6 m (corrida 35; falta el control).
 6. ~~¿Se puede hacer que el avatar mire hacia donde mira el otro cuando está quieto?~~ Sí, con teletransporte en el lugar más una orden nueva (corrida 34).
