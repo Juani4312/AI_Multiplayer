@@ -6,7 +6,7 @@ DLL proxy `winmm.dll` para `AI.exe` (Alien: Isolation, build de Windows). Funcio
 - **fase 3**: red UDP propia entre dos máquinas (`AIMP_NET`), con el estado del jugador a 20 paquetes/s;
 - **fase 4** (experimental, `AIMP_GHOST=3`): un NPC civil del nivel hace de avatar del otro jugador (hallazgo 12);
 - **fase 5** (experimental, `AIMP_SYNC_USE=1`): los "usar" (botones, cajas, ítems) se replican a la otra máquina, donde los hace el avatar (hallazgo 13);
-- **fase 4b** (experimental, `AIMP_GHOST_WALK=1`): el avatar camina con su animación hacia el otro jugador en vez de teletransportarse. Todavía inestable (hallazgo 19);
+- **fase 4b** (experimental, `AIMP_GHOST_WALK=1`): el avatar camina y corre con su animación hacia el otro jugador en vez de teletransportarse. Verificado en una máquina (corridas 27–31); falta con dos (hallazgo 19);
 - **fase 6** (experimental, `AIMP_SYNC_PINS=1`, sin probar con dos máquinas): los disparadores de zona de los scripts los decide el host. El cliente bloquea los suyos y ejecuta los del host (hallazgos 15 y 16).
 - **arrojables** (experimental, `AIMP_SYNC_THROW=1`; la inyección se verificó en una máquina, falta con dos): lo que tira o coloca el jugador (bengala, noisemaker, molotov, minas…) aparece en la otra máquina con la misma posición y velocidad (hallazgo 17).
 
@@ -131,11 +131,18 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_SYNC_THROW` | 0 | 1 = **experimental** (con red): lo que tira o coloca el jugador local se manda al otro, que llama a la misma función con los mismos datos (hallazgo 17) |
 | `AIMP_THROW_ECHO` | 0 | prueba local sin red: repite cada lanzamiento propio a los N ms, corrido `AIMP_THROW_ECHO_CM` cm (75) al costado. Si aparece la copia con la misma curva, la inyección funciona |
 | `AIMP_GHOST_WALK` | 0 | 1 = **fase 4b, experimental** (modos 2 y 3): el avatar camina hacia el objetivo con un comando `MOVE_TOWARDS` (su propia animación) en vez de teletransportarse en cada frame; solo se teletransporta si queda lejos. Apaga `AIMP_GHOST_NOAUTH` por defecto (hallazgo 19) |
-| `AIMP_GHOST_WALK_TYPE` | 1 | `move_type` del comando (enum MOVE del engine; 1 es el valor por defecto de los scripts) |
+| `AIMP_GHOST_WALK_TYPE` | 1 | `move_type` cerca del objetivo (enum `MOVE`: 0 `SLOW_WALK`, 1 `WALK`, 2 `FAST_WALK`, 3 `RUN`) |
+| `AIMP_GHOST_WALK_TYPE_FAR` | 3 | `move_type` si queda a más de `AIMP_GHOST_WALK_FAR_CM` del objetivo (`RUN`); igual a `AIMP_GHOST_WALK_TYPE` lo apaga |
+| `AIMP_GHOST_WALK_FAR_CM` | 500 | a partir de qué distancia al objetivo corre; vuelve a caminar 250 cm más cerca |
 | `AIMP_GHOST_WALK_MS` | 200 | cada cuánto se le actualiza el destino |
-| `AIMP_GHOST_WALK_TP_CM` | 1200 | distancia (cm) a partir de la cual, después de 1 s, se cancela el comando, se lo reubica y se lo vuelve a mandar (teletransportarlo caminando no se pega, corrida 22) |
-| `AIMP_GHOST_WALK_BLOCK` | 1 | bloquea los `SwitchCommand` de la IA sobre el avatar (solo pasan el `MOVE_TOWARDS` del mod y el cambio a ninguno) |
-| `AIMP_GHOST_WALK_BEHIND_CM` | 250 | sin red: qué tan detrás del jugador local va el avatar |
+| `AIMP_GHOST_WALK_TP_CM` | 1200 | si queda a más de esto (o en otro piso) durante 1 s, se lo reubica con una orden nueva en el mismo frame |
+| `AIMP_GHOST_WALK_PREP_MS` | 4000 | al empezar: máximo de espera a que termine el `PLAY_ANIMATION` de su IA antes de ubicarlo (mínimo 500 ms) |
+| `AIMP_GHOST_WALK_FOLLOW_CM` | 200 | sin red: el avatar sigue al jugador local a esta distancia, del lado donde está; 0 = punto fijo detrás |
+| `AIMP_GHOST_WALK_BEHIND_CM` | 250 | sin red: el punto detrás del jugador para ubicarlo (y para seguir, con `FOLLOW_CM=0`) |
+| `AIMP_GHOST_WALK_RESTART_CM` | 0 | > 0: orden nueva si el objetivo se movió más que esto (como mucho cada `AIMP_GHOST_WALK_RESTART_MS`, 500); 0 = solo actualizaciones |
+| `AIMP_GHOST_WALK_CTRL` | `0x3570` | controlador al que se le dan las órdenes: el de scripts; `0x3820` (14368) es el de tareas, que no funciona |
+| `AIMP_GHOST_WALK_CINEMATIC` | 1 | fuerza la motivación CINEMATIC del avatar (hook de `FUN_006d3630`): sin eso su árbol no ejecuta comandos de script |
+| `AIMP_GHOST_WALK_BLOCK` | 1 | bloquea los `SwitchCommand` de la IA sobre el controlador del avatar (solo pasan el `MOVE_TOWARDS` del mod y el cambio a ninguno) |
 | `AIMP_TRACE_CTRL` | 0 | 1 = vuelca el controlador de jugador del jugador 0 (`Character+0x31C`, 0x4C bytes) y su acción principal cada vez que cambian (líneas `CTRL`, como mucho cada `AIMP_TRACE_CTRL_MS` = 100 ms, hasta `AIMP_TRACE_CTRL_MAX` = 600 líneas). Solo mira (hallazgo 19) |
 | `AIMP_TRACE_CMD` | 0 | 1 = loguea los `SwitchCommand` de los personajes (líneas `CMD`: controlador de comandos, tipo y dueño). Solo mira (hallazgo 19) |
 | `AIMP_CRASHLOG` | 1 | registro de excepciones (VEH): código, módulo+RVA, registros y stack si el juego se cae |
@@ -172,16 +179,17 @@ Los modos 1 y 2 clonan el pedido de spawn del jugador para crear un personaje pr
 ## Fase 4b (experimental): avatar que camina
 
 `AIMP_GHOST_WALK=1` (`src/ghost.c`, hallazgo 19), junto con `AIMP_GHOST=3`:
-1. Ubica al NPC (teletransporte) y espera 400 ms.
-2. Le da un comando `MOVE_TOWARDS` hacia el objetivo (`FUN_0067e980` sobre su controlador de comandos, `Character+0x3820`) y cada `AIMP_GHOST_WALK_MS` (200) le actualiza el destino (`FUN_006797a0`). Camina con su propia animación.
-3. Mientras camina no se lo teletransporta: la locomoción lo devolvía en ~4 frames (corrida 22). Si queda a más de `AIMP_GHOST_WALK_TP_CM` (12 m) durante 1 s, se cancela el comando (`SwitchCommand(ctrl, NULL)`), se espera y se lo vuelve a ubicar.
-4. Para que procese comandos, el NPC conserva su autoridad (IA). Con `AIMP_GHOST_WALK_BLOCK=1` (por defecto) se bloquean los cambios de comando que le quiere hacer su IA (filtro en el hook de `SwitchCommand`, `src/ctrl.c`).
+1. **Preparación:** le da un `MOVE_TOWARDS` hacia el objetivo (`FUN_0067e980`) en su **controlador de scripts** (`Character+0x3570`) desde donde está. Espera a que su controlador de tareas (`+0x3820`) no tenga un `PLAY_ANIMATION` (al menos 500 ms): teletransportarlo durante esa animación lo hacía caer del piso (corridas 26–29).
+2. **Ubicación:** lo teletransporta al objetivo y le da una orden nueva en el mismo frame (sin orden nueva, la locomoción lo devuelve; corrida 22).
+3. **Caminata:** cada `AIMP_GHOST_WALK_MS` (200) le actualiza el destino (`FUN_006797a0`). Camina con su propia animación (`WALK`, ~1,2 m/s). Si queda a más de 5 m del objetivo, orden nueva con `RUN` (~4,8 m/s); a menos de 2,5 m, otra vez `WALK`.
+4. Si queda a más de `AIMP_GHOST_WALK_TP_CM` (12 m) u otro piso durante 1 s: teletransporte y orden nueva en el mismo frame (como mucho cada 3 s). Nunca `SwitchCommand(ctrl, NULL)`: el juego se cae (corrida 23).
+5. Su árbol de comportamiento (`NPC_INNOCENT_BEHAVE.XML`) solo ejecuta comandos de script en la rama CINEMATIC: el mod fuerza esa motivación para el avatar (hook de `ConditionHasMotivation`, `FUN_006d3630`, `ret 8`). El NPC conserva su autoridad. Con `AIMP_GHOST_WALK_BLOCK=1` se bloquean los cambios de comando de su IA sobre el controlador de scripts (filtro en el hook de `SwitchCommand`, `src/ctrl.c`).
 
-Sin red, el objetivo es `AIMP_GHOST_WALK_BEHIND_CM` (250) detrás del jugador local.
+Con red, el objetivo es la posición del otro jugador. Sin red, sigue al jugador local a `AIMP_GHOST_WALK_FOLLOW_CM` (200), del lado donde está; la primera vez y si quedó lejos, se lo ubica `AIMP_GHOST_WALK_BEHIND_CM` (250) detrás.
 
-**Estado:** en la corrida 21 caminó hacia el jugador; en la 22 los teletransportes no se pegaban y el NPC "salía corriendo". La versión actual (máquina de estados) todavía no se probó en el juego.
+**Estado:** verificado en una máquina con el mando virtual (corridas 27–31): sigue al jugador caminando y corriendo, sin trabarse ni pegársele. Falta la prueba con dos máquinas. Se detiene a ~1–2,8 m del objetivo (radio de llegada de `MOVE_TOWARDS`) y, quieto, no copia hacia dónde mira el otro.
 
-`test_walk` lo prueba contra stubs con los prólogos y el `ret 0x14` reales de los dos comandos y de `SwitchCommand`.
+`test_walk` lo prueba contra stubs con los prólogos y el `ret N` reales de los dos comandos (`ret 0x14`), de `SwitchCommand` y del nodo de motivación (`ret 8`): preparación con un `PLAY_ANIMATION` en curso, seguimiento a distancia, cambio a `RUN` y vuelta a `WALK`, reubicación y filtro.
 
 ## Fase 5 (experimental): "usar" compartido
 
