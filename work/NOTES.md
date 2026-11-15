@@ -688,3 +688,13 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   - orden nueva (`FUN_0067e980`) cuando el objetivo se mueve más de 75 cm (`AIMP_GHOST_WALK_RESTART_CM`), como mucho cada 500 ms;
   - a más de 12 m durante 1 s, teletransporte y orden nueva en el mismo frame (como mucho cada 3 s).
 - Las capturas de región no sirven si la ventana del juego está tapada. Las tomadas después del crash se borraron sin mirarlas.
+
+## 2026-11-15 — Corrida 24 (automática): el NPC ignora el `MOVE_TOWARDS`; la causa es el árbol de comportamiento
+- **Corrida 24** (`run24-caminata-auto.log`, 0 excepciones; mod en pasivo al final):
+  - con órdenes nuevas cada 500 ms (11 inicios, comando propio), el NPC **no se movió**: quedó en (-108,89, -8,43) mientras el jugador caminaba;
+  - al principio caminó 1,4 m hacia el jugador, no hacia el objetivo. Eso es una rama propia de su IA.
+- **Árbol del civil** (`DATA/BEHAVIOR/NPC_INNOCENT_BEHAVE.XML`, copia en `game/data/BEHAVIOR/`): los comandos de script solo se ejecutan en `ConditionHasMotivation(CINEMATIC_MOTIVATION) → CINEMATIC_BRANCH → ConditionHasScript → ActionScript`. Esa rama va antes que las de huir, agredir y seguir.
+  - `ConditionHasMotivation` = `FUN_006d3630` (thiscall(nodo, agente), ret 4): `nodo+0x14` = tipo (CINEMATIC = 1 según `FUN_006c9370`; FOLLOW = 5) y lee un byte por motivación en `[agente+0x31EC]+0x1B+tipo`.
+  - `ConditionHasScript` = `FUN_006eaa80`: `agente+0x3570` o `+0x3574` no nulos. Si el agente es `Character+0x2B0`, son `ctrl+0` y `ctrl+4` del controlador de comandos (`Character+0x3820`). Hipótesis: se confirma con el log del hook.
+  - Hay motivaciones `FOLLOW_MOTIVATION` y `MULTIPLAYER_MOTIVATION`.
+- **Cambio (tests OK):** hook de `FUN_006d3630` (`AIMP_GHOST_WALK_CINEMATIC=1`, por defecto con la caminata). Para el agente del avatar (dentro de su `Character`, por rango) y el tipo 1 devuelve verdadero; loguea el offset del agente la primera vez.

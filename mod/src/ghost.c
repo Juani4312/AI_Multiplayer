@@ -58,6 +58,7 @@ typedef uint32_t(__attribute__((fastcall)) * SpawnCharFn)(void *self, void *edx,
 typedef void(__attribute__((fastcall)) * TeleportFn)(void *self, void *edx, const float *pos, float yaw, uint32_t p3);
 typedef void(__attribute__((fastcall)) * MoveCmdFn)(void *ctrl, void *edx, const uint8_t *a, const uint8_t *b,
                                                     const float *target, const uint8_t *params, uint32_t never_succeed);
+typedef uint32_t(__attribute__((fastcall)) * HasMotivationFn)(void *node, void *edx, void *agent);
 
 enum { G_OFF, G_WAIT_PLAYER, G_DELAY, G_NPC, G_FIND, G_ACTIVE, G_DONE };
 
@@ -84,6 +85,12 @@ static float g_last_pos[3], g_last_yaw;
 static MoveCmdFn g_move_start, g_move_update;
 static int g_walk, g_walk_type = 1, g_walk_tp_cm = 600, g_walk_bad, g_walk_block = 1;
 static volatile uint32_t g_walk_ctrl; /* controlador del avatar, para el filtro (corre en otro thread) */
+/* AIMP_GHOST_WALK_CINEMATIC: la motivación cinemática del avatar siempre verdadera (hook de FUN_006d3630) */
+static AimpHook g_hook_motiv;
+static HasMotivationFn g_motiv_orig;
+static int g_walk_cine = 1;
+static volatile uint32_t g_walk_chr; /* el avatar, para el hook (corre en el thread de la IA) */
+static volatile LONG g_n_cine, g_cine_logged;
 static volatile LONG g_n_blocked;
 static int64_t g_walk_ticks, g_last_cmd, g_last_restart, g_wstate_at, g_far_since;
 static int g_wstate, g_walk_behind_cm = 250, g_walk_restart_cm = 75;
@@ -185,6 +192,24 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static uint32_t det
     return r;
 }
 
+/* ConditionHasMotivation del árbol de comportamiento: para el avatar, CINEMATIC_MOTIVATION es siempre verdadera,
+ * así el árbol entra en la rama de los comandos de script (ConditionHasScript -> ActionScript) y ejecuta el
+ * MOVE_TOWARDS del mod en vez de sus propias ramas (huir, acercarse al jugador). El agente se identifica por
+ * rango: está dentro del Character del avatar (los Character ocupan CHR_STRIDE bytes). */
+__attribute__((fastcall, force_align_arg_pointer, noinline)) static uint32_t det_has_motivation(void *node, void *edx, void *agent)
+{
+    uint32_t chr = g_walk_chr, a = (uint32_t)(uintptr_t)agent, type = 0;
+    if (chr && a >= chr && a - chr < CHR_STRIDE && node && mem_u32((uintptr_t)node + BTNODE_MOTIVATION_TYPE, &type) &&
+        type == MOTIVATION_CINEMATIC) {
+        InterlockedIncrement(&g_n_cine);
+        if (InterlockedIncrement(&g_cine_logged) == 1)
+            log_printf("GHOST: caminata: motivación cinemática forzada para el avatar 0x%08x (agente = personaje + 0x%x)", chr,
+                       a - chr);
+        return 1;
+    }
+    return g_motiv_orig(node, edx, agent);
+}
+
 int ghost_install(void)
 {
     g_mode = aimp_env_int(L"AIMP_GHOST", 0);
@@ -244,6 +269,13 @@ int ghost_install(void)
             g_walk_block = aimp_env_int(L"AIMP_GHOST_WALK_BLOCK", 1);
             if (g_walk_block)
                 ctrl_set_switch_filter(ghost_switch_filter); /* ctrl_install (después) instala el hook */
+            /* Corrida 24: sin motivación cinemática, el árbol del civil ignora los comandos de script. */
+            g_walk_cine = aimp_env_int(L"AIMP_GHOST_WALK_CINEMATIC", 1);
+            if (g_walk_cine && !hook_install(&g_hook_motiv, "ConditionHasMotivation (FUN_006d3630)",
+                                             (void *)(g_aimp_exe + AIMP_RVA_HAS_MOTIVATION), AIMP_HAS_MOTIVATION_PROLOGUE,
+                                             sizeof AIMP_HAS_MOTIVATION_PROLOGUE, AIMP_HAS_MOTIVATION_STEAL,
+                                             (void *)det_has_motivation, (void **)&g_motiv_orig))
+                g_walk_cine = 0;
         }
     }
     /* Corrida 14: con el avatar no autoritativo su IA no reacciona (no huye del fuego) y no se mueve
@@ -261,8 +293,8 @@ int ghost_install(void)
         log_printf("AIMP_GHOST=%d (fase 4, experimental: %s): empieza %d ms después de que aparece el jugador; NPC de tipo %d %s",
                    g_mode, names[g_mode], delay, g_npc_type, dur);
         if (g_walk)
-            log_printf("AIMP_GHOST_WALK=1 (fase 4b, experimental): MOVE_TOWARDS con move_type %d, destino cada %d ms, teletransporte a más de %d cm; NOAUTH %d; bloqueo de los comandos de la IA %d",
-                       g_walk_type, (int)(g_walk_ticks * 1000 / g_freq), g_walk_tp_cm, g_noauth, g_walk_block);
+            log_printf("AIMP_GHOST_WALK=1 (fase 4b, experimental): MOVE_TOWARDS con move_type %d, destino cada %d ms, teletransporte a más de %d cm; NOAUTH %d; bloqueo de los comandos de la IA %d; motivación cinemática %d",
+                       g_walk_type, (int)(g_walk_ticks * 1000 / g_freq), g_walk_tp_cm, g_noauth, g_walk_block, g_walk_cine);
     } else {
         log_printf("AIMP_TRACE_SPAWN=1: se loguean los pedidos de spawn (solo mira)");
     }
@@ -381,6 +413,7 @@ static void start_moving(uint32_t p, int64_t now)
     g_starts = g_updates = 0;
     g_walk_bad = 0;
     g_walk_ctrl = g_walk ? p + CHR_CMDCTRL : 0;
+    g_walk_chr = g_walk && g_walk_cine ? p : 0;
     aimp_memcpy(g_cmd_b, &p, 4); /* el segundo id del comando: el avatar y "GH" */
     g_cmd_b[4] = 'G';
     g_cmd_b[5] = 'H';
@@ -681,9 +714,10 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
     }
     (void)tyaw;
     if (now - g_last_log >= g_freq) {
-        log_printf("GHOST: caminata (%s): personaje en (%.2f, %.2f, %.2f), objetivo (%.2f, %.2f, %.2f) [%s] a %.2f m; comando %s tipo %d; %u inicios, %u actualizaciones, %u teletransportes; %s[%u]",
+        log_printf("GHOST: caminata (%s): personaje en (%.2f, %.2f, %.2f), objetivo (%.2f, %.2f, %.2f) [%s] a %.2f m; comando %s tipo %d; %u inicios, %u actualizaciones, %u teletransportes, %ld cinemáticas; %s[%u]",
                    g_wnames[g_wstate], (double)cur[0], (double)cur[1], (double)cur[2], (double)t[0], (double)t[1], (double)t[2], src,
-                   (double)aimp_sqrtf(d2), ours ? "propio" : "ajeno", (int)type, g_starts, g_updates, g_tps, where, idx);
+                   (double)aimp_sqrtf(d2), ours ? "propio" : "ajeno", (int)type, g_starts, g_updates, g_tps,
+                   (long)InterlockedExchange(&g_n_cine, 0), where, idx);
         g_last_log = now;
         g_tps = 0;
     }
