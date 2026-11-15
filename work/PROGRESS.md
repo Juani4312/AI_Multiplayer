@@ -54,6 +54,7 @@ _Última actualización: 2026-11-15, 02:20 (hallazgo 17: arrojables; `AIMP_SYNC_
 | Mod fase 6 (disparadores del host) | 🟡 `AIMP_SYNC_PINS=1` en `mod/src/pins.c`: el host manda los pines de zona y el cliente bloquea los suyos y aplica los del host. Tests OK; sin probar en el juego |
 | Hallazgo 17 (arrojables y equipo) | 🟡 `findings/17-arrojables.md`: tirar = `FUN_007b5050` (pool `0x16F0DE4`, composite `Thrown\X` + `spawn_explosive`; el vuelo lo simula `ProjectileMotion` con la posición y la velocidad dadas), colocar = `FUN_007b5190`. Las armas de fuego son composites (`Weapons\…`); su disparo no se siguió |
 | Hallazgo 18 (replicación de personajes de NETZ) | 🟡 `findings/18-replicacion-de-personajes.md`: replicador por personaje con 11 tipos de mensaje (acciones, animación, armas, salud), pero la capa de canales es un **stub** en retail (`FUN_00a2abb0`/`FUN_00a2ab80`). La opción C no es camino corto; la animación va a mano |
+| Hallazgo 19 (control de personajes) | 🟡 `findings/19-control-de-personajes.md`: el jugador se mueve con el comando `READ_GAMEPAD_1` (controlador de jugador `Character+0x31C`, 0x4C bytes); el engine reconoce un `"PLAYER_2"` (índice de jugador 1); `CMD_MoveTowards` = `FUN_0067e980`. Trazas `AIMP_TRACE_CTRL` / `AIMP_TRACE_CMD` (tests OK) para la próxima corrida |
 | Arrojables compartidos | 🟡 `AIMP_SYNC_THROW=1` en `mod/src/throw.c` (evento `AIMP_EVT_THROW`, **protocolo v2**), `AIMP_TRACE_THROW`, `AIMP_THROW_ECHO` (prueba local). Tests OK; sin probar en el juego |
 | Mando virtual (pruebas) | ✅ `mod/src/autopad.c`: `AIMP_AUTOPAD_FILE` (pad.txt), IAT de XINPUT1_3. En el menú, verificar cada paso con captura (corrida 17) |
 | Hallazgo 11 (mensajes RPC en runtime) | ✅ `findings/11-mensajes-rpc-en-runtime.md` (patrón RPC A → B confirmado; 0x29 spawn, 0x26 interacción) |
@@ -77,7 +78,10 @@ _Última actualización: 2026-11-15, 02:20 (hallazgo 17: arrojables; `AIMP_SYNC_
 - **2026-11-07: mod desinstalado** a pedido del usuario para jugar normal (`runtime_setup.sh revert`: sin `winmm.dll`, sin override en `user.reg`, sin `aimp.cfg`; los logs viejos quedan). Para la corrida 20 hay que reinstalar con `runtime_setup.sh install`.
 
 ## Pendientes que requieren al usuario
-- **Corrida 20** (local, fase 6 paso 4 + arrojables): el 2026-11-15 el usuario pidió seguir en estático y probar "cuando haga falta para avanzar". Pedirla cuando haya que validar. Plan en "Siguiente paso" 2. Sumar a la misma corrida `AIMP_TRACE_THROW=1;AIMP_THROW_ECHO=1500` (tirar una bengala: tiene que aparecer una copia al costado con la misma curva).
+- **Corrida 20** (local, una máquina): el 2026-11-15 el usuario pidió seguir en estático y probar "cuando haga falta para avanzar". Pedirla cuando haya que validar. Junta tres cosas, todas en papito:
+  1. pines (fase 6 paso 4): plan en "Siguiente paso" 2;
+  2. arrojables: `AIMP_TRACE_THROW=1;AIMP_THROW_ECHO=1500`. Al tirar una bengala tiene que aparecer una copia al costado con la misma curva;
+  3. control: `AIMP_TRACE_CTRL=1;AIMP_TRACE_CMD=1`. Con marcas F8, caminar, correr, agacharse y girar unos segundos cada cosa; si hay NPCs, dejarlos moverse.
 - **Protocolo v2** (2026-11-15): la laptop necesita la DLL nueva de `mod/dist/` para hablar con papito.
 0. ~~Tailscale para cerrar la fase 3~~: hecho con la laptop. papito es 100.126.161.126 y papulaptop, 100.126.159.45. Para el amigo:
    - instala Tailscale y se une a la red del usuario;
@@ -109,6 +113,6 @@ _Última actualización: 2026-11-15, 02:20 (hallazgo 17: arrojables; `AIMP_SYNC_
    - **Armas de fuego:** ubicar el disparo dentro del composite del arma (`Weapons\Pistol_Standard`…: `AIMED_WEAPON`, `BulletChamber`) o en el código que lo dispara (hallazgo 17, "El equipo del jugador").
    - **Ítems compartidos:** hoy el botín es por jugador. Si se quiere compartido, sacar el ítem del mundo en la otra máquina.
    - Hecho en la corrida 14: el avatar no autoritativo no tiene IA (`AIMP_GHOST_NOAUTH`, activado por defecto en el modo 3).
-   - Fase 4b, pendiente: la animación de caminar del avatar (hoy se teletransporta quieto).
+   - **Fase 4b** (animación del avatar): dos caminos en el hallazgo 19. El primero, comando `MOVE_TOWARDS` al NPC avatar. El segundo, un `PLAYER_2` con la entrada del otro escrita en su controlador de jugador. Primero, las trazas de la corrida 20.
 3. Investigar qué escribe en los canales NETZ durante el juego: posible camino para el movimiento de personajes.
 4. Estático pendiente: semántica de los RPCs 0x1E/0x20/0x22/0x23/0x28 y del B 0x07; dispatcher de los comandos de UI (hallazgo 09); inventario (07).

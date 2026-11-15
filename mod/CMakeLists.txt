@@ -48,6 +48,7 @@ add_library(aimp_winmm SHARED
   src/crash.c
   src/sync.c
   src/throw.c
+  src/ctrl.c
   src/log.c
   src/mem.c
   src/fmt.c
@@ -81,7 +82,7 @@ target_compile_options(test_core PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter
 set_target_properties(test_core PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 # test_probe: la sonda (probe.c + log.c) contra una imagen de AI.exe simulada.
-add_executable(test_probe test/test_probe.c src/probe.c src/trace.c src/pins.c src/autopad.c src/net.c src/ghost.c src/sync.c src/throw.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_probe test/test_probe.c src/probe.c src/trace.c src/pins.c src/autopad.c src/net.c src/ghost.c src/sync.c src/throw.c src/ctrl.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_probe PRIVATE src)
 target_compile_options(test_probe PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_probe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
@@ -127,3 +128,10 @@ add_executable(test_throw test/test_throw.c src/throw.c src/sync.c src/ghost.c s
 target_include_directories(test_throw PRIVATE src)
 target_compile_options(test_throw PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_throw PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+# test_ctrl: trazas de control (ctrl.c) contra un stub con el prólogo y el `ret 4` reales de
+# SwitchCommand (FUN_00678e20) y un CharacterManager falso.
+add_executable(test_ctrl test/test_ctrl.c src/ctrl.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+target_include_directories(test_ctrl PRIVATE src)
+target_compile_options(test_ctrl PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
+set_target_properties(test_ctrl PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)

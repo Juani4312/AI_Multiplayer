@@ -235,4 +235,28 @@ static const uint8_t AIMP_THROW_PROLOGUE[9] __attribute__((unused)) = {
 #define THROW_POOL_SLOTS          0x80
 #define THROW_POOL_STRIDE         0x0C
 
+/* ---- Control de personajes (NOTES 2026-11-15; hallazgos 17 y 18) ----
+ * Character+0x31C = controlador de jugador (0x4C bytes; FUN_007b2630 -> FUN_0078fb90; +0x48 activo).
+ * Character+0x36C = acción principal (FUN_0064f6e0): +0x0C y +0x10 punteros a bloques [largo][datos],
+ * +0x19 id/secuencia de la acción. Character+0x2E4 = índice de jugador (1 si el nombre empieza con
+ * "PLAYER_2", FUN_007cc400).
+ * SwitchCommand = FUN_00678e20 thiscall(controlador de comandos, comando), ret 4; comando+0x28 = tipo
+ * (nombres en 0x0163D010: NONE, IDLE, DIE, GOTO, …, READ_GAMEPAD_1 (0x11), …); controlador+0x0A & 4 =
+ * [TASK] (si no, [SCRIPT]). Prólogo: 81 EC 00 01 00 00 sub esp,0x100 | 56 push esi | 8B F1 mov esi,ecx. */
+#define CHR_PLAYER_INDEX          0x2E4
+#define CHR_ACTION                0x36C
+#define CTRL_SIZE                 0x4C
+#define ACTION_BLOCK_A            0x0C
+#define ACTION_BLOCK_B            0x10
+#define ACTION_ID                 0x19
+#define AIMP_RVA_SWITCH_COMMAND   0x00278E20u
+#define AIMP_SWITCH_COMMAND_STEAL 6
+static const uint8_t AIMP_SWITCH_COMMAND_PROLOGUE[9] __attribute__((unused)) = {
+    0x81, 0xEC, 0x00, 0x01, 0x00, 0x00, 0x56, 0x8B, 0xF1
+};
+#define AIMP_RVA_COMMAND_NAMES    0x0123D010u  /* char*[20] */
+#define COMMAND_TYPES             20
+#define CMD_TYPE                  0x28
+#define CMDCTRL_FLAGS             0x0A
+
 #endif

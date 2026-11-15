@@ -607,3 +607,14 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   - Hay hermanos para otros comandos (`FUN_0067ca60`, `cea0`, `d370`, `d7a0`, `db10`, `dea0`, `e3b0`, `b520`).
   - **Falta** saber de dónde sale el controlador (`a3`) a partir del `Character`: los métodos lo reciben del despachador genérico de entidades. Se podría encontrar en runtime, con un hook de traza en `FUN_0067e980` mientras un script mueve a un NPC.
 - **Idea para la 4b:** en vez de teletransportar al avatar, darle un `MoveTowards` hacia la posición del otro y actualizarle el destino cada ~100 ms. Lo animaría el propio engine. Requiere que el avatar procese comandos, quizás con autoridad o IA. Hipótesis sin probar.
+
+## 2026-11-15 — Hallazgo 19: control de personajes; trazas `AIMP_TRACE_CTRL` / `AIMP_TRACE_CMD`
+- **Comandos:** los personajes los maneja un comando (`SwitchCommand` = `FUN_00678e20`) de uno de 20 tipos.
+  - Entre ellos están `READ_GAMEPAD_1` (0x11, `FUN_0067ffb0`): el jugador se mueve con un comando que lee el mando, creado en `ctrl+0x560` si el personaje tiene controlador de jugador activo.
+  - También está `CLIENT_PLAYERS_LOGIC_CHARACTER_RUNNING_ON_THE_HOST` (0x12), que no tiene constructor en retail.
+- **`PLAYER_2`:** la inicialización del `Character` (`FUN_007cc400`) da índice de jugador 1 a un personaje cuyo nombre empieza con `"PLAYER_2"`. El controlador de jugador (`+0x31C`, 0x4C bytes) se crea para toda definición de jugador.
+- **Plan candidato para la 4b:** un segundo personaje-jugador con la entrada del otro escrita en su controlador. La alternativa es `MOVE_TOWARDS` al NPC avatar. Detalle y riesgos en `findings/19-control-de-personajes.md`.
+- **Código:** `mod/src/ctrl.c`, solo trazas:
+  - `AIMP_TRACE_CTRL`: el controlador de jugador del jugador 0 y su acción, cuando cambian;
+  - `AIMP_TRACE_CMD`: hook de `SwitchCommand` con el dueño del controlador de comandos.
+  - `test_ctrl`, con stub de prólogo y `ret 4` reales. **Todos los tests OK.**
