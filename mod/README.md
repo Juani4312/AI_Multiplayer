@@ -141,6 +141,7 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_GHOST_WALK_BEHIND_CM` | 250 | sin red: el punto detrás del jugador para ubicarlo (y para seguir, con `FOLLOW_CM=0`) |
 | `AIMP_GHOST_WALK_RESTART_CM` | 0 | > 0: orden nueva si el objetivo se movió más que esto (como mucho cada `AIMP_GHOST_WALK_RESTART_MS`, 500); 0 = solo actualizaciones |
 | `AIMP_GHOST_WALK_CTRL` | `0x3570` | controlador al que se le dan las órdenes: el de scripts; `0x3820` (14368) es el de tareas, que no funciona |
+| `AIMP_GHOST_WALK_FACE` | 1 | con red: si el otro está quieto 1 s y el avatar se asentó, se lo gira hacia donde mira el otro (teletransporte en el lugar con ese yaw y orden nueva) |
 | `AIMP_GHOST_WALK_CINEMATIC` | 1 | fuerza la motivación CINEMATIC del avatar (hook de `FUN_006d3630`): sin eso su árbol no ejecuta comandos de script |
 | `AIMP_GHOST_WALK_BLOCK` | 1 | bloquea los `SwitchCommand` de la IA sobre el controlador del avatar (solo pasan el `MOVE_TOWARDS` del mod y el cambio a ninguno) |
 | `AIMP_TRACE_CTRL` | 0 | 1 = vuelca el controlador de jugador del jugador 0 (`Character+0x31C`, 0x4C bytes) y su acción principal cada vez que cambian (líneas `CTRL`, como mucho cada `AIMP_TRACE_CTRL_MS` = 100 ms, hasta `AIMP_TRACE_CTRL_MAX` = 600 líneas). Solo mira (hallazgo 19) |
@@ -185,9 +186,11 @@ Los modos 1 y 2 clonan el pedido de spawn del jugador para crear un personaje pr
 4. Si queda a más de `AIMP_GHOST_WALK_TP_CM` (12 m) u otro piso durante 1 s: teletransporte y orden nueva en el mismo frame (como mucho cada 3 s). Nunca `SwitchCommand(ctrl, NULL)`: el juego se cae (corrida 23).
 5. Su árbol de comportamiento (`NPC_INNOCENT_BEHAVE.XML`) solo ejecuta comandos de script en la rama CINEMATIC: el mod fuerza esa motivación para el avatar (hook de `ConditionHasMotivation`, `FUN_006d3630`, `ret 8`). El NPC conserva su autoridad. Con `AIMP_GHOST_WALK_BLOCK=1` se bloquean los cambios de comando de su IA sobre el controlador de scripts (filtro en el hook de `SwitchCommand`, `src/ctrl.c`).
 
-Con red, el objetivo es la posición del otro jugador. Sin red, sigue al jugador local a `AIMP_GHOST_WALK_FOLLOW_CM` (200), del lado donde está; la primera vez y si quedó lejos, se lo ubica `AIMP_GHOST_WALK_BEHIND_CM` (250) detrás.
+Con red, el objetivo es la posición del otro jugador y, quieto, mira hacia donde mira el otro (`AIMP_GHOST_WALK_FACE`). Sin red, sigue al jugador local a `AIMP_GHOST_WALK_FOLLOW_CM` (200), del lado donde está; la primera vez y si quedó lejos, se lo ubica `AIMP_GHOST_WALK_BEHIND_CM` (250) detrás.
 
-**Estado:** verificado en una máquina con el mando virtual (corridas 27–31): sigue al jugador caminando y corriendo, sin trabarse ni pegársele. Falta la prueba con dos máquinas. Se detiene a ~1–2,8 m del objetivo (radio de llegada de `MOVE_TOWARDS`) y, quieto, no copia hacia dónde mira el otro.
+**Probar la red en una sola máquina:** el juego con `AIMP_NET=host` y `python3 -I work/scripts/aimp_peer.py --join 127.0.0.1:47811 --replay 3 --offset 0,0,2`. El peer hace de otro jugador que repite el recorrido del jugador 3 s después (corridas 32–34).
+
+**Estado:** verificado en una máquina con el mando virtual (corridas 27–34), también por red contra el peer: sigue caminando y corriendo, sin trabarse ni pegársele, y quieto mira hacia donde mira el otro. Falta la prueba con dos máquinas. Después de llegar, no vuelve a arrancar hasta que el objetivo se aleja ~1–3 m.
 
 `test_walk` lo prueba contra stubs con los prólogos y el `ret N` reales de los dos comandos (`ret 0x14`), de `SwitchCommand` y del nodo de motivación (`ret 8`): preparación con un `PLAY_ANIMATION` en curso, seguimiento a distancia, cambio a `RUN` y vuelta a `WALK`, reubicación y filtro.
 

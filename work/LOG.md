@@ -153,3 +153,5 @@
 - 04:17 Corrida 29: la caída del piso al ubicarlo coincide con un PLAY_ANIMATION de su IA. Captura del avatar de frente (girando al jugador con tiempos P relativos a su aparición).
 - 04:31 Corrida 30: preparación (orden primero, ubicarlo sin PLAY_ANIMATION): sin caída. Seguimiento a 2 m del lado del NPC: no se traba ni se le pega al jugador.
 - 04:34 Corrida 31: enum MOVE del binario (VA 0x0130FD18: SLOW_WALK, WALK, FAST_WALK, RUN...). Corre (RUN = 3, ~4,8 m/s) a más de 5 m y camina cerca. Capturas del avatar viniendo de frente. Juego cerrado, mod pasivo (AIMP_GHOST=0).
+- 04:52 Corrida 32 (red en una máquina): aimp_peer.py v2 con --replay (el "otro jugador" repite el recorrido del jugador 3 s después). El avatar sigue el recorrido con objetivo [red].
+- 05:05 Corridas 33-34: MOVE_TOWARDS no guarda la rotación del destino (FUN_0067e660). AIMP_GHOST_WALK_FACE: quieto, se lo gira hacia el yaw del otro (teletransporte en el lugar + orden). Funcionó en la 34 (el yaw queda). Mod pasivo.
