@@ -41,6 +41,10 @@ static AimpNet *g_net;
 static int g_trace, g_sync, g_echo_ms, g_echo_cm = 75;
 static volatile uint32_t g_level;
 static volatile LONG g_n_local, g_n_remote;
+/* AIMP_THROW_PROBE y el último lanzamiento (local o remoto) */
+static int g_probe;
+static float g_last_start[3];
+static int g_have_start;
 
 /* Los detours corren en el thread del evento de animación (no se sabe si es el principal): solo
  * encolan, con una sección crítica. throw_frame (thread principal) loguea, manda y hace los ecos. */
@@ -106,8 +110,17 @@ static void local_event(const ThrowEvt *t, uint32_t from)
 }
 
 /* throw_frame: log, red y eco de un evento local. */
+static void note_start(const ThrowEvt *t)
+{
+    g_last_start[0] = t->m[3];
+    g_last_start[1] = t->m[7];
+    g_last_start[2] = t->m[11];
+    g_have_start = 1;
+}
+
 static void process_local(const Item *it)
 {
+    note_start(&it->t);
     LONG n = InterlockedIncrement(&g_n_local);
     if (n <= LOG_MAX)
         log_evt("local", n, &it->t, it->from);
@@ -161,7 +174,8 @@ int throw_install(AimpNet *net)
     g_sync = aimp_env_int(L"AIMP_SYNC_THROW", 0);
     g_echo_ms = aimp_env_int(L"AIMP_THROW_ECHO", 0);
     g_echo_cm = aimp_env_int(L"AIMP_THROW_ECHO_CM", 75);
-    if (!g_trace && !g_sync && g_echo_ms <= 0)
+    g_probe = aimp_env_int(L"AIMP_THROW_PROBE", 0);
+    if (!g_trace && !g_sync && g_echo_ms <= 0 && !g_probe)
         return 0;
     g_net = net;
     if (!g_cs_ok) {
@@ -177,9 +191,9 @@ int throw_install(AimpNet *net)
         g_sync = 0;
         g_echo_ms = 0;
     }
-    log_printf("THROW: AIMP_TRACE_THROW=%d AIMP_SYNC_THROW=%d%s AIMP_THROW_ECHO=%d ms (%d cm); hooks %s/%s", g_trace, g_sync,
-               g_sync && !(net && net->mode) ? " (sin red: solo se loguea)" : "", g_echo_ms, g_echo_cm, ok ? "ok" : "NO",
-               ok2 ? "ok" : "NO");
+    log_printf("THROW: AIMP_TRACE_THROW=%d AIMP_SYNC_THROW=%d%s AIMP_THROW_ECHO=%d ms (%d cm) AIMP_THROW_PROBE=%d; hooks %s/%s", g_trace,
+               g_sync, g_sync && !(net && net->mode) ? " (sin red: solo se loguea)" : "", g_echo_ms, g_echo_cm, g_probe,
+               ok ? "ok" : "NO", ok2 ? "ok" : "NO");
     return ok && ok2;
 }
 
@@ -226,6 +240,7 @@ static int apply(const ThrowEvt *t, const char *who)
     }
     if (n <= LOG_MAX)
         log_evt(who, n, t, 0);
+    note_start(t);
     aimp_memcpy(s_m, t->m, sizeof t->m);
     aimp_memcpy(s_m + 12, t->vel, sizeof t->vel); /* como en FUN_007b9500: la velocidad sigue a la matriz */
     s_m[15] = 9.81f;
@@ -254,13 +269,174 @@ void throw_remote_event(const AimpEvt *e, uint32_t level)
     apply(&t, "remoto");
 }
 
+
+/* ---- AIMP_THROW_PROBE (solo mira; prueba con dos máquinas 2026-11-15: el noisemaker cayó unos cm al costado) ----
+ * ProjectileMotion (FUN_0060b740) integra el vuelo con el dt del frame, así que con fps distintos la trayectoria
+ * se separa y los rebotes lo amplifican. Para corregir la réplica hace falta saber dónde vive la posición del
+ * objeto. La sonda mira el pool cada frame; cuando una entrada pasa a "en uso", recorre su composite (hijos en
+ * +0x2C, hallazgo 16), busca tripletes de float a menos de 8 m del lanzamiento y los sigue 9 s, logueando los que
+ * se mueven (entidad, tipo, offset). */
+#define PR_SLOTS 4
+#define PR_CANDS 128
+#define PR_NODES 256
+typedef struct {
+    uint32_t node, off;
+    float first[3], last[3];
+} PCand;
+typedef struct {
+    int on, sample;
+    uint32_t idx, obj;
+    int64_t t0;
+    uint32_t ncand;
+    PCand c[PR_CANDS];
+} Probe;
+static Probe g_pr[PR_SLOTS];
+static uint8_t g_pool_prev[0x80];
+static const int k_pr_ms[] = { 100, 300, 600, 1000, 1500, 2000, 3000, 4000, 6000, 9000 };
+
+static int f_ok(float f)
+{
+    uint32_t u;
+    aimp_memcpy(&u, &f, 4);
+    return ((u >> 23) & 0xFF) != 0xFF && f > -5000.0f && f < 5000.0f && (f > 0.001f || f < -0.001f);
+}
+
+static void probe_scan_node(Probe *p, uint32_t node, const float *ref, int nref)
+{
+    static uint8_t buf[0x800];
+    uint32_t n = sizeof buf;
+    while (n >= 0x100 && !mem_read(node, buf, n))
+        n /= 2;
+    if (n < 0x100)
+        return;
+    for (uint32_t off = 0; off + 12 <= n && p->ncand < PR_CANDS; off += 4) {
+        float v[3];
+        aimp_memcpy(v, buf + off, 12);
+        if (!f_ok(v[0]) || !f_ok(v[1]) || !f_ok(v[2]))
+            continue;
+        int is_close = 0;
+        for (int r = 0; r < nref; r++) {
+            float dx = v[0] - ref[3 * r], dy = v[1] - ref[3 * r + 1], dz = v[2] - ref[3 * r + 2];
+            is_close |= dx * dx + dy * dy + dz * dz < 64.0f;
+        }
+        if (!is_close)
+            continue;
+        PCand *c = &p->c[p->ncand++];
+        c->node = node;
+        c->off = off;
+        aimp_memcpy(c->first, v, 12);
+        aimp_memcpy(c->last, v, 12);
+    }
+}
+
+static void probe_start(Probe *p)
+{
+    float ref[6];
+    int nref = 0;
+    uint32_t pl = local_player();
+    if (pl && mem_read(pl + CHR_POS, ref, 12))
+        nref++;
+    if (g_have_start) {
+        aimp_memcpy(ref + 3 * nref, g_last_start, 12);
+        nref++;
+    }
+    uint32_t st[PR_NODES], nst = 0, seen = 0, ncomp = 0;
+    st[nst++] = p->obj;
+    while (nst && seen < PR_NODES) {
+        uint32_t o = st[--nst], vt = 0;
+        seen++;
+        probe_scan_node(p, o, ref, nref);
+        if (!mem_u32(o, &vt) || vt != (uint32_t)g_aimp_exe + AIMP_RVA_VT_COMPOSITE)
+            continue;
+        ncomp++;
+        uint32_t arr = 0, cnt = 0, items = 0;
+        if (!mem_u32(o + COMP_CHILDREN, &arr) || !arr || !mem_u32(arr + 8, &cnt) || !mem_u32(arr + 0xC, &items) || cnt > 4096)
+            continue;
+        for (uint32_t i = 0; i < cnt && nst < PR_NODES; i++) {
+            uint32_t hh = 0, ch = 0;
+            if (mem_u32(items + 4 * i, &hh) && hh && mem_u32(hh + HANDLE_OBJ, &ch) && ch)
+                st[nst++] = ch;
+        }
+    }
+    log_printf("THROW sonda: entrada %u del pool, objeto 0x%08x: %u nodos (%u composites), %u candidatos cerca de %d referencias",
+               p->idx, p->obj, seen, ncomp, p->ncand, nref);
+}
+
+static void probe_frame(int64_t now, int64_t freq)
+{
+    uint32_t pool = *(volatile uint32_t *)(g_aimp_exe + AIMP_RVA_THROW_POOL);
+    if (!pool)
+        return;
+    uint8_t cur[0x80];
+    for (uint32_t i = 0; i < 0x80; i++) {
+        uint8_t f = 0;
+        mem_u8(pool + 4 + i * 12, &f);
+        cur[i] = f;
+        if (f && !g_pool_prev[i]) {
+            uint32_t hh = 0, obj = 0;
+            mem_u32(pool + 4 + i * 12 + 4, &hh);
+            if (hh)
+                mem_u32(hh + HANDLE_OBJ, &obj);
+            for (int s = 0; s < PR_SLOTS; s++) {
+                if (g_pr[s].on)
+                    continue;
+                aimp_memset(&g_pr[s], 0, sizeof g_pr[s]);
+                g_pr[s].on = 1;
+                g_pr[s].idx = i;
+                g_pr[s].obj = obj;
+                g_pr[s].t0 = now;
+                if (obj)
+                    probe_start(&g_pr[s]);
+                break;
+            }
+        }
+    }
+    aimp_memcpy(g_pool_prev, cur, sizeof cur);
+    for (int s = 0; s < PR_SLOTS; s++) {
+        Probe *p = &g_pr[s];
+        if (!p->on)
+            continue;
+        int ms = (int)((now - p->t0) * 1000 / freq);
+        if (p->sample >= (int)(sizeof k_pr_ms / sizeof k_pr_ms[0]) || !cur[p->idx]) {
+            log_printf("THROW sonda: entrada %u terminada a los %d ms (%s)", p->idx, ms, cur[p->idx] ? "fin de la sonda" : "el pool la liberó");
+            p->on = 0;
+            continue;
+        }
+        if (ms < k_pr_ms[p->sample])
+            continue;
+        p->sample++;
+        int shown = 0;
+        for (uint32_t k = 0; k < p->ncand; k++) {
+            PCand *c = &p->c[k];
+            float v[3];
+            if (!mem_read(c->node + c->off, v, 12))
+                continue;
+            float dx = v[0] - c->last[0], dy = v[1] - c->last[1], dz = v[2] - c->last[2];
+            if (dx * dx + dy * dy + dz * dz < 0.0001f)
+                continue;
+            aimp_memcpy(c->last, v, 12);
+            if (shown++ < 24) {
+                uint32_t id = 0, ty = 0, vt = 0;
+                mem_u32(c->node, &vt);
+                mem_u32(c->node + OUT_ID, &id);
+                mem_u32(c->node + OUT_TYPE, &ty);
+                log_printf("THROW sonda %u t=%d ms: nodo 0x%08x (vt rva 0x%x, id %08x, tipo %08x) +0x%x = (%.3f, %.3f, %.3f) [al inicio (%.3f, %.3f, %.3f)]",
+                           p->idx, ms, c->node, rva(vt), id, ty, c->off, (double)v[0], (double)v[1], (double)v[2], (double)c->first[0],
+                           (double)c->first[1], (double)c->first[2]);
+            }
+        }
+        if (shown > 24)
+            log_printf("THROW sonda %u t=%d ms: %d candidatos más se movieron", p->idx, ms, shown - 24);
+    }
+}
+
 void throw_frame(int64_t now, int64_t freq, uint32_t level)
 {
-    (void)now;
-    (void)freq;
     g_level = level;
     if (!g_cs_ok)
         return;
+    if (g_probe)
+        probe_frame(now, freq);
     Item loc[ECHO_MAX];
     int nl;
     EnterCriticalSection(&g_cs);
