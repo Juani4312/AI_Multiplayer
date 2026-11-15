@@ -15,4 +15,7 @@ uint32_t ghost_avatar(void);
 /* 1 si el avatar está activado (AIMP_GHOST > 0), aunque todavía no haya aparecido. */
 int ghost_enabled(void);
 
+/* Filtro de SwitchCommand de AIMP_GHOST_WALK (lo registra ghost_install en ctrl.c). 0 = bloquear. */
+int ghost_switch_filter(uint32_t ctrl, uint32_t cmd);
+
 #endif

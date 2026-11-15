@@ -96,7 +96,7 @@ set_target_properties(test_net PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINAR
 
 # test_ghost: fase 4 (ghost.c) contra stubs con los prólogos y el `ret N` reales del spawn
 # de autoridad y del teleport (prueba las convenciones de llamada).
-add_executable(test_ghost test/test_ghost.c src/ghost.c src/crash.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_ghost test/test_ghost.c src/ghost.c src/ctrl.c src/crash.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_ghost PRIVATE src)
 target_compile_options(test_ghost PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_ghost PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
@@ -117,14 +117,14 @@ set_target_properties(test_autopad PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_B
 
 # test_sync: fase 5 (sync.c) contra stubs con los prólogos reales del productor del "usar",
 # sus dos handlers y el wrapper de encolado A; la red es real (127.0.0.1).
-add_executable(test_sync test/test_sync.c src/sync.c src/throw.c src/ghost.c src/pins.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_sync test/test_sync.c src/sync.c src/throw.c src/ghost.c src/ctrl.c src/pins.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_sync PRIVATE src)
 target_compile_options(test_sync PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_sync PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 # test_throw: objetos arrojados (throw.c, hallazgo 17) contra stubs con el prólogo SEH y los
 # `ret 0x14` / `ret 0xC` reales de FUN_007b5050 (tirar) y FUN_007b5190 (colocar); red real.
-add_executable(test_throw test/test_throw.c src/throw.c src/sync.c src/ghost.c src/pins.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_throw test/test_throw.c src/throw.c src/sync.c src/ghost.c src/ctrl.c src/pins.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_throw PRIVATE src)
 target_compile_options(test_throw PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_throw PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
@@ -138,7 +138,7 @@ set_target_properties(test_ctrl PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINA
 
 # test_walk: AIMP_GHOST_WALK (ghost.c, fase 4b) contra stubs con los prólogos y el `ret 0x14` reales de
 # FUN_0067e980 (MOVE_TOWARDS) y FUN_006797a0 (actualizar destino), más los del spawn y el teleport.
-add_executable(test_walk test/test_walk.c src/ghost.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_walk test/test_walk.c src/ghost.c src/ctrl.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_walk PRIVATE src)
 target_compile_options(test_walk PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_walk PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
