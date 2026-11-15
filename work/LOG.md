@@ -142,3 +142,5 @@
 - 03:25 AIMP_GHOST_WALK (fase 4b): MOVE_TOWARDS (FUN_0067e980/FUN_006797a0) sobre Character+0x3820 para que el avatar camine; test_walk. Tests OK. Falta corrida 21.
 - 03:06 Corrida 21 (local): AIMP_GHOST=3;AIMP_GHOST_WALK=1. Índice de pines completo (92897). El NPC caminó hacia el usuario con animación, pero su IA lo hizo huir. Bug: el comando en ejecución está en ctrl+0 (solo miraba +4).
 - 03:30 Arreglos: "es mío" en +0/+4, filtro de SwitchCommand que bloquea la IA del avatar (cancela con vt+0x24), objetivo local 1,2 m detrás. Tests OK. Mod desinstalado.
+- 03:15 Corrida 22 (local): caminata con bloqueo de la IA. Raro: teletransportes que no se pegan (la locomoción lo devuelve), el jugador chocaba con el NPC. El usuario pidió dejar el mod instalado: queda en pasivo (AIMP_GHOST=0).
+- 03:40 Caminata como máquina de estados (ubicar, esperar, caminar, cancelar, reubicar; sin teletransportes mientras camina; objetivo 2,5 m detrás). Tests OK.
