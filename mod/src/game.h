@@ -278,7 +278,8 @@ static const uint8_t AIMP_SWITCH_COMMAND_PROLOGUE[9] __attribute__((unused)) = {
 #define MOVE_PARAMS_F18           0x18
 /* Árbol de comportamiento del civil (DATA/BEHAVIOR/NPC_INNOCENT_BEHAVE.XML): los comandos de script solo se
  * ejecutan en la rama ConditionHasMotivation(CINEMATIC_MOTIVATION) -> ConditionHasScript -> ActionScript.
- * Evaluación de ConditionHasMotivation: FUN_006d3630 thiscall(nodo, agente) -> bool, ret 4; nodo+0x14 = tipo
+ * Evaluación de ConditionHasMotivation: FUN_006d3630 thiscall(nodo, agente, x) -> bool, **ret 8** (x no se usa;
+ * corrida 25: declarado con ret 4 hizo caer el juego); nodo+0x14 = tipo
  * (CINEMATIC = 1, FUN_006c9370); lee [agente+0x31EC]+0x1B+tipo. ConditionHasScript (FUN_006eaa80): agente+0x3570
  * o +0x3574 no nulos. Prólogo: 8B 44 24 04 mov eax,[esp+4] | 8B 80 EC 31 00 00 mov eax,[eax+0x31EC] (10 bytes,
  * sin direccionamiento relativo; sigue test/jz rel32). */

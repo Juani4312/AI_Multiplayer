@@ -58,7 +58,9 @@ typedef uint32_t(__attribute__((fastcall)) * SpawnCharFn)(void *self, void *edx,
 typedef void(__attribute__((fastcall)) * TeleportFn)(void *self, void *edx, const float *pos, float yaw, uint32_t p3);
 typedef void(__attribute__((fastcall)) * MoveCmdFn)(void *ctrl, void *edx, const uint8_t *a, const uint8_t *b,
                                                     const float *target, const uint8_t *params, uint32_t never_succeed);
-typedef uint32_t(__attribute__((fastcall)) * HasMotivationFn)(void *node, void *edx, void *agent);
+/* FUN_006d3630 termina con `ret 8` (dos argumentos; el segundo no se usa). Corrida 25: declarado con uno, el stack
+ * quedaba corrido y el juego saltaba a 0x4. */
+typedef uint32_t(__attribute__((fastcall)) * HasMotivationFn)(void *node, void *edx, void *agent, uint32_t arg2);
 
 enum { G_OFF, G_WAIT_PLAYER, G_DELAY, G_NPC, G_FIND, G_ACTIVE, G_DONE };
 
@@ -196,7 +198,8 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static uint32_t det
  * así el árbol entra en la rama de los comandos de script (ConditionHasScript -> ActionScript) y ejecuta el
  * MOVE_TOWARDS del mod en vez de sus propias ramas (huir, acercarse al jugador). El agente se identifica por
  * rango: está dentro del Character del avatar (los Character ocupan CHR_STRIDE bytes). */
-__attribute__((fastcall, force_align_arg_pointer, noinline)) static uint32_t det_has_motivation(void *node, void *edx, void *agent)
+__attribute__((fastcall, force_align_arg_pointer, noinline)) static uint32_t det_has_motivation(void *node, void *edx, void *agent,
+                                                                                            uint32_t arg2)
 {
     uint32_t chr = g_walk_chr, a = (uint32_t)(uintptr_t)agent, type = 0;
     if (chr && a >= chr && a - chr < CHR_STRIDE && node && mem_u32((uintptr_t)node + BTNODE_MOTIVATION_TYPE, &type) &&
@@ -207,7 +210,7 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static uint32_t det
                        a - chr);
         return 1;
     }
-    return g_motiv_orig(node, edx, agent);
+    return g_motiv_orig(node, edx, agent, arg2);
 }
 
 int ghost_install(void)

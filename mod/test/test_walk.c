@@ -189,11 +189,12 @@ static void build_stubs(uint8_t *img)
     emit_call(&p, (void *)fake_move_start);
     emit(&p, "\x83\xC4\x18\x5E\xC2\x14\x00", 7); /* add esp,0x18; pop esi; ret 0x14 */
 
-    /* FUN_006d3630 (ConditionHasMotivation): mov eax,[esp+4]; mov eax,[eax+0x31EC] | xor eax,eax; ret 4 (falso) */
+    /* FUN_006d3630 (ConditionHasMotivation): mov eax,[esp+4]; mov eax,[eax+0x31EC] | xor eax,eax; ret 8 (falso;
+     * el `ret 8` real: dos argumentos) */
     p = img + AIMP_RVA_HAS_MOTIVATION;
     VirtualProtect(p, 0x100, PAGE_EXECUTE_READWRITE, &old);
     emit(&p, AIMP_HAS_MOTIVATION_PROLOGUE, sizeof AIMP_HAS_MOTIVATION_PROLOGUE);
-    emit(&p, "\x31\xC0\xC2\x04\x00", 5);
+    emit(&p, "\x31\xC0\xC2\x08\x00", 5);
 
     /* SwitchCommand: sub esp,0x100; push esi; mov esi,ecx | ret 4 */
     p = img + AIMP_RVA_SWITCH_COMMAND;
@@ -361,16 +362,16 @@ int main(void)
 
     printf("[motivación cinemática: verdadera solo para el agente del avatar]\n");
     {
-        typedef uint32_t(__attribute__((fastcall)) * MotivFn)(void *node, void *edx, void *agent);
+        typedef uint32_t(__attribute__((fastcall)) * MotivFn)(void *node, void *edx, void *agent, uint32_t x);
         MotivFn motiv = (MotivFn)(void *)(img + AIMP_RVA_HAS_MOTIVATION);
         uint8_t *cine = obj(0x40), *follow = obj(0x40);
         put32(cine, BTNODE_MOTIVATION_TYPE, MOTIVATION_CINEMATIC);
         put32(follow, BTNODE_MOTIVATION_TYPE, 5);
         uint32_t r1, r2, r3;
         __asm__ volatile("mov %%esp, %0" : "=r"(esp0));
-        r1 = motiv(cine, NULL, npc + 0x2B0);
-        r2 = motiv(cine, NULL, local + 0x2B0);
-        r3 = motiv(follow, NULL, npc + 0x2B0);
+        r1 = motiv(cine, NULL, npc + 0x2B0, 7);
+        r2 = motiv(cine, NULL, local + 0x2B0, 7);
+        r3 = motiv(follow, NULL, npc + 0x2B0, 7);
         __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
         CHECK(esp0 == esp1 && (r1 & 0xFF) == 1 && (r2 & 0xFF) == 0 && (r3 & 0xFF) == 0,
               "avatar + CINEMATIC: %u; jugador + CINEMATIC: %u; avatar + FOLLOW: %u (stack balanceado)", r1 & 0xFF, r2 & 0xFF,
