@@ -13,6 +13,8 @@ int throw_install(AimpNet *net);
 int throw_sync_enabled(void);
 /* Evento recibido (sync_frame, thread principal). */
 void throw_remote_event(const AimpEvt *e, uint32_t level);
+/* AIMP_EVT_THROW_REST recibido: si la réplica cayó lejos, se borra y se crea quieta donde cayó la del otro. */
+void throw_rest_event(const AimpEvt *e, uint32_t level);
 /* Por frame (thread principal): ecos pendientes de AIMP_THROW_ECHO. */
 void throw_frame(int64_t now, int64_t freq, uint32_t level);
 
@@ -30,6 +32,14 @@ typedef struct {
     uint32_t t;    /* time_left (def+0x70), bits tal cual */
     char name[THROW_NAME_MAX]; /* plantilla ("Thrown\Flare"), terminada en 0 */
 } ThrowEvt;
+/* Payload de AIMP_EVT_THROW_REST (2026-11-15): el objeto que tiró el emisor se quedó quieto ahí.
+ * id = ThrowEvt.pad[0] del lanzamiento (contador del emisor, 1..255). */
+typedef struct {
+    uint8_t id;
+    uint8_t pad[3];
+    float pos[3];
+    uint32_t ms; /* desde el lanzamiento */
+} ThrowRest;
 #pragma pack(pop)
 
 #endif

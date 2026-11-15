@@ -162,3 +162,4 @@
 - 17:30 Corridas 39-45: segunda THE_PLAYER por el spawn de autoridad (sin crash) pero invisible (solo modelos FP); avatar NPC con velocidad del otro y paso por velocidad (corrida 45 OK). dist actualizada, mod pasivo.
 - 18:30 Corridas 46-51: títere con posición exacta por frame (SetTransform, 0,00 m) y animación por velocidad; agachado detectado pero el IDLE con postura no agacha al NPC. Mod pasivo, dist actualizada.
 - 19:55 Corrida 52 (dos máquinas): títere OK según el usuario ("responsivo y exacto"). Corrida 53 (local): IDLE con posturas 0-5 no agacha al civil (descartado); prueba de escribir la posición del arrojable no concluyente. ProjectileMotion es analítico en t: la diferencia nace en el choque. Mod pasivo.
+- 20:48 Corridas 54-64 (locales): arrojables: la réplica se borra (FUN_007a10f0) y se crea quieta donde cayó la del otro (AIMP_EVT_THROW_REST); posición por composite con id y parábola (3 de 4). dist 907e36b5. Mod para la prueba con la laptop.

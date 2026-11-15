@@ -223,6 +223,14 @@ Requisitos: los del paso 6, con `git pull` (hay DLL nueva en `mod/dist`, protoco
    - cualquier `EXCEPCIÓN`, con sus 3 líneas.
    - Y lo que vio el usuario: ¿camina con animación? ¿se traba, atraviesa paredes o cae del piso?
 
+### 8b. Dónde cae el arrojable (2026-11-15, DLL `907e36b5…`)
+
+Misma instalación que el paso 8 (con `git pull`). Novedad: cuando la bengala del que tira se asienta, el mod le avisa al otro dónde quedó; si la réplica cayó a más de 15 cm, se borra y aparece quieta en ese punto. Se ve el vuelo igual que antes y, al final, un "salto" corto de la réplica.
+
+Qué mirar: tirar bengalas desde cada máquina y comparar dónde quedan en las dos pantallas. En el log buscar `THROW fijo`:
+- del lado que tiró: `el propio se asentó en (...) ... mandado` (si sale `no se pudo leer la posición`, no se manda nada y la réplica queda donde cayó);
+- del lado que recibe: `la réplica cayó a N m ... se borra y se pone en (...)` o `se deja`.
+
 ## Problemas conocidos
 
 - **No aparece `aimp.log`:** el proxy no cargó. Revisar KnownDLLs, que `winmm.dll` esté al lado de `AI.exe` (no en una subcarpeta) y que el juego haya llegado a arrancar.

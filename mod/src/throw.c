@@ -62,6 +62,145 @@ static volatile LONG g_n_lost;
 
 static char g_names[NAMES_MAX][THROW_NAME_MAX];
 
+/* ---- Dónde cae (AIMP_THROW_FIX, 1 por defecto con AIMP_SYNC_THROW; pedido del usuario 2026-11-15) ----
+ * La parábola sale igual en las dos máquinas (ProjectileMotion es analítico en t), pero el choque y los rebotes
+ * (Havok) no. El que tira sigue su objeto (game.h: TemporaryEntity+0x80 -> +0xC -> +0x24) y, cuando queda quieto
+ * 0,5 s, manda AIMP_EVT_THROW_REST. El otro, si su réplica cayó a más de AIMP_THROW_FIX_CM (15) de ahí, la libera
+ * como lo hace el juego (FUN_007a10f0) y tira una quieta en ese punto: se ve el vuelo de referencia y después
+ * queda donde cayó la del otro. */
+typedef void(__attribute__((fastcall)) * ReleaseFn)(void *pool, void *edx, uint32_t lo, uint32_t hi);
+typedef void *(__attribute__((fastcall)) * IdsFn)(void *obj, void *edx, uint32_t *out);
+static ReleaseFn g_release;
+static IdsFn g_ids;
+static int g_fix, g_fix_cm = 15;
+static uint8_t g_next_id;
+#define TRK_MAX 16
+typedef struct {
+    int on;
+    uint8_t id;
+    uint32_t idx, obj, ent, off;
+    DWORD t0, still;
+    float last[3];
+    ThrowEvt ev;
+} Track;
+static Track g_trk_local[TRK_MAX], g_trk_rep[TRK_MAX];
+
+static uint32_t pool_ptr(void) { return *(volatile uint32_t *)(g_aimp_exe + AIMP_RVA_THROW_POOL); }
+
+static int pool_free_idx(uint32_t pool)
+{
+    for (uint32_t i = 0; i < 0x80; i++) {
+        uint8_t f = 1;
+        if (mem_u8(pool + 4 + i * 12, &f) && !f)
+            return (int)i;
+    }
+    return -1;
+}
+
+/* objeto (TemporaryEntity) de una entrada ocupada del pool; 0 si está libre */
+static uint32_t entry_obj(uint32_t pool, uint32_t idx)
+{
+    uint8_t f = 0;
+    uint32_t hh = 0, obj = 0;
+    if (!pool || idx >= 0x80 || !mem_u8(pool + 4 + idx * 12, &f) || !f || !mem_u32(pool + 4 + idx * 12 + 4, &hh) || !hh ||
+        !mem_u32(hh + HANDLE_OBJ, &obj))
+        return 0;
+    return obj;
+}
+
+/* Entidad de posición del arrojable (2026-11-15, corridas 54-59): el CompositeInstance del arrojable (vt 0xFE1D2C) con el
+ * mismo id (+0xC) que el TemporaryEntity del pool; su +0xA4 sigue la posición (corrida 38). Se busca recorriendo
+ * punteros desde el objeto (hasta 5 niveles, 2048 nodos) y se acepta solo si coinciden la vtable y el id. El camino
+ * "obj+0x80 -> +0xC" de la corrida 54 resultó casual (memoria vecina; +0x80 no es puntero en la run59). */
+#define COMP_POS 0xA4u
+/* offset de un triplete a menos de 1 m de p dentro de los primeros 0x600 bytes del composite; 0 si no hay */
+static uint32_t comp_pos_off(uint32_t comp, const float *p)
+{
+    static uint8_t buf[0x600];
+    if (!mem_read(comp, buf, sizeof buf))
+        return 0;
+    for (uint32_t off = 0x20; off + 12 <= sizeof buf; off += 4) {
+        float v[3];
+        aimp_memcpy(v, buf + off, 12);
+        float dx = v[0] - p[0], dy = v[1] - p[1], dz = v[2] - p[2];
+        if (dx * dx + dy * dy + dz * dz < 1.0f)
+            return off;
+    }
+    return 0;
+}
+
+#define FP_NODES 2048
+#define FP_HASH 4096
+static uint32_t find_pos_ent(uint32_t obj, const float *start, uint32_t *poff)
+{
+    static uint32_t q[FP_NODES], hs[FP_HASH];
+    static uint8_t qd[FP_NODES];
+    uint32_t id = 0, vtc = (uint32_t)g_aimp_exe + AIMP_RVA_VT_COMPOSITE, nq = 0, head = 0;
+    if (!obj || !mem_u32(obj + OUT_ID, &id) || !id)
+        return 0;
+    aimp_memset(hs, 0, sizeof hs);
+    q[nq] = obj;
+    qd[nq++] = 0;
+    hs[(obj >> 2) & (FP_HASH - 1)] = obj;
+    while (head < nq) {
+        uint32_t o = q[head], d = qd[head++], w[64];
+        if (!mem_read(o, w, sizeof w)) /* una sola lectura por nodo: vtable en w[0], id en w[3] (+0xC) */
+            continue;
+        if (o != obj && w[0] == vtc && w[OUT_ID / 4] == id && (*poff = comp_pos_off(o, start)) != 0)
+            return o;
+        if (d >= 5)
+            continue;
+        for (int i = 1; i < 64 && nq < FP_NODES; i++) {
+            uint32_t v = w[i];
+            if (v < 0x10000 || (v & 3) || v >= 0x7FFF0000u || (v >= (uint32_t)g_aimp_exe && v < (uint32_t)g_aimp_exe + AIMP_EXPECT_SIZEOFIMAGE))
+                continue;
+            uint32_t h = (v >> 2) & (FP_HASH - 1);
+            int dup = 0;
+            while (hs[h]) {
+                if (hs[h] == v) {
+                    dup = 1;
+                    break;
+                }
+                h = (h + 1) & (FP_HASH - 1);
+            }
+            if (dup)
+                continue;
+            hs[h] = v;
+            q[nq] = v;
+            qd[nq++] = (uint8_t)(d + 1);
+        }
+    }
+    return 0;
+}
+
+static int ent_pos(const Track *k, float out[3])
+{
+    uint32_t vt = 0;
+    return k->ent && mem_u32(k->ent, &vt) && vt == (uint32_t)g_aimp_exe + AIMP_RVA_VT_COMPOSITE && mem_read(k->ent + k->off, out, 12);
+}
+
+static Track *trk_add(Track *arr, uint8_t id, uint32_t idx, uint32_t obj, const ThrowEvt *ev)
+{
+    Track *t = &arr[0];
+    for (int i = 0; i < TRK_MAX; i++) {
+        if (!arr[i].on) {
+            t = &arr[i];
+            break;
+        }
+        if (arr[i].t0 - t->t0 > 0x80000000u) /* el más viejo */
+            t = &arr[i];
+    }
+    aimp_memset(t, 0, sizeof *t);
+    t->on = 1;
+    t->id = id;
+    t->idx = idx;
+    t->obj = obj;
+    t->t0 = GetTickCount();
+    if (ev)
+        t->ev = *ev;
+    return t;
+}
+
 static uint32_t rva(uint32_t p) { return p >= (uint32_t)g_aimp_exe ? p - (uint32_t)g_aimp_exe : p; }
 
 static float bits_f(uint32_t u)
@@ -146,13 +285,24 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_spa
     ThrowEvt e;
     aimp_memset(&e, 0, sizeof e);
     e.op = THROW_OP_THROW;
+    int idx = g_fix ? pool_free_idx((uint32_t)(uintptr_t)pool) : -1;
     if (m && vel && name && mem_read((uintptr_t)m, e.m, sizeof e.m) && mem_read((uintptr_t)vel, e.vel, sizeof e.vel) &&
         mem_cstr((uintptr_t)name, e.name, sizeof e.name)) {
         e.a3 = a3;
         e.t = t;
+        if (g_fix) {
+            if (!++g_next_id)
+                g_next_id = 1;
+            e.pad[0] = g_next_id;
+        }
         local_event(&e, rva((uint32_t)(uintptr_t)__builtin_return_address(0)));
     }
     g_spawn_orig(pool, edx, m, vel, a3, name, t);
+    if (g_fix && idx >= 0 && e.pad[0]) {
+        uint32_t obj = entry_obj((uint32_t)(uintptr_t)pool, (uint32_t)idx);
+        if (obj)
+            trk_add(g_trk_local, e.pad[0], (uint32_t)idx, obj, &e);
+    }
 }
 
 __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_place(void *pool, void *edx, const float *m,
@@ -180,6 +330,21 @@ int throw_install(AimpNet *net)
     g_fix_test = aimp_env_int(L"AIMP_THROW_FIX_TEST", 0);
     if (!g_trace && !g_sync && g_echo_ms <= 0 && !g_probe)
         return 0;
+    g_fix = g_sync ? aimp_env_int(L"AIMP_THROW_FIX", 1) : 0;
+    g_fix_cm = aimp_env_int(L"AIMP_THROW_FIX_CM", 15);
+    if (g_fix) {
+        uint8_t pr[sizeof AIMP_ENT_IDS_PROLOGUE];
+        uintptr_t pi = g_aimp_exe + AIMP_RVA_ENT_IDS, pr2 = g_aimp_exe + AIMP_RVA_THROW_RELEASE;
+        uint8_t rp[sizeof AIMP_THROW_PROLOGUE];
+        if (mem_read(pi, pr, sizeof pr) && !aimp_memcmp(pr, AIMP_ENT_IDS_PROLOGUE, sizeof pr) && mem_read(pr2, rp, sizeof rp) &&
+            !aimp_memcmp(rp, AIMP_THROW_PROLOGUE, sizeof rp)) {
+            g_ids = (IdsFn)(void *)pi;
+            g_release = (ReleaseFn)(void *)pr2;
+        } else {
+            log_printf("THROW: el prólogo de FUN_008c3360 o FUN_007a10f0 no coincide; sin corrección de dónde cae");
+            g_fix = 0;
+        }
+    }
     g_net = net;
     if (!g_cs_ok) {
         InitializeCriticalSection(&g_cs);
@@ -194,9 +359,9 @@ int throw_install(AimpNet *net)
         g_sync = 0;
         g_echo_ms = 0;
     }
-    log_printf("THROW: AIMP_TRACE_THROW=%d AIMP_SYNC_THROW=%d%s AIMP_THROW_ECHO=%d ms (%d cm) AIMP_THROW_PROBE=%d; hooks %s/%s", g_trace,
-               g_sync, g_sync && !(net && net->mode) ? " (sin red: solo se loguea)" : "", g_echo_ms, g_echo_cm, g_probe,
-               ok ? "ok" : "NO", ok2 ? "ok" : "NO");
+    log_printf("THROW: AIMP_TRACE_THROW=%d AIMP_SYNC_THROW=%d%s AIMP_THROW_ECHO=%d ms (%d cm) AIMP_THROW_PROBE=%d AIMP_THROW_FIX=%d (%d cm); hooks %s/%s",
+               g_trace, g_sync, g_sync && !(net && net->mode) ? " (sin red: solo se loguea)" : "", g_echo_ms, g_echo_cm, g_probe,
+               g_fix, g_fix_cm, ok ? "ok" : "NO", ok2 ? "ok" : "NO");
     return ok && ok2;
 }
 
@@ -249,10 +414,16 @@ static int apply(const ThrowEvt *t, const char *who)
     s_m[15] = 9.81f;
     aimp_memcpy(s_v, t->vel, sizeof t->vel);
     s_v[3] = 9.81f;
+    int idx = pool_free_idx(pool);
     if (t->op == THROW_OP_THROW)
         g_spawn_orig((void *)(uintptr_t)pool, NULL, s_m, s_v, t->a3, nm, t->t);
     else
         g_place_orig((void *)(uintptr_t)pool, NULL, s_m, nm, t->t);
+    if (g_fix && t->op == THROW_OP_THROW && t->pad[0] && idx >= 0) {
+        uint32_t obj = entry_obj(pool, (uint32_t)idx);
+        if (obj)
+            trk_add(g_trk_rep, t->pad[0], (uint32_t)idx, obj, t);
+    }
     return 1;
 }
 
@@ -273,6 +444,173 @@ void throw_remote_event(const AimpEvt *e, uint32_t level)
 }
 
 
+/* Por frame: los arrojables propios; cuando uno queda quieto 0,5 s, se manda dónde. */
+/* diagnóstico: offsets del composite con tripletes a menos de 4 m del lanzamiento */
+static void comp_diag(const Track *k, const char *when)
+{
+    static uint8_t buf[0x600];
+    char out[600];
+    int n = 0, c = 0;
+    if (!mem_read(k->ent, buf, sizeof buf))
+        return;
+    for (uint32_t off = 0; off + 12 <= sizeof buf && c < 24; off += 4) {
+        float v[3];
+        aimp_memcpy(v, buf + off, 12);
+        float dx = v[0] - k->ev.m[3], dy = v[1] - k->ev.m[7], dz = v[2] - k->ev.m[11];
+        if (!(dx * dx + dy * dy + dz * dz < 16.0f))
+            continue;
+        n += aimp_snprintf(out + n, sizeof out - n, " +0x%x(%.2f,%.2f,%.2f)", off, (double)v[0], (double)v[1], (double)v[2]);
+        c++;
+    }
+    log_printf("THROW fijo %u diag %s: composite 0x%08x:%s", k->id, when, k->ent, c ? out : " nada cerca");
+}
+
+static void track_find_ents(Track *arr, const char *who)
+{
+    uint32_t pool = pool_ptr();
+    for (int i = 0; i < TRK_MAX; i++) {
+        Track *k = &arr[i];
+        DWORD age = GetTickCount() - k->t0;
+        /* se busca cada 100 ms durante el primer segundo, contra la parábola prevista (ProjectileMotion es analítico) */
+        if (!k->on || k->ent || age > 1000 || (k->still && age - k->still < 100) || entry_obj(pool, k->idx) != k->obj)
+            continue;
+        k->still = age ? age : 1; /* acá "still" guarda cuándo se buscó; se pone en 0 al encontrarlo */
+        float t = (float)age / 1000.0f;
+        float st[3] = { k->ev.m[3] + k->ev.vel[0] * t, k->ev.m[7] + k->ev.vel[1] * t - 4.905f * t * t, k->ev.m[11] + k->ev.vel[2] * t };
+        k->ent = find_pos_ent(k->obj, st, &k->off);
+        if (k->ent) {
+            k->still = 0;
+            comp_diag(k, "al encontrarlo");
+        }
+        if (k->ent)
+            log_printf("THROW fijo %u (%s): posición en el composite 0x%08x +0x%x, a los %lu ms", k->id, who, k->ent, k->off,
+                       (unsigned long)(GetTickCount() - k->t0));
+    }
+}
+
+static void track_local_frame(void)
+{
+    uint32_t pool = pool_ptr();
+    DWORD ms = GetTickCount();
+    track_find_ents(g_trk_local, "propio");
+    track_find_ents(g_trk_rep, "réplica");
+    for (int i = 0; i < TRK_MAX; i++) {
+        Track *k = &g_trk_local[i];
+        if (!k->on)
+            continue;
+        DWORD age = ms - k->t0;
+        float p[3];
+        if (entry_obj(pool, k->idx) != k->obj) {
+            log_printf("THROW fijo %u: el objeto propio desapareció antes de asentarse (%lu ms)", k->id, (unsigned long)age);
+            k->on = 0;
+            continue;
+        }
+        if (!ent_pos(k, p)) {
+            if (age > 15000) {
+                log_printf("THROW fijo %u: no se pudo leer la posición del objeto propio (vtable distinta); no se manda", k->id);
+                k->on = 0;
+            }
+            continue;
+        }
+        float dx = p[0] - k->last[0], dy = p[1] - k->last[1], dz = p[2] - k->last[2];
+        aimp_memcpy(k->last, p, 12);
+        if (dx * dx + dy * dy + dz * dz > 0.0001f) {
+            k->still = 0;
+            if (age > 15000) {
+                log_printf("THROW fijo %u: sigue moviéndose a los %lu ms; no se manda", k->id, (unsigned long)age);
+                k->on = 0;
+            }
+            continue;
+        }
+        if (!k->still)
+            k->still = ms;
+        if (ms - k->still < 500 || age < 800)
+            continue;
+        ThrowRest r;
+        aimp_memset(&r, 0, sizeof r);
+        r.id = k->id;
+        aimp_memcpy(r.pos, p, 12);
+        r.ms = age;
+        int sent = g_net && g_net->mode && net_event(g_net, AIMP_EVT_THROW_REST, g_level, &r, sizeof r);
+        log_printf("THROW fijo %u: el propio se asentó en (%.2f, %.2f, %.2f) a los %lu ms; %s", k->id, (double)p[0], (double)p[1],
+                   (double)p[2], (unsigned long)age, sent ? "mandado" : "no se pudo mandar");
+        k->on = 0;
+    }
+}
+
+void throw_rest_event(const AimpEvt *e, uint32_t level)
+{
+    ThrowRest r;
+    if (!g_fix || e->size != sizeof r)
+        return;
+    aimp_memcpy(&r, e->data, sizeof r);
+    if (e->level != level)
+        return;
+    Track *k = NULL;
+    for (int i = 0; i < TRK_MAX; i++)
+        if (g_trk_rep[i].on && g_trk_rep[i].id == r.id && (!k || g_trk_rep[i].t0 - k->t0 < 0x80000000u))
+            k = &g_trk_rep[i];
+    if (!k) {
+        log_printf("THROW fijo %u: el otro dice que cayó en (%.2f, %.2f, %.2f), pero no hay réplica con ese id", r.id,
+                   (double)r.pos[0], (double)r.pos[1], (double)r.pos[2]);
+        return;
+    }
+    k->on = 0;
+    uint32_t pool = pool_ptr();
+    float p[3] = { 0, 0, 0 };
+    int have = entry_obj(pool, k->idx) == k->obj;
+    if (have && k->ent)
+        comp_diag(k, "al asentarse");
+    int hp = have && ent_pos(k, p);
+    float dx = p[0] - r.pos[0], dy = p[1] - r.pos[1], dz = p[2] - r.pos[2];
+    float d = sqrt_f(dx * dx + dy * dy + dz * dz);
+    if (hp && d * 100.0f <= (float)g_fix_cm) {
+        log_printf("THROW fijo %u: la réplica cayó a %.2f m de la del otro; se deja", r.id, (double)d);
+        return;
+    }
+    if (!have) {
+        /* ya no está (se apagó o explotó): no se crea otra */
+        log_printf("THROW fijo %u: la réplica ya no estaba; no se crea otra", r.id);
+        return;
+    }
+    uint32_t ids[2] = { 0, 0 };
+    g_ids((void *)(uintptr_t)k->obj, NULL, ids);
+    g_release((void *)(uintptr_t)pool, NULL, ids[0], ids[1]);
+    int freed = entry_obj(pool, k->idx) != k->obj;
+    /* una quieta, 5 cm arriba del punto, con el tiempo que le queda */
+    static float s_m[16] __attribute__((aligned(16)));
+    static float s_v[4] __attribute__((aligned(16)));
+    aimp_memcpy(s_m, k->ev.m, sizeof k->ev.m);
+    s_m[3] = r.pos[0];
+    s_m[7] = r.pos[1] + 0.05f;
+    s_m[11] = r.pos[2];
+    s_m[12] = s_m[13] = s_m[14] = 0.0f;
+    s_m[15] = 9.81f;
+    s_v[0] = s_v[1] = s_v[2] = 0.0f;
+    s_v[3] = 9.81f;
+    float tl = bits_f(k->ev.t) - (float)(GetTickCount() - k->t0) / 1000.0f;
+    if (tl < 1.0f)
+        tl = 1.0f;
+    uint32_t tlb;
+    aimp_memcpy(&tlb, &tl, 4);
+    char name[THROW_NAME_MAX];
+    aimp_memcpy(name, k->ev.name, sizeof name);
+    name[sizeof name - 1] = 0;
+    const char *nm = intern(name);
+    if (!freed || !nm || !local_player()) {
+        log_printf("THROW fijo %u: no se pudo reemplazar la réplica (liberada %s, plantilla %s)", r.id, freed ? "sí" : "no",
+                   nm ? "ok" : "sin lugar");
+        return;
+    }
+    g_spawn_orig((void *)(uintptr_t)pool, NULL, s_m, s_v, k->ev.a3, nm, tlb);
+    if (hp)
+        log_printf("THROW fijo %u: la réplica cayó a %.2f m de la del otro: se borra y se pone en (%.2f, %.2f, %.2f), quedan %.1f s",
+                   r.id, (double)d, (double)r.pos[0], (double)r.pos[1], (double)r.pos[2], (double)tl);
+    else
+        log_printf("THROW fijo %u: réplica sin posición legible, liberada; se pone en (%.2f, %.2f, %.2f), quedan %.1f s", r.id,
+                   (double)r.pos[0], (double)r.pos[1], (double)r.pos[2], (double)tl);
+}
+
 /* ---- AIMP_THROW_PROBE (solo mira; prueba con dos máquinas 2026-11-15: el noisemaker cayó unos cm al costado) ----
  * ProjectileMotion (FUN_0060b740) integra el vuelo con el dt del frame, así que con fps distintos la trayectoria
  * se separa y los rebotes lo amplifican. Para corregir la réplica hace falta saber dónde vive la posición del
@@ -281,9 +619,10 @@ void throw_remote_event(const AimpEvt *e, uint32_t level)
  * se mueven (entidad, tipo, offset). */
 #define PR_SLOTS 4
 #define PR_CANDS 128
-#define PR_NODES 256
+#define PR_NODES 768
 typedef struct {
     uint32_t node, off;
+    uint16_t qi, chained;
     float first[3], last[3];
 } PCand;
 typedef struct {
@@ -292,6 +631,8 @@ typedef struct {
     int64_t t0;
     uint32_t ncand;
     PCand c[PR_CANDS];
+    /* camino de cada nodo del BFS: padre y cómo se llegó (offset del puntero, o 0x8000|i = hijo i del composite) */
+    uint16_t par[PR_NODES], how[PR_NODES];
 } Probe;
 static Probe g_pr[PR_SLOTS];
 static uint8_t g_pool_prev[0x80];
@@ -304,7 +645,7 @@ static int f_ok(float f)
     return ((u >> 23) & 0xFF) != 0xFF && f > -5000.0f && f < 5000.0f && (f > 0.001f || f < -0.001f);
 }
 
-static void probe_scan_node(Probe *p, uint32_t node, const float *ref, int nref)
+static void probe_scan_node(Probe *p, uint32_t node, const float *ref, int nref, uint16_t qi)
 {
     static uint8_t buf[0x800];
     uint32_t n = sizeof buf;
@@ -327,6 +668,8 @@ static void probe_scan_node(Probe *p, uint32_t node, const float *ref, int nref)
         PCand *c = &p->c[p->ncand++];
         c->node = node;
         c->off = off;
+        c->qi = qi;
+        c->chained = 0;
         aimp_memcpy(c->first, v, 12);
         aimp_memcpy(c->last, v, 12);
     }
@@ -358,29 +701,36 @@ static void probe_start(Probe *p)
     static uint8_t qd[PR_NODES];
     uint32_t nq = 0, head = 0, ncomp = 0;
     q[nq] = p->obj;
+    p->par[nq] = 0xFFFF;
+    p->how[nq] = 0;
     qd[nq++] = 0;
     while (head < nq) {
         uint32_t o = q[head], vt = 0;
         uint8_t d = qd[head++];
-        probe_scan_node(p, o, ref, nref);
+        probe_scan_node(p, o, ref, nref, (uint16_t)(head - 1));
         if (d >= 3)
             continue;
         uint32_t kids[64], nk = 0;
+        uint16_t khow[64];
         if (mem_u32(o, &vt) && vt == (uint32_t)g_aimp_exe + AIMP_RVA_VT_COMPOSITE) {
             ncomp++;
             uint32_t arr = 0, cnt = 0, items = 0;
             if (mem_u32(o + COMP_CHILDREN, &arr) && arr && mem_u32(arr + 8, &cnt) && mem_u32(arr + 0xC, &items) && cnt <= 4096)
                 for (uint32_t i = 0; i < cnt && nk < 64; i++) {
                     uint32_t hh = 0, ch = 0;
-                    if (mem_u32(items + 4 * i, &hh) && hh && mem_u32(hh + HANDLE_OBJ, &ch) && ch)
+                    if (mem_u32(items + 4 * i, &hh) && hh && mem_u32(hh + HANDLE_OBJ, &ch) && ch) {
+                        khow[nk] = (uint16_t)(0x8000 | i);
                         kids[nk++] = ch;
+                    }
                 }
         }
         uint32_t pw[64];
         if (mem_read(o, pw, sizeof pw))
             for (int i = 1; i < 64 && nk < 64; i++)
-                if (probe_ptr(pw[i]) && pw[i] != o)
+                if (probe_ptr(pw[i]) && pw[i] != o) {
+                    khow[nk] = (uint16_t)(i * 4);
                     kids[nk++] = pw[i];
+                }
         for (uint32_t k = 0; k < nk && nq < PR_NODES; k++) {
             int dup = 0;
             for (uint32_t j = 0; j < nq && !dup; j++)
@@ -391,6 +741,8 @@ static void probe_start(Probe *p)
             if (!mem_u32(kids[k], &tmp))
                 continue;
             q[nq] = kids[k];
+            p->par[nq] = (uint16_t)(head - 1);
+            p->how[nq] = khow[k];
             qd[nq++] = (uint8_t)(d + 1);
         }
     }
@@ -451,6 +803,22 @@ static void probe_frame(int64_t now, int64_t freq)
             if (dx * dx + dy * dy + dz * dz < 0.0001f)
                 continue;
             aimp_memcpy(c->last, v, 12);
+            if (!c->chained) {
+                /* camino desde el objeto del pool: [+off] = puntero en off, h<i> = hijo i del composite */
+                char buf[160];
+                int n = 0;
+                uint16_t chain[8], nc = 0;
+                for (uint16_t j = c->qi; j != 0xFFFF && nc < 8; j = p->par[j])
+                    chain[nc++] = j;
+                n += aimp_snprintf(buf + n, sizeof buf - n, "obj");
+                for (int j = nc - 2; j >= 0 && n < (int)sizeof buf - 16; j--) {
+                    uint16_t hw = p->how[chain[j]];
+                    n += hw & 0x8000 ? aimp_snprintf(buf + n, sizeof buf - n, " h%u", hw & 0x7FFF)
+                                     : aimp_snprintf(buf + n, sizeof buf - n, " [+0x%x]", hw);
+                }
+                log_printf("THROW sonda %u camino: %s +0x%x (nodo 0x%08x)", p->idx, buf, c->off, c->node);
+                c->chained = 1;
+            }
             if (shown++ < 24) {
                 uint32_t id = 0, ty = 0, vt = 0;
                 mem_u32(c->node, &vt);
@@ -503,6 +871,8 @@ void throw_frame(int64_t now, int64_t freq, uint32_t level)
     LeaveCriticalSection(&g_cs);
     for (int i = 0; i < nl; i++)
         process_local(&loc[i]);
+    if (g_fix)
+        track_local_frame();
     LONG lost = InterlockedExchange(&g_n_lost, 0);
     if (lost)
         log_printf("THROW: %ld eventos locales descartados en un frame (cola llena)", (long)lost);

@@ -43,14 +43,21 @@ def pack(seq, level, pos, yaw, flags=FLAG_PLAYER, kind=STATE, cam=None):
 
 
 EVT_FMT = "<IBBHIIHHI"  # cabecera de AimpEvt (mod/src/net.h), 24 bytes + 112 de datos
-EVENT, EVT_THROW, THROW_OP_THROW = 4, 3, 1
+EVENT, EVT_THROW, THROW_OP_THROW, EVT_THROW_REST = 4, 3, 1, 4
 
 
-def pack_throw(eseq, level, pos, vel, name, time_left):
+def pack_rest(eseq, level, tid, pos):
+    """AIMP_EVT_THROW_REST: ThrowRest de mod/src/throw.h (id, 3 de relleno, pos[3], ms), rellenado a 112 bytes."""
+    data = struct.pack("<B3x3fI", tid, *pos, 0).ljust(112, b"\0")
+    return struct.pack(EVT_FMT, MAGIC, VERSION, EVENT, 0, eseq, int(time.monotonic() * 1000) & 0xFFFFFFFF,
+                       EVT_THROW_REST, 20, level) + data
+
+
+def pack_throw(eseq, level, pos, vel, name, time_left, tid=0):
     m = [1.0, 0.0, 0.0, pos[0], 0.0, 1.0, 0.0, pos[1], 0.0, 0.0, 1.0, pos[2]]
     a3 = struct.unpack("<I", struct.pack("<f", 15.0))[0]
     tl = struct.unpack("<I", struct.pack("<f", time_left))[0]
-    data = struct.pack("<B3x12f3fII40s", THROW_OP_THROW, *m, *vel, a3, tl, name.encode()[:39])
+    data = struct.pack("<BB2x12f3fII40s", THROW_OP_THROW, tid, *m, *vel, a3, tl, name.encode()[:39])
     assert len(data) == 112, len(data)
     return struct.pack(EVT_FMT, MAGIC, VERSION, EVENT, 0, eseq, int(time.monotonic() * 1000) & 0xFFFFFFFF,
                        EVT_THROW, 112, level) + data
@@ -68,6 +75,9 @@ def main():
     ap.add_argument("--replay", type=float, default=0, help="segundos de retraso para repetir el recorrido del juego")
     ap.add_argument("--offset", default="0,0,0", help="corrimiento dx,dy,dz de las posiciones repetidas")
     ap.add_argument("--throw", action="append", default=[], help="T:plantilla:dx,dy,dz:vx,vy,vz[:time_left]")
+    ap.add_argument("--rest", action="append", default=[],
+                    help="T:id:dx,dy,dz -> AIMP_EVT_THROW_REST del lanzamiento id (1 = el primer --throw) en la "
+                         "posición del jugador del juego + (dx, dy, dz)")
     a = ap.parse_args()
     # SIGTERM (y SIGINT, que en segundo plano viene ignorado) terminan ordenado: BYE + resumen.
     def stop(*_):
@@ -94,6 +104,10 @@ def main():
         p = spec.split(":")
         throws.append([float(p[0]), p[1], [float(v) for v in p[2].split(",")], [float(v) for v in p[3].split(",")],
                        float(p[4]) if len(p) > 4 else 0.0, False])
+    rests = []
+    for spec in a.rest:
+        p = spec.split(":")
+        rests.append([float(p[0]), int(p[1]), [float(v) for v in p[2].split(",")], False])
     t_player, eseq = None, 0
     try:
         while not a.seconds or time.monotonic() - t0 < a.seconds:
@@ -148,11 +162,22 @@ def main():
                 eseq += 1
                 gp = last[8:11]
                 pos = (gp[0] + th[2][0], gp[1] + th[2][1], gp[2] + th[2][2])
-                pkt = pack_throw(eseq, last[6], pos, th[3], th[1], th[4])
+                pkt = pack_throw(eseq, last[6], pos, th[3], th[1], th[4], throws.index(th) + 1)
                 for _ in range(3):
                     s.sendto(pkt, peer)
                 print(f"[{now - t0:6.1f}s] THROW {eseq}: {th[1]} desde ({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f}) "
                       f"vel {th[3]} nivel {last[6]}")
+            for r in rests:
+                if r[3] or t_player is None or not peer or now - t_player < r[0]:
+                    continue
+                r[3] = True
+                eseq += 1
+                gp = last[8:11]
+                pos = (gp[0] + r[2][0], gp[1] + r[2][1], gp[2] + r[2][2])
+                pkt = pack_rest(eseq, last[6], r[1], pos)
+                for _ in range(3):
+                    s.sendto(pkt, peer)
+                print(f"[{now - t0:6.1f}s] REST {eseq}: lanzamiento {r[1]} asentado en ({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f})")
             if now - last_print >= 1.0:
                 if last:
                     flags, lvl, sim = last[3], last[6], last[7]
