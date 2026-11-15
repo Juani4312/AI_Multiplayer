@@ -657,3 +657,22 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   - filtro de `SwitchCommand` (`ctrl.c`, `AIMP_GHOST_WALK_BLOCK=1` por defecto): sobre el controlador del avatar solo pasan el `MOVE_TOWARDS` del mod y el cambio a "ninguno". Lo demás se bloquea y se cancela con `vt+0x24` (`FUN_00677ad0`, libera el slot);
   - sin red, el objetivo es 1,2 m detrás del jugador (adelante = (sin yaw, cos yaw), verificado con la corrida 20).
 - **Siguiente:** corrida 22, igual que la 21. Tiene que caminar detrás del jugador sin huir ni teletransportarse.
+
+## 2026-11-15 — Corrida 22 (local): caminata con bloqueo; el teletransporte no se pega mientras camina
+- **Montaje:** DLL `beabd9c`, `AIMP_GHOST=3;AIMP_GHOST_WALK=1;AIMP_TRACE_CMD=1`. Log en `work/evidence/runtime/run22-caminata-bloqueo.log`. 0 excepciones. Al final quedó **instalado en modo pasivo** (`AIMP_GHOST=0`), porque el usuario pidió no desinstalarlo más.
+- **Lo que vio el usuario:** "anda raro, se teletransporta o sale corriendo, y si me muevo con otras teclas aparte de W me teletransporta y buggea a mí".
+- **Lo que dice el log:**
+  - el filtro bloqueó **un solo** comando de la IA (`PLAY_ANIMATION`, al principio); la "huida" no venía de comandos nuevos de la IA;
+  - **138 teletransportes**, muchos cada ~70 ms: 4 frames después de cada uno, el NPC ya estaba otra vez a ~6 m. Con un `MOVE_TOWARDS` activo, la locomoción tiene su propia posición y le pisa el teletransporte; el NPC "corre" hacia donde cree estar;
+  - el objetivo a 1,2 m detrás del jugador hacía chocar al jugador contra el NPC al caminar hacia atrás o de costado.
+- **El teleport (`FUN_007c6330`)** avisa al listener de arriba del personaje (`vt+0x20(pos, yaw, p3)`) y después llama a `SetTransform`. En los NPCs, el de arriba es el replicador del hallazgo 18. Hipótesis: no le llega a la locomoción.
+- **Cambios (tests OK, 37 chequeos en `test_walk`):** la caminata es una máquina de estados:
+  1. ubicar (teletransporte), esperar 400 ms y recién ahí mandar `MOVE_TOWARDS`;
+  2. caminando, nunca se lo teletransporta;
+  3. si queda a más de 12 m durante 1 s, `SwitchCommand(ctrl, NULL)`, esperar 300 ms y volver a ubicarlo;
+  4. se sacó el giro en el lugar; sin red, el objetivo está 2,5 m detrás.
+- **Si la próxima corrida sigue mal**, alternativas:
+  1. un tipo de NPC que no huya;
+  2. animar al avatar NOAUTH escribiéndole el bloque de locomoción (hallazgos 18 y 19);
+  3. el segundo personaje-jugador `PLAYER_2`.
+  Mientras tanto, el avatar estable sigue siendo el teletransportado sin IA (`AIMP_GHOST=3`, v1).

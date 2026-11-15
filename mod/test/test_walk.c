@@ -128,6 +128,17 @@ static void __attribute__((cdecl)) fake_move_update(uint32_t ctrl, const uint8_t
     record(ctrl, a, b, t, params, flag);
 }
 
+/* Como SwitchCommand con comando NULL: el pendiente queda vacío y el que se ejecutaba termina. */
+static uint32_t g_null_switches;
+static void __attribute__((cdecl)) fake_switch(uint32_t ctrl, uint32_t cmd)
+{
+    if (!cmd) {
+        g_null_switches++;
+        put32((void *)(uintptr_t)ctrl, CMDCTRL_CURRENT, 0);
+        put32((void *)(uintptr_t)ctrl, CMDCTRL_EXEC, 0);
+    }
+}
+
 static void emit(uint8_t **p, const void *bytes, size_t n)
 {
     memcpy(*p, bytes, n);
@@ -177,6 +188,14 @@ static void build_stubs(uint8_t *img)
     emit(&p, "\x56", 1);                 /* push esi (ctrl) */
     emit_call(&p, (void *)fake_move_start);
     emit(&p, "\x83\xC4\x18\x5E\xC2\x14\x00", 7); /* add esp,0x18; pop esi; ret 0x14 */
+
+    /* SwitchCommand: sub esp,0x100; push esi; mov esi,ecx | ret 4 */
+    p = img + AIMP_RVA_SWITCH_COMMAND;
+    VirtualProtect(p, 0x100, PAGE_EXECUTE_READWRITE, &old);
+    emit(&p, AIMP_SWITCH_COMMAND_PROLOGUE, sizeof AIMP_SWITCH_COMMAND_PROLOGUE);
+    emit(&p, "\xFF\xB4\x24\x08\x01\x00\x00\x56", 8); /* push [esp+0x108] (cmd); push esi (ctrl) */
+    emit_call(&p, (void *)fake_switch);
+    emit(&p, "\x83\xC4\x08\x5E\x81\xC4\x00\x01\x00\x00\xC2\x04\x00", 13); /* add esp,8; pop esi; add esp,0x100; ret 4 */
 
     /* FUN_006797a0: mov eax,[esp+8]; mov edx,[esp+4]; push eax; push edx (ecx intacto = ctrl) */
     p = img + AIMP_RVA_CMD_MOVE_UPDATE;
@@ -277,17 +296,20 @@ int main(void)
     int64_t now = 1000000, step = f.QuadPart / 60;
     uint32_t esp0, esp1;
 
-    /* objetivo sin red con la caminata: 1,2 m detrás del jugador (adelante = (sin yaw, cos yaw)) */
-    const float bx = -1.2f * (float)sin(0.25), bz = -1.2f * (float)cos(0.25);
+    /* objetivo sin red con la caminata: 2,5 m detrás del jugador (adelante = (sin yaw, cos yaw)) */
+    const float bx = -2.5f * (float)sin(0.25), bz = -2.5f * (float)cos(0.25);
 #define CLOSE(a, b) ((a) > (b) - 0.01f && (a) < (b) + 0.01f)
-    printf("[el NPC elegido: un teletransporte y un MOVE_TOWARDS]\n");
+    printf("[el NPC elegido: se lo ubica, se espera 400 ms y recién ahí MOVE_TOWARDS]\n");
     __asm__ volatile("mov %%esp, %0" : "=r"(esp0));
-    for (int i = 0; i < 12; i++, now += step) /* 200 ms */
+    for (int i = 0; i < 12; i++, now += step) /* 200 ms: elegido y ubicado */
+        ghost_frame(now, &net, 16);
+    CHECK(g_teleports == 1 && g_starts == 0, "ubicado (teletransportes %u) y todavía sin comando (inicios %u)", g_teleports, g_starts);
+    for (int i = 0; i < 30; i++, now += step) /* 500 ms más */
         ghost_frame(now, &net, 16);
     __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
     CHECK(esp0 == esp1, "stack balanceado después de los frames (con las llamadas al engine)");
     CHECK(g_teleports == 1 && CLOSE(getf(npc, CHR_POS), 1.0f + bx) && CLOSE(getf(npc, CHR_POS + 8), 3.0f + bz),
-          "primer teletransporte al objetivo, 1,2 m detrás del jugador (%.2f, %.2f; %u)", (double)getf(npc, CHR_POS),
+          "teletransporte al objetivo, 2,5 m detrás del jugador (%.2f, %.2f; %u)", (double)getf(npc, CHR_POS),
           (double)getf(npc, CHR_POS + 8), g_teleports);
     CHECK(g_starts == 1 && g_bad_ctrl == 0, "MOVE_TOWARDS sobre el controlador del NPC (%u inicios, %u controladores malos)", g_starts,
           g_bad_ctrl);
@@ -337,20 +359,18 @@ int main(void)
     CHECK(ghost_switch_filter(actrl, 0) == 1, "cambiar a ningún comando: pasa");
     CHECK(ghost_switch_filter((uint32_t)(uintptr_t)local + CHR_CMDCTRL, (uint32_t)(uintptr_t)other) == 1, "otro personaje: pasa");
 
-    printf("[el objetivo se fue lejos: teletransporte]\n");
+    printf("[lejos más de 1 s: se cancela el comando, se lo reubica y se lo vuelve a mandar]\n");
     lp[0] = 20.0f;
     memcpy(local + CHR_POS, lp, 12);
-    for (int i = 0; i < 3; i++, now += step)
+    for (int i = 0; i < 30; i++, now += step) /* 500 ms: todavía no */
         ghost_frame(now, &net, 16);
-    CHECK(g_teleports == 2 && CLOSE(getf(npc, CHR_POS), 20.0f + bx), "teletransporte por distancia (x=%.2f, %u)", (double)getf(npc, CHR_POS),
+    CHECK(g_null_switches == 0 && g_teleports == 1, "a los 500 ms lejos no se hace nada (cancelaciones %u)", g_null_switches);
+    for (int i = 0; i < 90; i++, now += step) /* 1,5 s más */
+        ghost_frame(now, &net, 16);
+    CHECK(g_null_switches == 1, "se canceló el comando con SwitchCommand(ctrl, NULL) (%u)", g_null_switches);
+    CHECK(g_teleports == 2 && CLOSE(getf(npc, CHR_POS), 20.0f + bx), "reubicado sin comando activo (x=%.2f, %u)", (double)getf(npc, CHR_POS),
           g_teleports);
-
-    printf("[cerca y quieto, mirando a otro lado: giro en el lugar]\n");
-    putf(npc, CHR_YAW, 2.0f);
-    for (int i = 0; i < 70; i++, now += step)
-        ghost_frame(now, &net, 16);
-    CHECK(getf(npc, CHR_YAW) == 0.25f && g_teleports == 3, "yaw corregido en el lugar (%.2f, %u teletransportes)",
-          (double)getf(npc, CHR_YAW), g_teleports);
+    CHECK(g_starts == 3, "y después de esperar, otro MOVE_TOWARDS (inicios %u)", g_starts);
     CHECK(g_misaligned == 0, "posiciones y destinos alineados a 16 (%u)", g_misaligned);
 
     log_close();
@@ -362,11 +382,14 @@ int main(void)
     expect(log, "AIMP_GHOST_WALK=1 (fase 4b, experimental): MOVE_TOWARDS con move_type 1", 1);
     expect(log, "GHOST: caminata: teletransporte de", 1);
     expect(log, "(primera vez;", 1);
-    expect(log, "el comando actual era ninguno", 1);
+    expect(log, "(controlador 0x", 1);
+    expect(log, "después de ubicarlo", 1);
+    expect(log, "se cancela el comando para reubicarlo", 1);
     expect(log, "el comando actual era GOTO", 1);
     expect(log, "(lejos o en otro piso;", 1);
+    expect(log, "caminata (caminando)", 1);
     expect(log, "comando propio tipo 5", 1);
-    expect(log, "local 1,2 m detrás", 1);
+    expect(log, "local detrás", 1);
     expect(log, "bloqueado el comando GOTO", 1);
     expect(log, "bloqueo de los comandos de la IA 1", 1);
     expect(log, "AIMP_GHOST_NOAUTH", 0);

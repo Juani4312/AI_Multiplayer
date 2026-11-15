@@ -132,7 +132,9 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_GHOST_WALK` | 0 | 1 = **fase 4b, experimental** (modos 2 y 3): el avatar camina hacia el objetivo con un comando `MOVE_TOWARDS` (su propia animación) en vez de teletransportarse en cada frame; solo se teletransporta si queda lejos. Apaga `AIMP_GHOST_NOAUTH` por defecto (hallazgo 19) |
 | `AIMP_GHOST_WALK_TYPE` | 1 | `move_type` del comando (enum MOVE del engine; 1 es el valor por defecto de los scripts) |
 | `AIMP_GHOST_WALK_MS` | 200 | cada cuánto se le actualiza el destino |
-| `AIMP_GHOST_WALK_TP_CM` | 600 | distancia (cm) a partir de la cual se lo teletransporta |
+| `AIMP_GHOST_WALK_TP_CM` | 1200 | distancia (cm) a partir de la cual, después de 1 s, se cancela el comando, se lo reubica y se lo vuelve a mandar (teletransportarlo caminando no se pega, corrida 22) |
+| `AIMP_GHOST_WALK_BLOCK` | 1 | bloquea los `SwitchCommand` de la IA sobre el avatar (solo pasan el `MOVE_TOWARDS` del mod y el cambio a ninguno) |
+| `AIMP_GHOST_WALK_BEHIND_CM` | 250 | sin red: qué tan detrás del jugador local va el avatar |
 | `AIMP_TRACE_CTRL` | 0 | 1 = vuelca el controlador de jugador del jugador 0 (`Character+0x31C`, 0x4C bytes) y su acción principal cada vez que cambian (líneas `CTRL`, como mucho cada `AIMP_TRACE_CTRL_MS` = 100 ms, hasta `AIMP_TRACE_CTRL_MAX` = 600 líneas). Solo mira (hallazgo 19) |
 | `AIMP_TRACE_CMD` | 0 | 1 = loguea los `SwitchCommand` de los personajes (líneas `CMD`: controlador de comandos, tipo y dueño). Solo mira (hallazgo 19) |
 | `AIMP_CRASHLOG` | 1 | registro de excepciones (VEH): código, módulo+RVA, registros y stack si el juego se cae |

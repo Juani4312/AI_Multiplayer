@@ -54,7 +54,7 @@ _Última actualización: 2026-11-15, 03:00 (corrida 20: arrojables verificados; 
 | Mod fase 6 (disparadores del host) | 🟡 `AIMP_SYNC_PINS=1` en `mod/src/pins.c`: el host manda los pines de zona y el cliente bloquea los suyos y aplica los del host. Tests OK; sin probar en el juego |
 | Hallazgo 17 (arrojables y equipo) | 🟡 `findings/17-arrojables.md`: tirar = `FUN_007b5050` (pool `0x16F0DE4`, composite `Thrown\X` + `spawn_explosive`; el vuelo lo simula `ProjectileMotion` con la posición y la velocidad dadas), colocar = `FUN_007b5190`. Las armas de fuego son composites (`Weapons\…`); su disparo no se siguió |
 | Hallazgo 18 (replicación de personajes de NETZ) | 🟡 `findings/18-replicacion-de-personajes.md`: replicador por personaje con 11 tipos de mensaje (acciones, animación, armas, salud), pero la capa de canales es un **stub** en retail (`FUN_00a2abb0`/`FUN_00a2ab80`). La opción C no es camino corto; la animación va a mano |
-| Avatar caminando (fase 4b) | 🟡 `AIMP_GHOST_WALK=1` en `mod/src/ghost.c` (MOVE_TOWARDS sobre `Character+0x3820`). **Corrida 21: camina con animación**, pero su IA lo hacía huir. Arreglado (bloqueo de los comandos de la IA, chequeo en `+0`/`+4`); falta la corrida 22 |
+| Avatar caminando (fase 4b) | 🟡 `AIMP_GHOST_WALK=1` en `mod/src/ghost.c` (MOVE_TOWARDS sobre `Character+0x3820`). Corrida 21: camina con animación, pero huía. Corrida 22: el teletransporte no se pega mientras camina (la locomoción lo devuelve). Ahora es una máquina de estados (ubicar, esperar, caminar, cancelar, reubicar); falta la corrida 23. **El avatar estable sigue siendo el v1 (teletransporte sin IA)** |
 | Hallazgo 19 (control de personajes) | 🟡 `findings/19-control-de-personajes.md`: el jugador se mueve con el comando `READ_GAMEPAD_1` (controlador de jugador `Character+0x31C`, 0x4C bytes); el engine reconoce un `"PLAYER_2"` (índice de jugador 1); `CMD_MoveTowards` = `FUN_0067e980`. Trazas `AIMP_TRACE_CTRL` / `AIMP_TRACE_CMD` (tests OK) para la próxima corrida |
 | Arrojables compartidos | ✅ **inyección verificada en una máquina** (corrida 20: la bengala se duplicó con la misma trayectoria). `AIMP_SYNC_THROW=1` en `mod/src/throw.c` (evento `AIMP_EVT_THROW`, **protocolo v2**). Falta la prueba con dos máquinas |
 | Mando virtual (pruebas) | ✅ `mod/src/autopad.c`: `AIMP_AUTOPAD_FILE` (pad.txt), IAT de XINPUT1_3. En el menú, verificar cada paso con captura (corrida 17) |
@@ -81,7 +81,8 @@ _Última actualización: 2026-11-15, 03:00 (corrida 20: arrojables verificados; 
 ## Pendientes que requieren al usuario
 - ~~Corrida 20~~: hecha el 2026-11-15 (arrojables OK, controlador de comandos, locomoción; el índice de pines se llenó y ya está agrandado). El mod quedó desinstalado.
 - ~~Corrida 21~~ (2026-11-15): el avatar caminó con animación, pero huía (IA). Índice de pines completo.
-- **Corrida 22** (local): `AIMP_GHOST=3;AIMP_GHOST_WALK=1;AIMP_TRACE_CMD=1`. Tiene que seguir caminando detrás del jugador, sin huir ni teletransportarse.
+- ~~Corrida 22~~ (2026-11-15): raro (teletransportes que no se pegan, choques con el jugador). Corregido en código.
+- **Corrida 23** (local): `AIMP_GHOST=3;AIMP_GHOST_WALK=1;AIMP_TRACE_CMD=1`. El NPC tiene que caminar detrás, a 2,5 m, sin saltos mientras camina. **El mod queda instalado en pasivo** entre corridas (pedido del usuario): para probar, `runtime_setup.sh install --cfg ...` con la config de la corrida.
 - **Protocolo v2** (2026-11-15): la laptop necesita la DLL nueva de `mod/dist/` para hablar con papito.
 0. ~~Tailscale para cerrar la fase 3~~: hecho con la laptop. papito es 100.126.161.126 y papulaptop, 100.126.159.45. Para el amigo:
    - instala Tailscale y se une a la red del usuario;
