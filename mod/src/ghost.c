@@ -90,6 +90,11 @@ static float g_last_pos[3], g_last_yaw;
 static MoveCmdFn g_move_start, g_move_update;
 static int g_walk, g_walk_type = MOVE_TYPE_WALK, g_walk_tp_cm = 600, g_walk_bad, g_walk_block = 1, g_owner_warned;
 static int g_walk_type_far = MOVE_TYPE_RUN, g_walk_far_cm = 500, g_cur_type = MOVE_TYPE_WALK; /* corre si queda lejos */
+/* AIMP_GHOST_WALK_FACE: con red, quieto, mira hacia donde mira el otro jugador */
+static int g_walk_face = 1, g_tgt_net;
+static int64_t g_still_since, g_last_face;
+static float g_still_t[3];
+static uint32_t g_faces;
 static volatile uint32_t g_walk_ctrl; /* controlador del avatar, para el filtro (corre en otro thread) */
 /* AIMP_GHOST_WALK_CINEMATIC: la motivación cinemática del avatar siempre verdadera (hook de FUN_006d3630) */
 static AimpHook g_hook_motiv;
@@ -266,6 +271,7 @@ int ghost_install(void)
             g_walk_type = aimp_env_int(L"AIMP_GHOST_WALK_TYPE", MOVE_TYPE_WALK);
             g_walk_type_far = aimp_env_int(L"AIMP_GHOST_WALK_TYPE_FAR", MOVE_TYPE_RUN); /* igual a TYPE: no cambia */
             g_walk_far_cm = aimp_env_int(L"AIMP_GHOST_WALK_FAR_CM", 500);
+            g_walk_face = aimp_env_int(L"AIMP_GHOST_WALK_FACE", 1);
             int ms = aimp_env_int(L"AIMP_GHOST_WALK_MS", 200);
             g_walk_ticks = g_freq * (ms < 20 ? 20 : ms) / 1000;
             g_walk_tp_cm = aimp_env_int(L"AIMP_GHOST_WALK_TP_CM", 1200);
@@ -434,6 +440,7 @@ static void start_moving(uint32_t p, int64_t now)
     g_last_restart = g_last_cmd = g_far_since = 0;
     g_wstate = 0; /* W_PREP */
     g_prep_at = 0;
+    g_still_since = g_last_face = 0;
     g_starts = g_updates = 0;
     g_walk_bad = 0;
     g_walk_ctrl = g_walk ? p + g_walk_off : 0;
@@ -676,6 +683,15 @@ static int task_playing_anim(char *nm, size_t cap)
     return (int)anim;
 }
 
+static float wrap_pi(float a)
+{
+    while (a > 3.14159265f)
+        a -= 6.28318531f;
+    while (a < -3.14159265f)
+        a += 6.28318531f;
+    return a;
+}
+
 static void set_move_type(int type)
 {
     uint32_t mt = (uint32_t)type;
@@ -777,6 +793,31 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             break;
         }
         ours = walk_is_ours(ctrl, &type);
+        /* AIMP_GHOST_WALK_FACE: con red, si el otro está quieto hace 1 s y el avatar ya llegó (a menos de 1,5 m),
+         * se lo gira hacia donde mira el otro. MOVE_TOWARDS no guarda la rotación del destino (FUN_0067e660 copia
+         * solo la traslación), así que: teletransporte en su lugar con ese yaw y orden nueva en el mismo frame
+         * (como mucho cada 2 s y si la diferencia pasa de 20 grados). */
+        if (g_walk_face && g_tgt_net) {
+            float sx = t[0] - g_still_t[0], sz = t[2] - g_still_t[2], yaw;
+            if (sx * sx + sz * sz > 0.0025f || !g_still_since) {
+                g_still_t[0] = t[0];
+                g_still_t[1] = t[1];
+                g_still_t[2] = t[2];
+                g_still_since = now;
+            } else if (now - g_still_since >= g_freq && d2 < 2.25f && now - g_last_face >= 2 * g_freq && mem_f32(g_chr + CHR_YAW, &yaw)) {
+                float dyaw = wrap_pi(tyaw - yaw);
+                if (dyaw > 0.35f || dyaw < -0.35f) {
+                    g_faces++;
+                    if (g_faces <= 10 || g_faces % 50 == 0)
+                        log_printf("GHOST: caminata: gira de %.2f a %.2f rad, hacia donde mira el otro (%u)", (double)yaw, (double)tyaw,
+                                   g_faces);
+                    teleport_to(cur, tyaw);
+                    g_last_tp = g_last_face = now;
+                    walk_start(ctrl, t, now, "gira hacia donde mira el otro");
+                    break;
+                }
+            }
+        }
         /* Corrida 30: caminando (~1,2 m/s) quedaba hasta 8,8 m atrás del jugador (~2,2 m/s). Corre (MOVE RUN) si
          * queda a más de AIMP_GHOST_WALK_FAR_CM del objetivo y vuelve a caminar 2,5 m más cerca; el tipo se
          * fija al dar la orden, así que va con una orden nueva (como mucho una por segundo). */
@@ -815,9 +856,11 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
     }
     (void)tyaw;
     if (now - g_last_log >= g_freq) {
-        log_printf("GHOST: caminata (%s): personaje en (%.2f, %.2f, %.2f), objetivo (%.2f, %.2f, %.2f) [%s] a %.2f m; comando %s tipo %d, move_type %d; %u inicios, %u actualizaciones, %u teletransportes, %ld cinemáticas; %s[%u]",
-                   g_wnames[g_wstate], (double)cur[0], (double)cur[1], (double)cur[2], (double)t[0], (double)t[1], (double)t[2], src,
-                   (double)aimp_sqrtf(d2), ours ? "propio" : "ajeno", (int)type, g_cur_type, g_starts, g_updates, g_tps,
+        float cyaw = 0.0f;
+        mem_f32(g_chr + CHR_YAW, &cyaw);
+        log_printf("GHOST: caminata (%s): personaje en (%.2f, %.2f, %.2f) yaw %.2f, objetivo (%.2f, %.2f, %.2f) yaw %.2f [%s] a %.2f m; comando %s tipo %d, move_type %d; %u inicios, %u actualizaciones, %u teletransportes, %ld cinemáticas; %s[%u]",
+                   g_wnames[g_wstate], (double)cur[0], (double)cur[1], (double)cur[2], (double)cyaw, (double)t[0], (double)t[1], (double)t[2],
+                   (double)tyaw, src, (double)aimp_sqrtf(d2), ours ? "propio" : "ajeno", (int)type, g_cur_type, g_starts, g_updates, g_tps,
                    (long)InterlockedExchange(&g_n_cine, 0), where, idx);
         g_last_log = now;
         g_tps = 0;
@@ -844,12 +887,14 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
     if (!mem_read(g_player + CHR_POS, lpos, sizeof lpos) || !mem_f32(g_player + CHR_YAW, &lyaw))
         return;
     const char *src;
+    g_tgt_net = 0;
     if (net && net->have_remote && (net->remote.flags & AIMP_FLAG_PLAYER) && net->remote.level == level) {
         t[0] = net->remote.pos[0];
         t[1] = net->remote.pos[1];
         t[2] = net->remote.pos[2];
         tyaw = net->remote.yaw;
         src = "red";
+        g_tgt_net = 1;
     } else if (g_walk && !g_walk_bad) {
         /* AIMP_GHOST_WALK_BEHIND_CM (250) detrás del jugador: adelante = (sin yaw, cos yaw) (corrida 20). Con
          * 1,2 m, caminar hacia atrás metía al jugador contra el NPC (corrida 22). Corrida 29: si el jugador se da

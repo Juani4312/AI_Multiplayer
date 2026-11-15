@@ -432,6 +432,25 @@ int main(void)
     CHECK(g_starts > st0 && CLOSE(g_start_target[3], 20.0f + bx), "con una orden nueva detrás del jugador (inicios %u, destino x=%.2f)",
           g_starts, (double)g_start_target[3]);
     CHECK(get32(g_start_params, 0) == MOVE_TYPE_WALK, "al reubicarlo vuelve a caminar (move_type %u)", get32(g_start_params, 0));
+    printf("[con red: el otro quieto 1 s con otro yaw y el avatar ya llegó: gira una vez (teletransporte en el lugar + orden)]\n");
+    net.have_remote = 1;
+    net.remote.flags = AIMP_FLAG_PLAYER;
+    net.remote.level = 16;
+    memcpy(net.remote.pos, npc + CHR_POS, 12);
+    net.remote.yaw = 2.0f;
+    uint32_t tp0 = g_teleports, st2 = g_starts;
+    for (int i = 0; i < 30; i++, now += step) /* 500 ms: todavía no */
+        ghost_frame(now, &net, 16);
+    CHECK(g_teleports == tp0, "a los 500 ms quieto todavía no gira (%u)", g_teleports - tp0);
+    for (int i = 0; i < 60; i++, now += step)
+        ghost_frame(now, &net, 16);
+    CHECK(g_teleports == tp0 + 1 && g_starts == st2 + 1 && getf(npc, CHR_YAW) == 2.0f, "giró: yaw %.2f (teletransportes +%u, inicios +%u)",
+          (double)getf(npc, CHR_YAW), g_teleports - tp0, g_starts - st2);
+    for (int i = 0; i < 180; i++, now += step) /* 3 s más: ya mira hacia ahí */
+        ghost_frame(now, &net, 16);
+    CHECK(g_teleports == tp0 + 1, "no vuelve a girar si ya mira hacia ahí (%u)", g_teleports - tp0);
+    net.have_remote = 0;
+
     CHECK(g_null_switches == 0, "nunca SwitchCommand(ctrl, NULL), que hace caer el juego (%u)", g_null_switches);
     CHECK(g_misaligned == 0, "posiciones y destinos alineados a 16 (%u)", g_misaligned);
 
@@ -455,6 +474,7 @@ int main(void)
     expect(log, "comando propio tipo 5", 1);
     expect(log, "local detrás", 1);
     expect(log, "local a distancia", 1);
+    expect(log, "hacia donde mira el otro (1)", 1);
     expect(log, "corre: a ", 1);
     expect(log, "camina: a ", 1);
     expect(log, "move_type 1 (3 a más de 500 cm del objetivo)", 1);
