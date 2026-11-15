@@ -81,6 +81,8 @@ static const uint8_t AIMP_CHR_TELEPORT_PROLOGUE[13] __attribute__((unused)) = {
 #define SREQ_ID                   0x28  /* 8 bytes; en el del jugador, el id que va en los RPCs */
 #define SREQ_TYPE                 0x30  /* 0 jugador; 3/6 en NPCs (= def+0x04) */
 #define SREQ_NAME                 0x64  /* char[0x40] */
+#define SREQ_PLAYER_FLAG          0x4C  /* != 0: RequestCharacter ata el personaje a la plaza de jugador con id +0x48 (FUN_007a37e0: input y cámara) */
+#define SREQ_PLAYER_ID            0x48
 #define SREQ_COMPOSITE            0xA4  /* char[0x40] (composite o "CUTSCENE") */
 
 #define AIMP_RVA_G_ROOT           0x012F0C88u  /* Root* (dato en .data) */

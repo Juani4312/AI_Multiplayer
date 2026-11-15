@@ -82,6 +82,8 @@ static float g_vec[4] __attribute__((aligned(16)));
 static uint8_t g_scq[MAX_REQS][SC_REQ_SIZE];
 static int g_mode, g_state = G_OFF, g_from_key = -1, g_npc_type = 6, g_obs_logged, g_warned_npc, g_chosen_once;
 static int64_t g_last_pick;
+static int g_clone_auth;      /* AIMP_GHOST_CLONE_AUTH: clonar el pedido de autoridad (0x130) en vez del de SpawnCharacter */
+static char g_clone_name[0x40]; /* AIMP_GHOST_CLONE_NAME (p. ej. PLAYER_2) */
 static int g_noauth; /* AIMP_GHOST_NOAUTH=1: experimento, el avatar pasa a no autoritativo */
 static int64_t g_freq = 1, g_delay_ticks, g_npc_ticks, g_t0, g_deadline, g_last_log, g_last_tp;
 static uint32_t g_player, g_chr, g_before[2 * MAX_CHARS], g_nbefore, g_attempts, g_tps;
@@ -285,6 +287,17 @@ int ghost_install(void)
     g_delay_ticks = g_freq * (delay < 0 ? 0 : delay) / 1000;
     g_npc_ticks = npc_ms > 0 ? g_freq * npc_ms / 1000 : 0;
     g_from_key = aimp_env_int(L"AIMP_GHOST_FROM", -1);
+    g_clone_auth = aimp_env_int(L"AIMP_GHOST_CLONE_AUTH", 0);
+    {
+        wchar_t wn[0x40];
+        g_clone_name[0] = 0;
+        if (aimp_env_str(L"AIMP_GHOST_CLONE_NAME", wn, 0x40)) {
+            int i = 0;
+            for (; i < 0x3F && wn[i]; i++)
+                g_clone_name[i] = (char)(wn[i] < 128 ? wn[i] : '?');
+            g_clone_name[i] = 0;
+        }
+    }
     g_npc_type = aimp_env_int(L"AIMP_GHOST_NPC_TYPE", 6);
     g_walk = g_mode >= 2 && aimp_env_int(L"AIMP_GHOST_WALK", 0);
     if (g_walk) {
@@ -544,8 +557,14 @@ static void pick_npc(const Chars *c, int64_t now)
     start_moving(best, now);
 }
 
+static void do_spawn_auth(const Chars *c, int64_t now);
+
 static void do_spawn(const Chars *c, int64_t now)
 {
+    if (g_clone_auth) {
+        do_spawn_auth(c, now);
+        return;
+    }
     /* Se clona lo que recibió SpawnCharacter (el mensaje de sesión 0x2E de 0xF0 bytes), no el
      * pedido de 0x130 del spawn de autoridad: es otro formato (corrida 7). */
     LONG total = g_nsc;
@@ -595,6 +614,72 @@ static void do_spawn(const Chars *c, int64_t now)
     g_chr = 0;
     g_state = G_FIND;
     g_deadline = now + 5 * g_freq;
+}
+
+
+/* AIMP_GHOST_CLONE_AUTH=1 ("dos Amandas", 2026-11-15): la corrida 8 clonó el mensaje de SpawnCharacter y se cayó en
+ * RequestCharacter porque el slot de la clave nueva (CM+0x230 + i*0x1D0) no tenía recursos. Esos los prepara
+ * FUN_007b7a10 a partir del pedido de autoridad de 0x130 bytes (instancia el composite del personaje con las
+ * referencias de +0xFC..+0x114). Acá se clona ese pedido (clave nueva en +0x00 y +0xF0, id nuevo, nombre opcional)
+ * y se lo manda por FUN_00797490, la misma vía que el juego. */
+static void do_spawn_auth(const Chars *c, int64_t now)
+{
+    LONG total = g_nreq;
+    int found = -1;
+    for (LONG k = total; k > 0 && k > total - MAX_REQS; k--) {
+        const uint8_t *r = g_req[(k - 1) % MAX_REQS];
+        uint32_t key = rd32(r + SREQ_KEY), type = rd32(r + SREQ_TYPE);
+        if ((g_from_key < 0 && type == 0) || (g_from_key >= 0 && key == (uint32_t)g_from_key)) {
+            found = (int)((k - 1) % MAX_REQS);
+            break;
+        }
+    }
+    if (found < 0 || !g_this) {
+        log_printf("GHOST: no se clona (autoridad): pedido %s, spawn de autoridad %s (%ld pedidos)", found < 0 ? "no encontrado" : "ok",
+                   g_this ? "visto" : "no visto", (long)total);
+        g_state = G_DONE;
+        return;
+    }
+    if (g_attempts >= MAX_ATTEMPTS) {
+        log_printf("GHOST: ya se hicieron %u intentos en la sesión; no se clona más", g_attempts);
+        g_state = G_DONE;
+        return;
+    }
+    aimp_memset(g_clone, 0, sizeof g_clone);
+    aimp_memcpy(g_clone, g_req[found], SPAWN_REQ_SIZE);
+    uint32_t old_key = rd32(g_clone + SREQ_KEY), key = 0x40 + g_attempts, id1 = 0x504D4941u + g_attempts;
+    char id_old[17], id_new[17];
+    id_str(id_old, g_clone + SREQ_ID);
+    aimp_memcpy(g_clone + SREQ_KEY, &key, 4);
+    aimp_memcpy(g_clone + SREQ_KEY2, &key, 4);
+    aimp_memcpy(g_clone + SREQ_ID + 4, &id1, 4);
+    /* Corrida 40: con +0x4C = 1 RequestCharacter llama a FUN_007a37e0, que ata el personaje a la plaza de jugador
+     * con el id de +0x48 (la del jugador 0): el clon se llevó la cámara y el input. AIMP_GHOST_CLONE_UNBIND=1
+     * (por defecto) pone +0x4C = 0: personaje sin plaza de jugador. */
+    if (aimp_env_int(L"AIMP_GHOST_CLONE_UNBIND", 1))
+        g_clone[SREQ_PLAYER_FLAG] = 0;
+    if (g_clone_name[0]) {
+        aimp_memset(g_clone + SREQ_NAME, 0, 0x40);
+        aimp_memcpy(g_clone + SREQ_NAME, g_clone_name, aimp_strlen(g_clone_name));
+    }
+    id_str(id_new, g_clone + SREQ_ID);
+    g_nbefore = 0;
+    for (uint32_t i = 0; i < c->npl; i++)
+        g_before[g_nbefore++] = c->pl[i];
+    for (uint32_t i = 0; i < c->nnpc; i++)
+        g_before[g_nbefore++] = c->npc[i];
+    g_attempts++;
+    log_printf("GHOST: clonando el pedido de AUTORIDAD (clave %u -> %u, id %s -> %s, nombre \"%s\"), this 0x%08x; antes: %u jugadores, %u NPCs, %u pendientes",
+               old_key, key, id_old, id_new, g_clone_name, (unsigned)g_this, c->npl, c->nnpc, c->npend);
+    log_request("GHOST clon auth", (long)g_attempts, g_this, g_clone, 0);
+    log_hexdump("GHOST   volcado", (uintptr_t)g_clone, SPAWN_REQ_SIZE);
+    g_auth_orig((void *)g_this, NULL, g_clone, 0);
+    Chars a;
+    if (read_chars(&a))
+        log_printf("GHOST: spawn de autoridad hecho; ahora %u jugadores, %u NPCs, %u pendientes", a.npl, a.nnpc, a.npend);
+    g_chr = 0;
+    g_state = G_FIND;
+    g_deadline = now + 10 * g_freq;
 }
 
 static void on_found(uint32_t p, const char *where, uint32_t idx, int64_t now)
