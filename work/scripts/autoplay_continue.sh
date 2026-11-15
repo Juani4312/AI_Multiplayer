@@ -37,6 +37,23 @@ menu)
   w 7
   printf '%s\n' "0-150:A,2000-2150:A,3500-3650:A,5000-5150:DOWN" > "$PAD"; w 7
   shot_game "$SHOT" && echo "captura: $SHOT (verificar 'Continue Game' resaltado antes de 'go')" ;;
+shot)
+  shot_game "$SHOT" && echo "captura: $SHOT" ;;
+wait)
+  # espera el frontend sin apretar nada y saca captura
+  end=$((SECONDS+40))
+  until [ "$(stat -c %Y "$L" 2>/dev/null || echo 0)" -ge "$(( $(date +%s) - 20 ))" ] || [ $SECONDS -ge $end ]; do sleep 1; done
+  end=$((SECONDS+180))
+  until grep -q '\] PIN f\|nivel 0/35' "$L" 2>/dev/null; do
+    [ $SECONDS -ge $end ] && { echo "timeout esperando el frontend"; exit 1; }; sleep 1
+  done
+  w 8
+  shot_game "$SHOT" && echo "captura: $SHOT" ;;
+key)
+  # un solo botón (A, B, DOWN, UP...) y captura 3 s después. 2026-11-15: la secuencia fija A,A,A,DOWN llegó a
+  # la dificultad de "Start Game"; el menú se recorre de a un paso, mirando cada captura.
+  printf '%s\n' "0-150:${2:?botón}" > "$PAD"; w 3
+  shot_game "$SHOT" && echo "captura: $SHOT" ;;
 go)
   printf '%s\n' "0-150:A" > "$PAD"
   end=$((SECONDS+180)); n0=$(grep -c "apareció el jugador 0" "$L")
