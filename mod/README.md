@@ -6,8 +6,9 @@ DLL proxy `winmm.dll` para `AI.exe` (Alien: Isolation, build de Windows). Funcio
 - **fase 3**: red UDP propia entre dos máquinas (`AIMP_NET`), con el estado del jugador a 20 paquetes/s;
 - **fase 4** (experimental, `AIMP_GHOST=3`): un NPC civil del nivel hace de avatar del otro jugador (hallazgo 12);
 - **fase 5** (experimental, `AIMP_SYNC_USE=1`): los "usar" (botones, cajas, ítems) se replican a la otra máquina, donde los hace el avatar (hallazgo 13);
+- **fase 4b** (experimental, `AIMP_GHOST_WALK=1`): el avatar camina con su animación hacia el otro jugador en vez de teletransportarse. Todavía inestable (hallazgo 19);
 - **fase 6** (experimental, `AIMP_SYNC_PINS=1`, sin probar con dos máquinas): los disparadores de zona de los scripts los decide el host. El cliente bloquea los suyos y ejecuta los del host (hallazgos 15 y 16).
-- **arrojables** (experimental, `AIMP_SYNC_THROW=1`, sin probar en el juego): lo que tira o coloca el jugador (bengala, noisemaker, molotov, minas…) aparece en la otra máquina con la misma posición y velocidad (hallazgo 17).
+- **arrojables** (experimental, `AIMP_SYNC_THROW=1`; la inyección se verificó en una máquina, falta con dos): lo que tira o coloca el jugador (bengala, noisemaker, molotov, minas…) aparece en la otra máquina con la misma posición y velocidad (hallazgo 17).
 
 Sin opciones, el mod **solo lee**: lo único que modifica son los primeros bytes de `ModeManager::Run` (el JMP del hook), y siempre con la build verificada.
 - Los trazados (`AIMP_TRACE_QUEUES`, `AIMP_TRACE_SPAWN`, `AIMP_TRACE_USE`) agregan hooks que solo miran.
@@ -168,6 +169,20 @@ Los modos 1 y 2 clonan el pedido de spawn del jugador para crear un personaje pr
 
 `test_ghost` prueba todo contra stubs con los prólogos y el `ret N` reales del spawn, `SpawnCharacter` y el teleport. Verifica el balance del stack y la alineación.
 
+## Fase 4b (experimental): avatar que camina
+
+`AIMP_GHOST_WALK=1` (`src/ghost.c`, hallazgo 19), junto con `AIMP_GHOST=3`:
+1. Ubica al NPC (teletransporte) y espera 400 ms.
+2. Le da un comando `MOVE_TOWARDS` hacia el objetivo (`FUN_0067e980` sobre su controlador de comandos, `Character+0x3820`) y cada `AIMP_GHOST_WALK_MS` (200) le actualiza el destino (`FUN_006797a0`). Camina con su propia animación.
+3. Mientras camina no se lo teletransporta: la locomoción lo devolvía en ~4 frames (corrida 22). Si queda a más de `AIMP_GHOST_WALK_TP_CM` (12 m) durante 1 s, se cancela el comando (`SwitchCommand(ctrl, NULL)`), se espera y se lo vuelve a ubicar.
+4. Para que procese comandos, el NPC conserva su autoridad (IA). Con `AIMP_GHOST_WALK_BLOCK=1` (por defecto) se bloquean los cambios de comando que le quiere hacer su IA (filtro en el hook de `SwitchCommand`, `src/ctrl.c`).
+
+Sin red, el objetivo es `AIMP_GHOST_WALK_BEHIND_CM` (250) detrás del jugador local.
+
+**Estado:** en la corrida 21 caminó hacia el jugador; en la 22 los teletransportes no se pegaban y el NPC "salía corriendo". La versión actual (máquina de estados) todavía no se probó en el juego.
+
+`test_walk` lo prueba contra stubs con los prólogos y el `ret 0x14` reales de los dos comandos y de `SwitchCommand`.
+
 ## Fase 5 (experimental): "usar" compartido
 
 `AIMP_SYNC_USE=1` (`src/sync.c`, hallazgo 13), con red:
@@ -193,7 +208,7 @@ Los modos 1 y 2 clonan el pedido de spawn del jugador para crear un personaje pr
 - **Envío:** hooks en `FUN_007b5050` (tirar: el evento de animación `spawn_projectile`) y `FUN_007b5190` (colocar: minas y soltar el ítem de la mano). Cada llamada sale como `AIMP_EVT_THROW` (112 bytes): la matriz de la mano, la velocidad, `time_left` y la plantilla (`Thrown\Flare`…).
 - **Aplicación:** el receptor, si está en el mismo nivel, llama a la misma función por el trampolín (no vuelve a mandarse). El engine instancia el composite `REQUIRED_ASSETS\THROWN\…` y `ProjectileMotion` simula el mismo vuelo.
 - **Protocolo v2:** los eventos pasaron de 52 a 112 bytes de datos. Las dos máquinas tienen que tener la misma versión del mod.
-- Sin probar en el juego. Primero, en una sola máquina: `AIMP_TRACE_THROW=1;AIMP_THROW_ECHO=1500`.
+- **Corrida 20 (una máquina):** con `AIMP_TRACE_THROW=1;AIMP_THROW_ECHO=1500`, una bengala real se duplicó 1,5 s después, 75 cm al costado, con la misma trayectoria. Falta la prueba con dos máquinas.
 
 `test_throw` lo prueba contra stubs con el prólogo SEH y los `ret` reales de las dos funciones.
 
