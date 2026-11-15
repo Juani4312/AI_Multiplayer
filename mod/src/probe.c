@@ -15,6 +15,7 @@
 #include "ghost.h"
 #include "sync.h"
 #include "throw.h"
+#include "ctrl.h"
 #include <tlhelp32.h>
 
 typedef struct {
@@ -625,6 +626,7 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
         autopad_frame(now, g_freq, g_cur.pl && g_cur.pl_ok, ok ? pp : NULL, py);
     }
     pins_frame(now, g_cur.level_cur);
+    ctrl_frame(now, g_freq); /* AIMP_TRACE_CTRL (solo mira) */
     if (status_due) {
         status(&g_cur, now - g_last_status);
         net_status(&g_net, now);

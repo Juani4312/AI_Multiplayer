@@ -4,6 +4,7 @@
 #include "ghost.h"
 #include "sync.h"
 #include "throw.h"
+#include "ctrl.h"
 #include "hook.h"
 #include "log.h"
 #include "autopad.h"
@@ -91,6 +92,7 @@ int game_init(void)
     sync_install(probe_net()); /* opcional: AIMP_TRACE_USE=1 / AIMP_SYNC_USE=1 (fase 5, experimental) */
     pins_install(probe_net()); /* opcional: AIMP_TRACE_PINS=1 (traza) / AIMP_SYNC_PINS=1 (fase 6) */
     throw_install(probe_net()); /* opcional: AIMP_TRACE_THROW=1 / AIMP_SYNC_THROW=1 / AIMP_THROW_ECHO=ms (hallazgo 17) */
+    ctrl_install(); /* opcional: AIMP_TRACE_CTRL=1 / AIMP_TRACE_CMD=1 (solo miran) */
     autopad_install(); /* opcional: AIMP_AUTOPAD=guion (pruebas sin nadie al teclado) */
     return 1;
 }

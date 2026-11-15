@@ -129,6 +129,8 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_TRACE_THROW` | 0 | 1 = loguea cada objeto que tira o coloca el jugador (líneas `THROW`: plantilla, posición, velocidad, caller). Solo mira |
 | `AIMP_SYNC_THROW` | 0 | 1 = **experimental** (con red): lo que tira o coloca el jugador local se manda al otro, que llama a la misma función con los mismos datos (hallazgo 17) |
 | `AIMP_THROW_ECHO` | 0 | prueba local sin red: repite cada lanzamiento propio a los N ms, corrido `AIMP_THROW_ECHO_CM` cm (75) al costado. Si aparece la copia con la misma curva, la inyección funciona |
+| `AIMP_TRACE_CTRL` | 0 | 1 = vuelca el controlador de jugador del jugador 0 (`Character+0x31C`, 0x4C bytes) y su acción principal cada vez que cambian (líneas `CTRL`, como mucho cada `AIMP_TRACE_CTRL_MS` = 100 ms, hasta `AIMP_TRACE_CTRL_MAX` = 600 líneas). Solo mira (hallazgo 19) |
+| `AIMP_TRACE_CMD` | 0 | 1 = loguea los `SwitchCommand` de los personajes (líneas `CMD`: controlador de comandos, tipo y dueño). Solo mira (hallazgo 19) |
 | `AIMP_CRASHLOG` | 1 | registro de excepciones (VEH): código, módulo+RVA, registros y stack si el juego se cae |
 
 ## Fase 3: red mínima (UDP)
