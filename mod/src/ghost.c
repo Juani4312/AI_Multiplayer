@@ -118,6 +118,7 @@ static int64_t g_inv_last;
 /* plantado después de girar (no camina hasta que el otro se mueve) */
 static int g_hold;
 static float g_hold_p[4] __attribute__((aligned(16)));
+static float g_hold_t[3]; /* objetivo cuando quedó plantado */
 static float g_still_yaw;
 static int64_t g_yaw_since; /* controlador al que se le dan las órdenes (AIMP_GHOST_WALK_CTRL) */
 static float g_cmd_t[3]; /* objetivo de la última orden (FUN_0067e980) */
@@ -828,10 +829,12 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
         if (g_hold && !g_tgt_net)
             g_hold = 0;
         if (g_hold) {
-            float hx = t[0] - g_still_t[0], hz = t[2] - g_still_t[2];
+            float hx = t[0] - g_hold_t[0], hz = t[2] - g_hold_t[2]; /* corrida 37: g_still_t sigue al objetivo */
             if (hx * hx + hz * hz > 0.25f) {
                 g_hold = 0;
                 log_printf("GHOST: caminata: el otro se movió; deja de estar plantado");
+                walk_start(ctrl, t, now, "deja de estar plantado");
+                break;
             } else {
                 g_target[3] = g_hold_p[0];
                 g_target[7] = g_hold_p[1];
@@ -872,6 +875,8 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                                    g_faces);
                     if (!g_hold) {
                         g_hold = 1;
+                        g_hold_t[0] = t[0];
+                        g_hold_t[2] = t[2];
                         g_hold_p[0] = cur[0];
                         g_hold_p[1] = cur[1];
                         g_hold_p[2] = cur[2];
