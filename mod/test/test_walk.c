@@ -306,11 +306,12 @@ int main(void)
     /* objetivo sin red con la caminata: 2,5 m detrás del jugador (adelante = (sin yaw, cos yaw)) */
     const float bx = -2.5f * (float)sin(0.25), bz = -2.5f * (float)cos(0.25);
 #define CLOSE(a, b) ((a) > (b) - 0.01f && (a) < (b) + 0.01f)
-    printf("[el NPC elegido: se lo ubica, se espera 400 ms y recién ahí MOVE_TOWARDS]\n");
+    printf("[el NPC elegido: se lo ubica y en el mismo frame MOVE_TOWARDS]\n");
     __asm__ volatile("mov %%esp, %0" : "=r"(esp0));
     for (int i = 0; i < 12; i++, now += step) /* 200 ms: elegido y ubicado */
         ghost_frame(now, &net, 16);
-    CHECK(g_teleports == 1 && g_starts == 0, "ubicado (teletransportes %u) y todavía sin comando (inicios %u)", g_teleports, g_starts);
+    CHECK(g_teleports == 1 && g_starts == 1, "ubicado (teletransportes %u) y con la orden en el mismo frame (inicios %u)", g_teleports,
+          g_starts);
     for (int i = 0; i < 30; i++, now += step) /* 500 ms más */
         ghost_frame(now, &net, 16);
     __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
@@ -337,8 +338,8 @@ int main(void)
         memcpy(local + CHR_POS, lp, 12);
         ghost_frame(now, &net, 16);
     }
-    CHECK(g_starts == 2 && g_updates >= 2, "una orden nueva cuando el objetivo se movió más de 75 cm (inicios %u; actualizaciones %u)",
-          g_starts, g_updates);
+    CHECK(g_starts == 1 && g_updates >= 4, "sin órdenes nuevas: se le actualiza el destino (inicios %u; actualizaciones %u)", g_starts,
+          g_updates);
     CHECK(g_teleports == 1, "sin teletransportes mientras camina (%u)", g_teleports);
     CHECK(g_last_target[3] > 1.4f + bx && g_last_target[3] < 2.0f + bx, "el destino sigue al objetivo (x=%.2f)", (double)g_last_target[3]);
 
@@ -349,7 +350,7 @@ int main(void)
     uint32_t up0 = g_updates;
     for (int i = 0; i < 70; i++, now += step)
         ghost_frame(now, &net, 16);
-    CHECK(g_starts == 2 && g_updates > up0, "no se lo vuelve a dar (inicios %u) y se le sigue actualizando el destino (%u)", g_starts,
+    CHECK(g_starts == 1 && g_updates > up0, "no se lo vuelve a dar (inicios %u) y se le sigue actualizando el destino (%u)", g_starts,
           g_updates - up0);
 
     printf("[la IA cambió el comando: se lo vuelve a dar]\n");
@@ -358,7 +359,7 @@ int main(void)
     putp(npc, CHR_SCRIPTCTRL + CMDCTRL_EXEC, other);
     for (int i = 0; i < 70; i++, now += step)
         ghost_frame(now, &net, 16);
-    CHECK(g_starts == 3, "otro MOVE_TOWARDS (inicios %u)", g_starts);
+    CHECK(g_starts == 2, "otro MOVE_TOWARDS (inicios %u)", g_starts);
 
     printf("[motivación cinemática: verdadera solo para el agente del avatar]\n");
     {
@@ -406,13 +407,14 @@ int main(void)
         printf("FALLA: no se pudo leer el log\n");
         return 1;
     }
-    expect(log, "AIMP_GHOST_WALK=1 (fase 4b, experimental): MOVE_TOWARDS con move_type 1", 1);
+    expect(log, "AIMP_GHOST_WALK=1 (fase 4b, experimental): MOVE_TOWARDS en el controlador +0x3570 con move_type 1", 1);
     expect(log, "GHOST: caminata: teletransporte de", 1);
     expect(log, "(primera vez;", 1);
     expect(log, "(controlador 0x", 1);
     expect(log, "después de ubicarlo", 1);
     expect(log, "después de reubicarlo", 1);
-    expect(log, "el objetivo se movió", 1);
+    expect(log, "sin órdenes nuevas cuando el objetivo se mueve", 1);
+    expect(log, "el objetivo se movió", 0);
     expect(log, "el comando actual era GOTO", 1);
     expect(log, "(lejos o en otro piso hace 1 s;", 1);
     expect(log, "caminata (caminando)", 1);
