@@ -131,6 +131,9 @@ static int rearm_allowed(const float *t)
 /* movimiento del otro jugador (remote_motion) */
 static uint32_t g_rm_seq, g_rm_ms;
 static float g_rm_p[3], g_rm_v[3], g_rm_speed, g_rm_camh = 1.57f;
+static int64_t g_rm_at;
+static int g_puppet; /* AIMP_GHOST_PUPPET: 1 = SetTransform por frame, 2 = escribir la posición */
+static uint32_t g_pup_frames;
 static int g_rm_valid, g_rm_crouch, g_walk_lead_ms = 400, g_walk_run_mms = 3000;
 /* AIMP_GHOST_INVINCIBLE */
 static int g_invincible = 1, g_inv_bad;
@@ -295,6 +298,7 @@ int ghost_install(void)
     g_clone_auth = aimp_env_int(L"AIMP_GHOST_CLONE_AUTH", 0);
     g_front_cm = aimp_env_int(L"AIMP_GHOST_FRONT_CM", 0);
     g_walk_lead_ms = aimp_env_int(L"AIMP_GHOST_WALK_LEAD_MS", 400);
+    g_puppet = aimp_env_int(L"AIMP_GHOST_PUPPET", 0);
     g_walk_run_mms = aimp_env_int(L"AIMP_GHOST_WALK_RUN_MMS", 3000);
     {
         wchar_t wn[0x40];
@@ -738,6 +742,13 @@ static float aimp_sinf(float x)
     return r;
 }
 
+static float aimp_atan2f(float y, float x)
+{
+    float r;
+    __asm__("fpatan" : "=t"(r) : "0"(x), "u"(y) : "st(1)");
+    return r;
+}
+
 static float aimp_cosf(float x)
 {
     float r;
@@ -938,6 +949,50 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
         g_far_since = 0;
         break;
     case W_WALK: {
+        /* AIMP_GHOST_PUPPET (pedido del usuario 2026-11-15: "movimientos exactos, en tiempo real"): con red, el
+         * avatar va cada frame a la posición del otro (extrapolada con su velocidad desde el último paquete, como
+         * mucho 150 ms) y su locomoción recibe un MOVE_TOWARDS hacia un punto 0,6 s adelante, con el paso según la
+         * velocidad del otro, para que las piernas animen. 1 = SetTransform (teleport) por frame; 2 = escribir
+         * Character+0x70/+0x174 directo (SetTransform pone en 0 +0x184/+0x1A0, que podría cortar la animación). */
+        if (g_puppet && g_tgt_net && g_rm_valid) {
+            float el = (float)(now - g_rm_at) / (float)g_freq;
+            if (el > 0.15f)
+                el = 0.15f;
+            if (el < 0.0f)
+                el = 0.0f;
+            static float s_p[4] __attribute__((aligned(16)));
+            s_p[0] = g_rm_p[0] + g_rm_v[0] * el;
+            s_p[1] = g_rm_p[1];
+            s_p[2] = g_rm_p[2] + g_rm_v[2] * el;
+            float pyaw = tyaw;
+            if (g_rm_speed > 0.5f)
+                pyaw = aimp_atan2f(g_rm_v[0], g_rm_v[2]);
+            if (g_puppet == 2) {
+                mem_write(g_chr + CHR_POS, s_p, 12);
+                mem_write(g_chr + CHR_YAW, &pyaw, 4);
+            } else {
+                teleport_to(s_p, pyaw);
+            }
+            g_pup_frames++;
+            float lk = g_rm_speed > 0.3f ? 0.6f : 0.0f;
+            g_target[3] = s_p[0] + g_rm_v[0] * lk;
+            g_target[7] = s_p[1];
+            g_target[11] = s_p[2] + g_rm_v[2] * lk;
+            float lt[3] = { g_target[3], g_target[7], g_target[11] };
+            int want = g_rm_speed * 1000.0f > (float)g_walk_run_mms ? g_walk_type_far : g_walk_type;
+            ours = walk_is_ours(ctrl, &type);
+            if (want != g_cur_type && now - g_last_restart >= g_freq * 3 / 10) {
+                set_move_type(want);
+                walk_start(ctrl, lt, now, want == g_walk_type_far ? "títere: corre" : "títere: camina");
+            } else if (!ours && now - g_last_restart >= g_freq) {
+                walk_start(ctrl, lt, now, "títere: el comando no era el nuestro");
+            } else if (ours && now - g_last_cmd >= g_walk_ticks / 2) {
+                g_move_update((void *)ctrl, NULL, g_cmd_a, g_cmd_b, g_target, g_params, 1);
+                g_last_cmd = now;
+                g_updates++;
+            }
+            break;
+        }
         int is_far = d2 > tp * tp || dy > 2.0f || dy < -2.0f;
         if (!is_far)
             g_far_since = 0;
@@ -1137,9 +1192,10 @@ static void invincible(int64_t now)
  * la velocidad (media exponencial) y la altura de la cámara sobre los pies (parado ~1,57 m). El objetivo se
  * adelanta AIMP_GHOST_WALK_LEAD_MS (400) en la dirección del movimiento, y el paso sale de la velocidad real:
  * RUN a más de AIMP_GHOST_WALK_RUN_MMS (3000 mm/s). Agachado = cámara a menos de 1,25 m (por ahora solo se loguea). */
-static void remote_motion(const AimpPkt *r, float *t)
+static void remote_motion(const AimpPkt *r, float *t, int64_t now)
 {
     if (r->seq != g_rm_seq) {
+        g_rm_at = now;
         if (g_rm_valid && r->seq > g_rm_seq && r->time_ms != g_rm_ms) {
             float dt = (float)(uint32_t)(r->time_ms - g_rm_ms) / 1000.0f;
             if (dt > 0.0f && dt < 1.0f) {
@@ -1202,7 +1258,7 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
         tyaw = net->remote.yaw;
         src = "red";
         g_tgt_net = 1;
-        remote_motion(&net->remote, t);
+        remote_motion(&net->remote, t, now);
     } else if (g_walk && !g_walk_bad) {
         /* AIMP_GHOST_WALK_BEHIND_CM (250) detrás del jugador: adelante = (sin yaw, cos yaw) (corrida 20). Con
          * 1,2 m, caminar hacia atrás metía al jugador contra el NPC (corrida 22). Corrida 29: si el jugador se da
