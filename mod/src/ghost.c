@@ -92,8 +92,8 @@ static int g_walk, g_walk_type = MOVE_TYPE_WALK, g_walk_tp_cm = 600, g_walk_bad,
 static int g_walk_type_far = MOVE_TYPE_RUN, g_walk_far_cm = 500, g_cur_type = MOVE_TYPE_WALK; /* corre si queda lejos */
 /* AIMP_GHOST_WALK_FACE: con red, quieto, mira hacia donde mira el otro jugador */
 static int g_walk_face = 1, g_tgt_net;
-static int64_t g_still_since, g_last_face;
-static float g_still_t[3];
+static int64_t g_still_since, g_last_face, g_settle_since;
+static float g_still_t[3], g_settle_p[3];
 static uint32_t g_faces;
 static volatile uint32_t g_walk_ctrl; /* controlador del avatar, para el filtro (corre en otro thread) */
 /* AIMP_GHOST_WALK_CINEMATIC: la motivación cinemática del avatar siempre verdadera (hook de FUN_006d3630) */
@@ -440,7 +440,7 @@ static void start_moving(uint32_t p, int64_t now)
     g_last_restart = g_last_cmd = g_far_since = 0;
     g_wstate = 0; /* W_PREP */
     g_prep_at = 0;
-    g_still_since = g_last_face = 0;
+    g_still_since = g_last_face = g_settle_since = 0;
     g_starts = g_updates = 0;
     g_walk_bad = 0;
     g_walk_ctrl = g_walk ? p + g_walk_off : 0;
@@ -793,18 +793,26 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             break;
         }
         ours = walk_is_ours(ctrl, &type);
-        /* AIMP_GHOST_WALK_FACE: con red, si el otro está quieto hace 1 s y el avatar ya llegó (a menos de 1,5 m),
-         * se lo gira hacia donde mira el otro. MOVE_TOWARDS no guarda la rotación del destino (FUN_0067e660 copia
-         * solo la traslación), así que: teletransporte en su lugar con ese yaw y orden nueva en el mismo frame
-         * (como mucho cada 2 s y si la diferencia pasa de 20 grados). */
+        /* AIMP_GHOST_WALK_FACE: con red, si el otro está quieto hace 1 s y el avatar se asentó (no se movió más de
+         * 10 cm en 1 s, a menos de 3 m: corrida 33, el punto exacto puede no ser alcanzable), se lo gira hacia donde
+         * mira el otro. MOVE_TOWARDS no guarda la rotación del destino (FUN_0067e660 copia solo la traslación), así
+         * que: teletransporte en su lugar con ese yaw y orden nueva en el mismo frame (como mucho cada 2 s y si la
+         * diferencia pasa de 20 grados). */
         if (g_walk_face && g_tgt_net) {
-            float sx = t[0] - g_still_t[0], sz = t[2] - g_still_t[2], yaw;
+            float sx = t[0] - g_still_t[0], sz = t[2] - g_still_t[2], px = cur[0] - g_settle_p[0], pz = cur[2] - g_settle_p[2], yaw;
+            if (px * px + pz * pz > 0.01f || !g_settle_since) {
+                g_settle_p[0] = cur[0];
+                g_settle_p[1] = cur[1];
+                g_settle_p[2] = cur[2];
+                g_settle_since = now;
+            }
             if (sx * sx + sz * sz > 0.0025f || !g_still_since) {
                 g_still_t[0] = t[0];
                 g_still_t[1] = t[1];
                 g_still_t[2] = t[2];
                 g_still_since = now;
-            } else if (now - g_still_since >= g_freq && d2 < 2.25f && now - g_last_face >= 2 * g_freq && mem_f32(g_chr + CHR_YAW, &yaw)) {
+            } else if (now - g_still_since >= g_freq && now - g_settle_since >= g_freq && d2 < 9.0f && now - g_last_face >= 2 * g_freq &&
+                       mem_f32(g_chr + CHR_YAW, &yaw)) {
                 float dyaw = wrap_pi(tyaw - yaw);
                 if (dyaw > 0.35f || dyaw < -0.35f) {
                     g_faces++;

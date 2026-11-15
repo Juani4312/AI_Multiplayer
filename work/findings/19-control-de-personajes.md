@@ -71,7 +71,8 @@
 - **Enum `MOVE`** (tabla de nombres de enums en VA `0x0130FD18`): `SLOW_WALK`, `WALK`, `FAST_WALK`, `RUN`, `OBSOLETE_1`, `OBSOLETE_2`, `TELEPORT`. `params+0x00` = `WALK` (1) camina a ~1,2 m/s y `RUN` (3) corre a ~4,8 m/s (corridas 27–31).
 - **Teletransporte:** sin orden nueva en el mismo frame, la locomoción lo devuelve (corrida 22). Si su IA tiene un `PLAY_ANIMATION` en el controlador de tareas, cae del piso (corridas 26–29). Por eso: primero la orden; teletransporte y orden nueva cuando ya no hay animación.
 - **Nunca `SwitchCommand(ctrl, NULL)`** desde el mod: se cae leyendo `cmd+0x28` (corrida 23).
-- Resultado (corrida 31): sigue al jugador a ~2 m, sin trabarse ni pegársele; corre si queda a más de 5 m. Capturas en `work/evidence/runtime/shots/` (locales).
+- **Comando `MOVE_TOWARDS`** (constructor `FUN_0067e660`): ids en `cmd+0x34`/`+0x3C`, tipo en `+0x28`, destino (solo la traslación) en `+0x50..+0x58`, parámetros en `+0x80` (0x1C bytes, `move_type` primero) y `never_succeed` en `+0x9C`; la actualización escribe el destino en `+0x60..+0x68`. **No guarda la rotación del destino**: para orientar al avatar quieto, el mod lo teletransporta en su lugar con el yaw del otro y le da una orden nueva en el mismo frame (corrida 34: el yaw queda).
+- Resultado (corrida 31): sigue al jugador a ~2 m, sin trabarse ni pegársele; corre si queda a más de 5 m. Por red, en una máquina con `aimp_peer.py --replay` (corridas 32–34): sigue el recorrido del otro y, quieto, mira hacia donde mira el otro. Capturas en `work/evidence/runtime/shots/` (locales).
 
 ## Preguntas abiertas
 
@@ -80,4 +81,4 @@
 3. ¿Qué hace el resto de la vtable de `READ_GAMEPAD_1` (`0x012B19F0`: `+0x50` `FUN_00682830`, `+0x58` `FUN_00680990`, `+0x60` `FUN_00682b50`, `+0x68` `FUN_006816a0`, `+0x78` `FUN_00682560`, `+0x80` `FUN_00682b10`)?
 4. ¿Cómo se spawnea un personaje con la definición del jugador sin el crash de recursos (reutilizar los recursos del jugador 0)?
 5. ¿Qué controla el `+0x18` de los parámetros de `MOVE_TOWARDS` (0,1 por defecto) y cuál es el radio de llegada? Con el objetivo a menos de ~2,8 m el avatar no arranca (corrida 31).
-6. ¿Se puede hacer que el avatar mire hacia donde mira el otro jugador cuando está quieto (orientación del destino)?
+6. ~~¿Se puede hacer que el avatar mire hacia donde mira el otro cuando está quieto?~~ Sí, con teletransporte en el lugar más una orden nueva (corrida 34).
