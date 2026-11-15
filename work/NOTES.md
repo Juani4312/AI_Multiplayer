@@ -698,3 +698,8 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   - `ConditionHasScript` = `FUN_006eaa80`: `agente+0x3570` o `+0x3574` no nulos. Si el agente es `Character+0x2B0`, son `ctrl+0` y `ctrl+4` del controlador de comandos (`Character+0x3820`). Hipótesis: se confirma con el log del hook.
   - Hay motivaciones `FOLLOW_MOTIVATION` y `MULTIPLAYER_MOTIVATION`.
 - **Cambio (tests OK):** hook de `FUN_006d3630` (`AIMP_GHOST_WALK_CINEMATIC=1`, por defecto con la caminata). Para el agente del avatar (dentro de su `Character`, por rango) y el tipo 1 devuelve verdadero; loguea el offset del agente la primera vez.
+
+## 2026-11-15 — Corrida 25 (automática): crash por un hook con el `ret` mal (lección)
+- El juego se cayó a los 3,7 s de cargar el nivel, antes de elegir al NPC: `EXCEPCIÓN 0xc0000005 en 0x00000004`, retorno `AI.exe+0x2D02DF` (`FUN_006d0260`, que llama a los nodos del árbol). Log en `run25-crash-ret8.log`.
+- **Causa:** `FUN_006d3630` termina con **`ret 8`** (dos argumentos; el segundo no se usa) y el detour lo había declarado con uno, porque el decompilador mostraba un solo parámetro. Corregido; el stub de `test_walk` ahora tiene el `ret 8` real.
+- **Lección:** antes de hookear, verificar siempre el `ret N` en el asm, no la firma del decompilador.
