@@ -595,3 +595,15 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **Hallazgo 18:** cada personaje tiene un replicador (pool `[g_root+0x4C]`, apilado como listener del personaje) que codifica 11 tipos de mensaje: acciones y animación, posición, armas, salud…
   - La capa de canales es un **stub** en retail: `FUN_00a2abb0` no escribe nada y `FUN_00a2ab80` devuelve vacío. Por eso el dispatch nunca llama a un transporte.
   - La opción C queda descartada como camino corto. La animación del avatar y del Alien títere va a mano; lo que codificaba el replicador sirve de guía.
+
+## 2026-11-15 — Animación del avatar (fase 4b): pistas en estático, sin cerrar
+- **Componente de acción:** `Character+0x36C` es la acción principal (animación).
+  - `+0x0C` y `+0x10` son bloques de bytes con el largo en el primer byte (posición y acción continua); `+0x19` es el id o la secuencia de la acción.
+  - En `Character+0x370 + (j + 2i)·4` (i < 6, j < 2) hay acciones secundarias (`FUN_00648b70(i)` dice si el slot i existe).
+  - Es lo que codificaba el replicador (`FUN_007e2870`, `FUN_007e3a30`; hallazgo 18). Evidencia en `work/evidence/h18/a1.txt`.
+- **Comandos de NPC (`CMD_MoveTowards`, tipo `DAT_017509c4`, parámetro `MoveTarget` `DAT_017509d0`):** los métodos `FUN_0054b7a0` (empezar) y `FUN_0054b840` (actualizar destino) arman los parámetros (`FUN_00531530`) y el destino 3x4 (`FUN_008e2a20`). Después llaman a:
+  - `FUN_0067e980(ECX = controlador de comandos del personaje, a2, &id[8], &destino, &parámetros, flag)`: cancela el anterior (`+4`), construye el comando en el slot `+0x10` o `+0x160` (`FUN_0067e660`) y lo activa con `FUN_00678e20` (`"[SwitchCommand]"`);
+  - `FUN_006797a0(a2, &id, &destino, &parámetros, flag)`: busca el comando activo (`FUN_00677990`) y le actualiza el destino (`FUN_006776f0`).
+  - Hay hermanos para otros comandos (`FUN_0067ca60`, `cea0`, `d370`, `d7a0`, `db10`, `dea0`, `e3b0`, `b520`).
+  - **Falta** saber de dónde sale el controlador (`a3`) a partir del `Character`: los métodos lo reciben del despachador genérico de entidades. Se podría encontrar en runtime, con un hook de traza en `FUN_0067e980` mientras un script mueve a un NPC.
+- **Idea para la 4b:** en vez de teletransportar al avatar, darle un `MoveTowards` hacia la posición del otro y actualizarle el destino cada ~100 ms. Lo animaría el propio engine. Requiere que el avatar procese comandos, quizás con autoridad o IA. Hipótesis sin probar.
