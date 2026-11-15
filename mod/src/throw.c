@@ -329,6 +329,12 @@ static void probe_scan_node(Probe *p, uint32_t node, const float *ref, int nref)
     }
 }
 
+static int probe_ptr(uint32_t v)
+{
+    return v >= 0x10000 && v < 0x7FFF0000u && !(v & 3) &&
+           !(v >= (uint32_t)g_aimp_exe && v < (uint32_t)g_aimp_exe + AIMP_EXPECT_SIZEOFIMAGE);
+}
+
 static void probe_start(Probe *p)
 {
     float ref[6];
@@ -340,26 +346,53 @@ static void probe_start(Probe *p)
         aimp_memcpy(ref + 3 * nref, g_last_start, 12);
         nref++;
     }
-    uint32_t st[PR_NODES], nst = 0, seen = 0, ncomp = 0;
-    st[nst++] = p->obj;
-    while (nst && seen < PR_NODES) {
-        uint32_t o = st[--nst], vt = 0;
-        seen++;
+    uint32_t w[16];
+    if (mem_read(p->obj, w, sizeof w))
+        log_printf("THROW sonda: objeto 0x%08x (vt rva 0x%x): %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x",
+                   p->obj, rva(w[0]), w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7], w[8], w[9], w[10], w[11], w[12], w[13], w[14], w[15]);
+    /* BFS: hijos de los composites y punteros (primeros 0x100 bytes de cada nodo), hasta 3 niveles */
+    static uint32_t q[PR_NODES];
+    static uint8_t qd[PR_NODES];
+    uint32_t nq = 0, head = 0, ncomp = 0;
+    q[nq] = p->obj;
+    qd[nq++] = 0;
+    while (head < nq) {
+        uint32_t o = q[head], vt = 0;
+        uint8_t d = qd[head++];
         probe_scan_node(p, o, ref, nref);
-        if (!mem_u32(o, &vt) || vt != (uint32_t)g_aimp_exe + AIMP_RVA_VT_COMPOSITE)
+        if (d >= 3)
             continue;
-        ncomp++;
-        uint32_t arr = 0, cnt = 0, items = 0;
-        if (!mem_u32(o + COMP_CHILDREN, &arr) || !arr || !mem_u32(arr + 8, &cnt) || !mem_u32(arr + 0xC, &items) || cnt > 4096)
-            continue;
-        for (uint32_t i = 0; i < cnt && nst < PR_NODES; i++) {
-            uint32_t hh = 0, ch = 0;
-            if (mem_u32(items + 4 * i, &hh) && hh && mem_u32(hh + HANDLE_OBJ, &ch) && ch)
-                st[nst++] = ch;
+        uint32_t kids[64], nk = 0;
+        if (mem_u32(o, &vt) && vt == (uint32_t)g_aimp_exe + AIMP_RVA_VT_COMPOSITE) {
+            ncomp++;
+            uint32_t arr = 0, cnt = 0, items = 0;
+            if (mem_u32(o + COMP_CHILDREN, &arr) && arr && mem_u32(arr + 8, &cnt) && mem_u32(arr + 0xC, &items) && cnt <= 4096)
+                for (uint32_t i = 0; i < cnt && nk < 64; i++) {
+                    uint32_t hh = 0, ch = 0;
+                    if (mem_u32(items + 4 * i, &hh) && hh && mem_u32(hh + HANDLE_OBJ, &ch) && ch)
+                        kids[nk++] = ch;
+                }
+        }
+        uint32_t pw[64];
+        if (mem_read(o, pw, sizeof pw))
+            for (int i = 1; i < 64 && nk < 64; i++)
+                if (probe_ptr(pw[i]) && pw[i] != o)
+                    kids[nk++] = pw[i];
+        for (uint32_t k = 0; k < nk && nq < PR_NODES; k++) {
+            int dup = 0;
+            for (uint32_t j = 0; j < nq && !dup; j++)
+                dup = q[j] == kids[k];
+            if (dup)
+                continue;
+            uint32_t tmp;
+            if (!mem_u32(kids[k], &tmp))
+                continue;
+            q[nq] = kids[k];
+            qd[nq++] = (uint8_t)(d + 1);
         }
     }
     log_printf("THROW sonda: entrada %u del pool, objeto 0x%08x: %u nodos (%u composites), %u candidatos cerca de %d referencias",
-               p->idx, p->obj, seen, ncomp, p->ncand, nref);
+               p->idx, p->obj, nq, ncomp, p->ncand, nref);
 }
 
 static void probe_frame(int64_t now, int64_t freq)
