@@ -266,7 +266,11 @@ static const uint8_t AIMP_SWITCH_COMMAND_PROLOGUE[9] __attribute__((unused)) = {
  * Del destino se lee la traslación (+0x0C, +0x1C, +0x2C). Parámetros (0x1C bytes, FUN_00677670):
  * +0x00 move_type (enum MOVE; 1 por defecto en el script), +0x04 disallow_traversal, +0x08
  * should_be_aiming, +0x09 use_current_target_as_aim, +0x10 id de AimTarget, +0x18 float (0,1). */
-#define CHR_CMDCTRL               0x3820
+#define CHR_CMDCTRL               0x3820  /* controlador de tareas de la IA ([TASK]) */
+/* Corrida 26: hay dos controladores consecutivos de 0x2B0 bytes (0x10 + 2 slots de 0x150). El de scripts
+ * ([SCRIPT]) está en Character+0x3570: ConditionHasScript (FUN_006eaa80) mira sus +0/+4 y ActionScript
+ * (FUN_006d2830) ejecuta su comando. Ahí hay que dar el MOVE_TOWARDS para que lo ejecute la rama cinemática. */
+#define CHR_SCRIPTCTRL            0x3570
 #define CMDCTRL_OWNER             0x34
 #define CMDCTRL_EXEC              0x00  /* comando en ejecución (FUN_00677990 revisa +0 y +4; corrida 21) */
 #define CMDCTRL_CURRENT           0x04  /* comando pendiente: lo pone SwitchCommand */

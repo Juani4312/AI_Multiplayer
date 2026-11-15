@@ -73,7 +73,7 @@ static uint32_t __attribute__((cdecl)) fake_spawnchar(uint32_t self, const uint8
     uint32_t type = get32(req, SREQ_TYPE);
     put32(d, DEF_TYPE, type);
     putp(c, CHR_DEF, d);
-    putp(c, CHR_CMDCTRL + CMDCTRL_OWNER, c); /* controlador de comandos: +0x34 = el personaje */
+    putp(c, CHR_SCRIPTCTRL + CMDCTRL_OWNER, c); /* controlador de comandos: +0x34 = el personaje */
     if (type == 0) {
         uint8_t *ctrl = obj(0x60);
         d[DEF_FLAG_1C] = d[DEF_FLAG_1F] = 1;
@@ -98,7 +98,7 @@ static void __attribute__((cdecl)) fake_teleport(uint32_t pj, const float *pos, 
 static void record(uint32_t ctrl, const uint8_t *a, const uint8_t *b, const float *t, const uint8_t *params, uint32_t flag)
 {
     uint32_t owner = get32((void *)(uintptr_t)ctrl, CMDCTRL_OWNER);
-    if (ctrl != owner + CHR_CMDCTRL)
+    if (ctrl != owner + CHR_SCRIPTCTRL)
         g_bad_ctrl++;
     if ((uintptr_t)t & 15)
         g_misaligned++;
@@ -343,9 +343,9 @@ int main(void)
     CHECK(g_last_target[3] > 1.4f + bx && g_last_target[3] < 2.0f + bx, "el destino sigue al objetivo (x=%.2f)", (double)g_last_target[3]);
 
     printf("[el engine pasa el comando de pendiente (+4) a en ejecución (+0): sigue siendo el del mod]\n");
-    uint32_t mine = get32(npc, CHR_CMDCTRL + CMDCTRL_CURRENT);
-    put32(npc, CHR_CMDCTRL + CMDCTRL_EXEC, mine);
-    put32(npc, CHR_CMDCTRL + CMDCTRL_CURRENT, 0);
+    uint32_t mine = get32(npc, CHR_SCRIPTCTRL + CMDCTRL_CURRENT);
+    put32(npc, CHR_SCRIPTCTRL + CMDCTRL_EXEC, mine);
+    put32(npc, CHR_SCRIPTCTRL + CMDCTRL_CURRENT, 0);
     uint32_t up0 = g_updates;
     for (int i = 0; i < 70; i++, now += step)
         ghost_frame(now, &net, 16);
@@ -355,7 +355,7 @@ int main(void)
     printf("[la IA cambió el comando: se lo vuelve a dar]\n");
     uint8_t *other = obj(0x100);
     put32(other, CMD_TYPE, 3);
-    putp(npc, CHR_CMDCTRL + CMDCTRL_EXEC, other);
+    putp(npc, CHR_SCRIPTCTRL + CMDCTRL_EXEC, other);
     for (int i = 0; i < 70; i++, now += step)
         ghost_frame(now, &net, 16);
     CHECK(g_starts == 3, "otro MOVE_TOWARDS (inicios %u)", g_starts);
@@ -379,11 +379,11 @@ int main(void)
     }
 
     printf("[filtro de SwitchCommand: la IA no puede cambiarle el comando al avatar]\n");
-    uint32_t actrl = (uint32_t)(uintptr_t)npc + CHR_CMDCTRL, ours = get32(npc, CHR_CMDCTRL + CMDCTRL_CURRENT);
+    uint32_t actrl = (uint32_t)(uintptr_t)npc + CHR_SCRIPTCTRL, ours = get32(npc, CHR_SCRIPTCTRL + CMDCTRL_CURRENT);
     CHECK(ghost_switch_filter(actrl, (uint32_t)(uintptr_t)other) == 0, "GOTO de la IA sobre el avatar: bloqueado");
     CHECK(ghost_switch_filter(actrl, ours) == 1, "el MOVE_TOWARDS del mod: pasa");
     CHECK(ghost_switch_filter(actrl, 0) == 1, "cambiar a ningún comando: pasa");
-    CHECK(ghost_switch_filter((uint32_t)(uintptr_t)local + CHR_CMDCTRL, (uint32_t)(uintptr_t)other) == 1, "otro personaje: pasa");
+    CHECK(ghost_switch_filter((uint32_t)(uintptr_t)local + CHR_SCRIPTCTRL, (uint32_t)(uintptr_t)other) == 1, "otro personaje: pasa");
 
     printf("[lejos más de 1 s: teletransporte y orden nueva en el mismo frame, nunca SwitchCommand(NULL)]\n");
     lp[0] = 20.0f;
