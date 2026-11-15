@@ -59,6 +59,9 @@
 typedef void(__attribute__((fastcall)) * SpawnAuthFn)(void *self, void *edx, void *req, uint32_t flag);
 typedef uint32_t(__attribute__((fastcall)) * SpawnCharFn)(void *self, void *edx, void *req);
 typedef void(__attribute__((fastcall)) * TeleportFn)(void *self, void *edx, const float *pos, float yaw, uint32_t p3);
+typedef void(__attribute__((fastcall)) * IdleCmdFn)(void *ctrl, void *edx, const uint8_t *a, const uint8_t *b, uint32_t stance,
+                                                    float f, uint32_t face, uint32_t raise, uint32_t style, uint32_t lock,
+                                                    uint32_t anchor, uint32_t start);
 typedef void(__attribute__((fastcall)) * MoveCmdFn)(void *ctrl, void *edx, const uint8_t *a, const uint8_t *b,
                                                     const float *target, const uint8_t *params, uint32_t never_succeed);
 /* FUN_006d3630 termina con `ret 8` (dos argumentos; el segundo no se usa). Corrida 25: declarado con uno, el stack
@@ -132,6 +135,9 @@ static int rearm_allowed(const float *t)
 static uint32_t g_rm_seq, g_rm_ms;
 static float g_rm_p[3], g_rm_v[3], g_rm_speed, g_rm_camh = 1.57f;
 static int64_t g_rm_at;
+static IdleCmdFn g_idle_cmd;
+static int g_idle_on, g_crouch_stance = 2;
+static volatile int g_allow_cmd; /* el filtro deja pasar el comando que da el mod (mismo thread) */
 static int g_puppet; /* AIMP_GHOST_PUPPET: 1 = SetTransform por frame, 2 = escribir la posición */
 static uint32_t g_pup_frames;
 static int g_rm_valid, g_rm_crouch, g_walk_lead_ms = 400, g_walk_run_mms = 3000;
@@ -298,7 +304,7 @@ int ghost_install(void)
     g_clone_auth = aimp_env_int(L"AIMP_GHOST_CLONE_AUTH", 0);
     g_front_cm = aimp_env_int(L"AIMP_GHOST_FRONT_CM", 0);
     g_walk_lead_ms = aimp_env_int(L"AIMP_GHOST_WALK_LEAD_MS", 400);
-    g_puppet = aimp_env_int(L"AIMP_GHOST_PUPPET", 0);
+    g_puppet = aimp_env_int(L"AIMP_GHOST_PUPPET", 1); /* corrida 46: 1 (SetTransform) da 0,00 m; 2 (escribir +0x70) no se pega (corrida 47) */
     g_walk_run_mms = aimp_env_int(L"AIMP_GHOST_WALK_RUN_MMS", 3000);
     {
         wchar_t wn[0x40];
@@ -321,6 +327,13 @@ int ghost_install(void)
             g_walk = 0;
         } else {
             g_move_start = (MoveCmdFn)(void *)ps;
+            uint8_t c[sizeof AIMP_CMD_MOVE_START_PROLOGUE];
+            uintptr_t pi = g_aimp_exe + AIMP_RVA_CMD_IDLE;
+            if (mem_read(pi, c, sizeof c) && aimp_memcmp(c, AIMP_CMD_MOVE_START_PROLOGUE, sizeof c) == 0)
+                g_idle_cmd = (IdleCmdFn)(void *)pi;
+            else
+                log_printf("GHOST: el prólogo de FUN_0067db10 (IDLE) no coincide; el avatar no se agacha");
+            g_crouch_stance = aimp_env_int(L"AIMP_GHOST_CROUCH_STANCE", 2);
             g_move_update = (MoveCmdFn)(void *)pu;
             g_walk_type = aimp_env_int(L"AIMP_GHOST_WALK_TYPE", MOVE_TYPE_WALK);
             g_walk_type_far = aimp_env_int(L"AIMP_GHOST_WALK_TYPE_FAR", MOVE_TYPE_RUN); /* igual a TYPE: no cambia */
@@ -511,6 +524,7 @@ static void start_moving(uint32_t p, int64_t now)
     g_rearm_since = 0;
     g_hold = 0;
     g_yaw_since = 0;
+    g_idle_on = 0;
     g_walk_ctrl = g_walk ? p + g_walk_off : 0;
     g_walk_chr = g_walk && g_walk_cine ? p : 0;
     aimp_memcpy(g_cmd_b, &p, 4); /* el segundo id del comando: el avatar y "GH" */
@@ -805,7 +819,7 @@ static int walk_is_ours(uint32_t ctrl, uint32_t *type)
 int ghost_switch_filter(uint32_t ctrl, uint32_t cmd)
 {
     uint32_t mine = g_walk_ctrl, type = 0xFFFFFFFFu;
-    if (!mine || ctrl != mine || !cmd || cmd_is_ours(cmd, &type))
+    if (!mine || ctrl != mine || !cmd || g_allow_cmd || cmd_is_ours(cmd, &type))
         return 1;
     LONG n = InterlockedIncrement(&g_n_blocked);
     if (n <= 20 || (n & 255) == 0) {
@@ -979,7 +993,29 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             g_target[7] = s_p[1];
             g_target[11] = s_p[2] + g_rm_v[2] * lk;
             float lt[3] = { g_target[3], g_target[7], g_target[11] };
-            int want = g_rm_speed * 1000.0f > (float)g_walk_run_mms ? g_walk_type_far : g_walk_type;
+            /* agachado y quieto: comando IDLE con la postura (AIMP_GHOST_CROUCH_STANCE); al moverse o pararse, MOVE */
+            int want_idle = g_idle_cmd && g_rm_crouch && g_rm_speed < 0.3f;
+            if (want_idle && !g_idle_on && now - g_last_restart >= g_freq / 2) {
+                log_printf("GHOST: títere: el otro está agachado y quieto; IDLE con postura %d", g_crouch_stance);
+                g_allow_cmd = 1;
+                g_idle_cmd((void *)ctrl, NULL, g_cmd_a, g_cmd_b, (uint32_t)g_crouch_stance, 1.0f, 0, 0, 0, 0, 0, 1);
+                g_allow_cmd = 0;
+                g_idle_on = 1;
+                g_last_restart = now;
+                break;
+            }
+            if (g_idle_on) {
+                if (want_idle)
+                    break;
+                g_idle_on = 0;
+                walk_start(ctrl, lt, now, "títere: deja el IDLE");
+                break;
+            }
+            int want = g_cur_type; /* histéresis: corre por encima del umbral, camina por debajo del 80 % (corrida 46) */
+            if (g_rm_speed * 1000.0f > (float)g_walk_run_mms)
+                want = g_walk_type_far;
+            else if (g_rm_speed * 1000.0f < (float)g_walk_run_mms * 0.8f)
+                want = g_walk_type;
             ours = walk_is_ours(ctrl, &type);
             if (want != g_cur_type && now - g_last_restart >= g_freq * 3 / 10) {
                 set_move_type(want);
