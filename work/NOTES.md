@@ -565,3 +565,23 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   1. corrida local con `AIMP_TRACE_PINS=1`: que el `PINIX` automático dé "0 faltan", cuánto tarda, y el layout del mensaje;
   2. `FIRE` por índice de un `TriggerVolumeFilter` que no disparó;
   3. dos máquinas con `AIMP_SYNC_PINS=1`.
+
+## 2026-11-15 — Arrojables: cadena del lanzamiento y `AIMP_SYNC_THROW` (estático + tests; hallazgo 17)
+- El usuario no autorizó todavía la corrida 20: pidió seguir en estático y probar cuando haga falta.
+- **Cadena (hallazgo 17):** el evento de animación `"spawn_projectile"` (`FUN_00666f90`) lleva a `FUN_007b9500`.
+  - `FUN_0079c910` arma 64 bytes: matriz 3x4 de la mano (traslación en `m[3]`, `m[7]`, `m[11]`), velocidad = dirección al punto de impacto `[Character+0x1100]+0x90` × 20, y 9.81.
+  - Después llama a `FUN_007b5050(pool [0x16F0DE4], &m, &vel, 15.0, def+0x58 "Thrown\X", def+0x70)`.
+  - `FUN_007ade20` instancia el composite que **termina** con ese nombre (`REQUIRED_ASSETS\THROWN\FLARE`, etc., en los `COMMANDS.PAK`). Le pone posición, velocidad y duración 10, y le dispara `"spawn_explosive"`.
+  - `ProjectileMotion` (`FUN_0060b740`) simula el vuelo con esos parámetros y la gravedad. No lee al jugador.
+  - Las minas (`"place_ied"`) usan `FUN_007b5190` con velocidad 0 y `"place_item"`.
+- **Las armas de fuego son composites de CATHODE** (`Weapons\Pistol_Standard`…, `FUN_0079c150`, con `starting_ammo`). El disparo se resuelve dentro del composite. No se siguió: queda para otro bloque.
+- **Código:**
+  - `mod/src/throw.c`: `AIMP_TRACE_THROW`, `AIMP_SYNC_THROW` y `AIMP_THROW_ECHO`, con hooks en las dos funciones (prólogo SEH, se pisan 6 bytes);
+  - evento `AIMP_EVT_THROW` de 112 bytes. El **protocolo pasa a la v2** (`AIMP_EVT_DATA` 52 → 112 y `AimpEvt` 76 → 136); `net.c` valida el largo de los eventos;
+  - el receptor llama por el trampolín, con buffers alineados a 16 y la plantilla interna;
+  - los detours solo encolan y `throw_frame` (thread principal) loguea, manda y hace los ecos.
+- **Tests:** `test_throw` (stubs con el prólogo SEH y `ret 0x14` / `ret 0xC` reales). Prueba el envío, el eco corrido, que no haya eco por red, la aplicación remota, otro nivel, sin pool y colocar. **Todos los tests OK.**
+- `Dump.java`: comando nuevo `fstr:INICIO:FIN` (funciones de un rango con los strings que referencian).
+- **Falta runtime** (cuando el usuario lo autorice):
+  1. en una sola máquina, `AIMP_TRACE_THROW=1;AIMP_THROW_ECHO=1500`: tirar una bengala y ver si aparece la copia con la misma curva, y que no se caiga;
+  2. con dos máquinas, `AIMP_SYNC_THROW=1`. La laptop necesita la DLL nueva (protocolo v2).

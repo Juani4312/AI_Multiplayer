@@ -190,6 +190,10 @@ static void handle_packet(AimpNet *n, const AimpPkt *p, int len, uint32_t ip, ui
     }
     if (p->type == AIMP_PKT_EVENT) {
         const AimpEvt *e = (const AimpEvt *)p;
+        if (len < (int)sizeof *e || e->size > AIMP_EVT_DATA) {
+            n->bad++;
+            return;
+        }
         uint32_t s = e->seq;
         if (s > n->evt_last_in) {
             uint32_t sh = s - n->evt_last_in;
@@ -251,10 +255,14 @@ void net_poll(AimpNet *n, int64_t now)
     int first = !n->polled;
     n->polled = 1;
     for (int i = 0; i < (first ? 8192 : 1024); i++) {
-        AimpPkt buf[2]; /* lugar de sobra: paquetes más largos se truncan y cuentan como malos */
+        union {
+            AimpPkt p;
+            AimpEvt e;
+            uint8_t raw[2 * sizeof(AimpEvt)]; /* lugar de sobra: paquetes más largos se truncan y cuentan como malos */
+        } buf;
         struct sockaddr_in from;
         int fl = sizeof from;
-        int r = W.recvfrom(s, (char *)buf, sizeof buf, 0, (struct sockaddr *)&from, &fl);
+        int r = W.recvfrom(s, (char *)&buf, sizeof buf, 0, (struct sockaddr *)&from, &fl);
         if (r == SOCKET_ERROR) {
             int e = W.WSAGetLastError();
             if (e != WSAEWOULDBLOCK && e != WSAECONNRESET)
@@ -267,7 +275,7 @@ void net_poll(AimpNet *n, int64_t now)
             n->stale_total++;
             continue;
         }
-        handle_packet(n, buf, r, from.sin_addr.s_addr, from.sin_port, now);
+        handle_packet(n, &buf.p, r, from.sin_addr.s_addr, from.sin_port, now);
     }
     if (first && n->stale_total)
         log_printf("NET: descartados %u paquetes que llegaron antes del primer frame", n->stale_total);

@@ -3,6 +3,7 @@
 #include "crash.h"
 #include "ghost.h"
 #include "sync.h"
+#include "throw.h"
 #include "hook.h"
 #include "log.h"
 #include "autopad.h"
@@ -89,6 +90,7 @@ int game_init(void)
     ghost_install(); /* opcional: AIMP_TRACE_SPAWN=1 / AIMP_GHOST=1 (fase 4, experimental) */
     sync_install(probe_net()); /* opcional: AIMP_TRACE_USE=1 / AIMP_SYNC_USE=1 (fase 5, experimental) */
     pins_install(probe_net()); /* opcional: AIMP_TRACE_PINS=1 (traza) / AIMP_SYNC_PINS=1 (fase 6) */
+    throw_install(probe_net()); /* opcional: AIMP_TRACE_THROW=1 / AIMP_SYNC_THROW=1 / AIMP_THROW_ECHO=ms (hallazgo 17) */
     autopad_install(); /* opcional: AIMP_AUTOPAD=guion (pruebas sin nadie al teclado) */
     return 1;
 }

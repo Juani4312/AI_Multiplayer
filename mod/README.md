@@ -7,6 +7,7 @@ DLL proxy `winmm.dll` para `AI.exe` (Alien: Isolation, build de Windows). Funcio
 - **fase 4** (experimental, `AIMP_GHOST=3`): un NPC civil del nivel hace de avatar del otro jugador (hallazgo 12);
 - **fase 5** (experimental, `AIMP_SYNC_USE=1`): los "usar" (botones, cajas, ítems) se replican a la otra máquina, donde los hace el avatar (hallazgo 13);
 - **fase 6** (experimental, `AIMP_SYNC_PINS=1`, sin probar con dos máquinas): los disparadores de zona de los scripts los decide el host. El cliente bloquea los suyos y ejecuta los del host (hallazgos 15 y 16).
+- **arrojables** (experimental, `AIMP_SYNC_THROW=1`, sin probar en el juego): lo que tira o coloca el jugador (bengala, noisemaker, molotov, minas…) aparece en la otra máquina con la misma posición y velocidad (hallazgo 17).
 
 Sin opciones, el mod **solo lee**: lo único que modifica son los primeros bytes de `ModeManager::Run` (el JMP del hook), y siempre con la build verificada.
 - Los trazados (`AIMP_TRACE_QUEUES`, `AIMP_TRACE_SPAWN`, `AIMP_TRACE_USE`) agregan hooks que solo miran.
@@ -125,6 +126,9 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_PINS_FILE` | — | archivo de comandos que se relee cuando cambia: `FIRE <pid> <pin> [flags]` (reinyecta un pin) e `INDEX` (rearma el índice) |
 | `AIMP_SYNC_PINS` | 0 | 1 = **fase 6, experimental** (con red): el host manda los disparos de las reglas y el cliente bloquea los suyos y aplica los del host (líneas `PINSYNC`) |
 | `AIMP_SYNC_PINS_LIST` | zona | reglas `tipo:pin,...` en hex (`tipo:*` = todos los pines). Por defecto: `PlayerTriggerBox` `on_entered`/`on_exited` y `TriggerVolumeFilter` `on_event_entered`/`on_event_exited`/`triggered` |
+| `AIMP_TRACE_THROW` | 0 | 1 = loguea cada objeto que tira o coloca el jugador (líneas `THROW`: plantilla, posición, velocidad, caller). Solo mira |
+| `AIMP_SYNC_THROW` | 0 | 1 = **experimental** (con red): lo que tira o coloca el jugador local se manda al otro, que llama a la misma función con los mismos datos (hallazgo 17) |
+| `AIMP_THROW_ECHO` | 0 | prueba local sin red: repite cada lanzamiento propio a los N ms, corrido `AIMP_THROW_ECHO_CM` cm (75) al costado. Si aparece la copia con la misma curva, la inyección funciona |
 | `AIMP_CRASHLOG` | 1 | registro de excepciones (VEH): código, módulo+RVA, registros y stack si el juego se cae |
 
 ## Fase 3: red mínima (UDP)
@@ -174,6 +178,16 @@ Los modos 1 y 2 clonan el pedido de spawn del jugador para crear un personaje pr
 - Los eventos de otro nivel o de entidades que todavía no están quedan pendientes, en orden, hasta `AIMP_SYNC_PENDING_MS`.
 
 `test_pins` lo prueba con un árbol falso: índice, FIRE sin disparo previo, bloqueo, aplicación, bloqueo del disparo en cadena y envío del host.
+
+## Arrojables (experimental): lo que tira o coloca el jugador
+
+`AIMP_SYNC_THROW=1` (`src/throw.c`, hallazgo 17), con red:
+- **Envío:** hooks en `FUN_007b5050` (tirar: el evento de animación `spawn_projectile`) y `FUN_007b5190` (colocar: minas y soltar el ítem de la mano). Cada llamada sale como `AIMP_EVT_THROW` (112 bytes): la matriz de la mano, la velocidad, `time_left` y la plantilla (`Thrown\Flare`…).
+- **Aplicación:** el receptor, si está en el mismo nivel, llama a la misma función por el trampolín (no vuelve a mandarse). El engine instancia el composite `REQUIRED_ASSETS\THROWN\…` y `ProjectileMotion` simula el mismo vuelo.
+- **Protocolo v2:** los eventos pasaron de 52 a 112 bytes de datos. Las dos máquinas tienen que tener la misma versión del mod.
+- Sin probar en el juego. Primero, en una sola máquina: `AIMP_TRACE_THROW=1;AIMP_THROW_ECHO=1500`.
+
+`test_throw` lo prueba contra stubs con el prólogo SEH y los `ret` reales de las dos funciones.
 
 ## Qué hay en el log
 

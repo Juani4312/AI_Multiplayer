@@ -24,6 +24,7 @@
 #include "hook.h"
 #include "log.h"
 #include "pins.h"
+#include "throw.h"
 
 #define LOG_MAX 64
 
@@ -260,14 +261,19 @@ static int try_apply(Pend *q, uint32_t level)
 void sync_frame(AimpNet *net, uint32_t level)
 {
     g_level = level;
-    int pins = pins_sync_enabled();
-    if ((!g_on && !pins) || !net || !net->mode)
+    int pins = pins_sync_enabled(), throws = throw_sync_enabled();
+    if ((!g_on && !pins && !throws) || !net || !net->mode)
         return;
     int64_t now = qpc_now();
     AimpEvt e;
     while (net_take_event(net, &e)) {
         if (e.kind == AIMP_EVT_PIN) { /* fase 6: pines decididos por el host (pins.c) */
             pins_remote_event(&e);
+            continue;
+        }
+        if (e.kind == AIMP_EVT_THROW) { /* objetos arrojados y colocados (throw.c, hallazgo 17) */
+            if (throws)
+                throw_remote_event(&e, level);
             continue;
         }
         if (!g_on && e.kind == AIMP_EVT_USE)
