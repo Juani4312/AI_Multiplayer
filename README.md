@@ -108,6 +108,8 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 3. Después, en estático: el disparo de las armas de fuego (hallazgo 17, "El equipo del jugador"), y más adelante el Alien.
 4. Pendientes menores: `AIMP_SYNC_PINS` con dos máquinas; una corrida de control para el arranque corto.
 
+**2026-11-15, noche (corridas 46–51), el títere:** el avatar ya no decide nada por su cuenta. Cada frame se pone en la posición exacta del otro jugador (0,00 m de diferencia en la mayoría de las muestras), con la animación de caminar o correr según la velocidad del otro. Que se agache cuando el otro se agacha todavía no funciona. Falta probarlo con dos máquinas: la DLL nueva está en `mod/dist/`.
+
 **2026-11-15, noche (corridas 39–45), "dos Amandas":** se puede crear una segunda Amanda (`THE_PLAYER`) desde el mod, clonando el pedido de spawn de autoridad del jugador, sin que se caiga el juego y sin que se lleve la cámara. Pero **es invisible**: el juego solo trae modelos de Amanda en primera persona (las cinemáticas son videos). Por eso el avatar sigue siendo un NPC, ahora más responsivo:
 - calcula la velocidad del otro y apunta adonde va a estar;
 - corre cuando el otro corre;
