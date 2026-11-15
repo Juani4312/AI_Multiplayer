@@ -82,6 +82,7 @@ static float g_vec[4] __attribute__((aligned(16)));
 static uint8_t g_scq[MAX_REQS][SC_REQ_SIZE];
 static int g_mode, g_state = G_OFF, g_from_key = -1, g_npc_type = 6, g_obs_logged, g_warned_npc, g_chosen_once;
 static int64_t g_last_pick;
+static int g_front_cm; /* AIMP_GHOST_FRONT_CM */
 static int g_clone_auth;      /* AIMP_GHOST_CLONE_AUTH: clonar el pedido de autoridad (0x130) en vez del de SpawnCharacter */
 static char g_clone_name[0x40]; /* AIMP_GHOST_CLONE_NAME (p. ej. PLAYER_2) */
 static int g_noauth; /* AIMP_GHOST_NOAUTH=1: experimento, el avatar pasa a no autoritativo */
@@ -127,6 +128,10 @@ static int rearm_allowed(const float *t)
     }
     return g_rearm_n++ < 3;
 }
+/* movimiento del otro jugador (remote_motion) */
+static uint32_t g_rm_seq, g_rm_ms;
+static float g_rm_p[3], g_rm_v[3], g_rm_speed, g_rm_camh = 1.57f;
+static int g_rm_valid, g_rm_crouch, g_walk_lead_ms = 400, g_walk_run_mms = 3000;
 /* AIMP_GHOST_INVINCIBLE */
 static int g_invincible = 1, g_inv_bad;
 static uint32_t g_inv_chr;
@@ -288,6 +293,9 @@ int ghost_install(void)
     g_npc_ticks = npc_ms > 0 ? g_freq * npc_ms / 1000 : 0;
     g_from_key = aimp_env_int(L"AIMP_GHOST_FROM", -1);
     g_clone_auth = aimp_env_int(L"AIMP_GHOST_CLONE_AUTH", 0);
+    g_front_cm = aimp_env_int(L"AIMP_GHOST_FRONT_CM", 0);
+    g_walk_lead_ms = aimp_env_int(L"AIMP_GHOST_WALK_LEAD_MS", 400);
+    g_walk_run_mms = aimp_env_int(L"AIMP_GHOST_WALK_RUN_MMS", 3000);
     {
         wchar_t wn[0x40];
         g_clone_name[0] = 0;
@@ -656,7 +664,34 @@ static void do_spawn_auth(const Chars *c, int64_t now)
     /* Corrida 40: con +0x4C = 1 RequestCharacter llama a FUN_007a37e0, que ata el personaje a la plaza de jugador
      * con el id de +0x48 (la del jugador 0): el clon se llevó la cámara y el input. AIMP_GHOST_CLONE_UNBIND=1
      * (por defecto) pone +0x4C = 0: personaje sin plaza de jugador. */
-    if (aimp_env_int(L"AIMP_GHOST_CLONE_UNBIND", 1))
+    /* Corrida 41: sin plaza (+0x4C = 0) el clon THE_PLAYER queda como NPC y el juego se cae (árbol de IA, lectura
+     * en 0x10). Plazas de jugador: **(SpawnCharacter.this + 0x34): +0xAC0 arreglo de entradas de 0x158 bytes,
+     * +0xAC4 cantidad; por entrada +0xF4 id, +0xC8 flags (bit 1: remota, FUN_007a37e0 no le conecta input ni
+     * cámara), +0xD0 personaje. Se loguean y el clon va a una plaza libre (sin personaje) o, si no hay, a un id
+     * que no existe (AIMP_GHOST_CLONE_PLAYER_ID lo fuerza). UNBIND=1 vuelve a lo de la corrida 41. */
+    {
+        uint32_t m = 0, base = 0, arr = 0, cnt = 0, free_id = 0xFFFFFFFFu;
+        if (mem_u32(g_sc_this + 0x34, &m) && m && mem_u32(m, &base) && base && mem_u32(base + 0xAC0, &arr) && mem_u32(base + 0xAC4, &cnt)) {
+            log_printf("GHOST: plazas de jugador: %u (arreglo 0x%08x)", cnt, arr);
+            for (uint32_t i = 0; i < cnt && i < 8; i++) {
+                uint32_t e = arr + i * 0x158, id = 0, fl = 0, ch = 0;
+                mem_u32(e + 0xF4, &id);
+                mem_u32(e + 0xC8, &fl);
+                mem_u32(e + 0xD0, &ch);
+                log_printf("GHOST:   plaza %u: id 0x%08x flags 0x%08x personaje 0x%08x", i, id, fl, ch);
+                if (!ch && free_id == 0xFFFFFFFFu)
+                    free_id = id;
+            }
+        } else {
+            log_printf("GHOST: no se pudieron leer las plazas de jugador (this 0x%08x)", (unsigned)g_sc_this);
+        }
+        int forced = aimp_env_int(L"AIMP_GHOST_CLONE_PLAYER_ID", -1);
+        uint32_t pid = forced >= 0 ? (uint32_t)forced : free_id != 0xFFFFFFFFu ? free_id : 0x4149u;
+        aimp_memcpy(g_clone + SREQ_PLAYER_ID, &pid, 4);
+        log_printf("GHOST: el clon va con +0x48 = 0x%08x (%s)", pid,
+                   forced >= 0 ? "forzado" : free_id != 0xFFFFFFFFu ? "plaza libre" : "id que no existe");
+    }
+    if (aimp_env_int(L"AIMP_GHOST_CLONE_UNBIND", 0))
         g_clone[SREQ_PLAYER_FLAG] = 0;
     if (g_clone_name[0]) {
         aimp_memset(g_clone + SREQ_NAME, 0, 0x40);
@@ -1013,15 +1048,22 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
          * fija al dar la orden, así que va con una orden nueva (como mucho una por segundo). */
         float run_at = (float)g_walk_far_cm / 100.0f, walk_at = run_at - 2.5f, dd = aimp_sqrtf(d2);
         int want = g_cur_type;
-        if (g_walk_type_far != g_walk_type && !g_hold) {
+        if (g_tgt_net && g_rm_valid && g_walk_run_mms > 0 && !g_hold) {
+            /* con red: el paso sigue a la velocidad del otro (corre si el otro corre) o corre si quedó lejos */
+            if (g_rm_speed * 1000.0f > (float)g_walk_run_mms || dd > run_at)
+                want = g_walk_type_far;
+            else if (g_rm_speed * 1000.0f < (float)g_walk_run_mms * 0.8f && dd < walk_at)
+                want = g_walk_type;
+        } else if (g_walk_type_far != g_walk_type && !g_hold) {
             if (g_cur_type == g_walk_type && dd > run_at)
                 want = g_walk_type_far;
             else if (g_cur_type == g_walk_type_far && dd < walk_at)
                 want = g_walk_type;
         }
-        if (want != g_cur_type && now - g_last_restart >= g_freq) {
-            char why[48];
-            aimp_snprintf(why, sizeof why, "%s: a %.1f m del objetivo", want == g_walk_type_far ? "corre" : "camina", (double)dd);
+        if (want != g_cur_type && now - g_last_restart >= (g_tgt_net ? g_freq / 2 : g_freq)) {
+            char why[64];
+            aimp_snprintf(why, sizeof why, "%s: a %.1f m del objetivo, el otro a %.1f m/s", want == g_walk_type_far ? "corre" : "camina",
+                          (double)dd, (double)g_rm_speed);
             set_move_type(want);
             walk_start(ctrl, t, now, why);
             break;
@@ -1089,6 +1131,49 @@ static void invincible(int64_t now)
     g_inv_last = now;
 }
 
+
+/* Movimiento del otro jugador (prueba con dos máquinas 2026-11-15: el avatar reaccionaba tarde, caminaba cuando
+ * el otro corría una distancia corta y no se agachaba). Con los paquetes de estado (time_ms del emisor) se estima
+ * la velocidad (media exponencial) y la altura de la cámara sobre los pies (parado ~1,57 m). El objetivo se
+ * adelanta AIMP_GHOST_WALK_LEAD_MS (400) en la dirección del movimiento, y el paso sale de la velocidad real:
+ * RUN a más de AIMP_GHOST_WALK_RUN_MMS (3000 mm/s). Agachado = cámara a menos de 1,25 m (por ahora solo se loguea). */
+static void remote_motion(const AimpPkt *r, float *t)
+{
+    if (r->seq != g_rm_seq) {
+        if (g_rm_valid && r->seq > g_rm_seq && r->time_ms != g_rm_ms) {
+            float dt = (float)(uint32_t)(r->time_ms - g_rm_ms) / 1000.0f;
+            if (dt > 0.0f && dt < 1.0f) {
+                for (int k = 0; k < 3; k++) {
+                    float v = (r->pos[k] - g_rm_p[k]) / dt;
+                    g_rm_v[k] = g_rm_v[k] * 0.5f + v * 0.5f;
+                }
+            } else {
+                g_rm_v[0] = g_rm_v[1] = g_rm_v[2] = 0.0f;
+            }
+        }
+        g_rm_seq = r->seq;
+        g_rm_ms = r->time_ms;
+        g_rm_p[0] = r->pos[0];
+        g_rm_p[1] = r->pos[1];
+        g_rm_p[2] = r->pos[2];
+        g_rm_valid = 1;
+        g_rm_speed = aimp_sqrtf(g_rm_v[0] * g_rm_v[0] + g_rm_v[2] * g_rm_v[2]);
+        float h = r->cam_pos[1] - r->pos[1];
+        if (h > 0.3f && h < 2.5f)
+            g_rm_camh = h;
+        int cr = g_rm_camh < 1.25f;
+        if (cr != g_rm_crouch) {
+            g_rm_crouch = cr;
+            log_printf("GHOST: el otro %s (cámara a %.2f m de los pies)", cr ? "se agachó" : "se paró", (double)g_rm_camh);
+        }
+    }
+    if (g_walk_lead_ms > 0 && g_rm_speed > 0.3f) {
+        float k = (float)g_walk_lead_ms / 1000.0f;
+        t[0] += g_rm_v[0] * k;
+        t[2] += g_rm_v[2] * k;
+    }
+}
+
 static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t now)
 {
     uint32_t idx;
@@ -1117,6 +1202,7 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
         tyaw = net->remote.yaw;
         src = "red";
         g_tgt_net = 1;
+        remote_motion(&net->remote, t);
     } else if (g_walk && !g_walk_bad) {
         /* AIMP_GHOST_WALK_BEHIND_CM (250) detrás del jugador: adelante = (sin yaw, cos yaw) (corrida 20). Con
          * 1,2 m, caminar hacia atrás metía al jugador contra el NPC (corrida 22). Corrida 29: si el jugador se da
@@ -1142,6 +1228,13 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
         }
         t[1] = lpos[1];
         tyaw = lyaw;
+    } else if (g_front_cm > 0) { /* AIMP_GHOST_FRONT_CM: delante del jugador, mirándolo (para verlo en las capturas) */
+        float d = (float)g_front_cm / 100.0f;
+        t[0] = lpos[0] + d * aimp_sinf(lyaw);
+        t[1] = lpos[1];
+        t[2] = lpos[2] + d * aimp_cosf(lyaw);
+        tyaw = lyaw > 0.0f ? lyaw - 3.14159265f : lyaw + 3.14159265f;
+        src = "local delante";
     } else {
         t[0] = lpos[0] + 1.5f;
         t[1] = lpos[1];
