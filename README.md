@@ -106,6 +106,8 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 1. **Prueba con dos máquinas** (papito host + laptop join). La laptop necesita la DLL nueva de `mod/dist/`, porque el protocolo cambió a v2. Config de las dos: `AIMP_GHOST=3`, `AIMP_GHOST_WALK=1`, `AIMP_SYNC_USE=1`, `AIMP_SYNC_THROW=1`, más `AIMP_NET=host` en papito y `AIMP_NET=join` con `AIMP_NET_PEER=<IP de Tailscale de papito>:47811` en la laptop. Ver que cada avatar camine y corra hacia el otro jugador, que gire cuando el otro está quieto, y que las bengalas y los noisemakers aparezcan del otro lado.
 2. Si anda, dejar `AIMP_GHOST_WALK=1` por defecto con `AIMP_GHOST=3`.
 3. Después, en estático: el disparo de las armas de fuego (hallazgo 17, "El equipo del jugador"), y más adelante el Alien.
-4. Pendientes menores: que el avatar vuelva a arrancar con movimientos cortos del otro; `AIMP_SYNC_PINS` con dos máquinas.
+4. Pendientes menores: `AIMP_SYNC_PINS` con dos máquinas; una corrida de control para el arranque corto.
+
+**2026-11-15, tarde (corrida 35):** el avatar ya vuelve a arrancar con movimientos cortos del otro (1–1,6 m, ≤1 s de retardo). Salió del layout de los parámetros de `MOVE_TOWARDS` (hallazgo 19): el flag `start_instantly`, más una orden nueva si queda quieto a más de 1 m. Los dos están activados por defecto y `mod/dist/winmm.dll` está actualizada (`a88bc1a`).
 
 El detalle completo está en `work/PROGRESS.md` (estado), `work/NOTES.md` y `work/LOG.md` (bitácora) y `work/findings/19-control-de-personajes.md`.
