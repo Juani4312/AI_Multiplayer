@@ -676,3 +676,15 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   2. animar al avatar NOAUTH escribiéndole el bloque de locomoción (hallazgos 18 y 19);
   3. el segundo personaje-jugador `PLAYER_2`.
   Mientras tanto, el avatar estable sigue siendo el teletransportado sin IA (`AIMP_GHOST=3`, v1).
+
+## 2026-11-15 — Corrida 23 (automática, mando virtual): crash al cancelar con `SwitchCommand(ctrl, NULL)`
+- **Montaje:** `AIMP_GHOST=3;AIMP_GHOST_WALK=1;AIMP_TRACE_CMD=1;AIMP_TRACE_PINS=1;AIMP_AUTOPAD_FILE=…pad.txt`.
+  - Entrada por el menú con `autoplay_continue.sh`; la captura confirmó "Continue Game" resaltado. El juego estaba en HDMI-A-1, no en DP-3: hay que buscar la ventana con `hyprctl clients`.
+  - Guion de movimiento con tiempos `P` (adelante, giro, atrás, costado, correr). Log en `work/evidence/runtime/run23-caminata-auto.log`.
+- **El mando virtual funciona aunque la ventana del juego no tenga el foco.**
+- **Caminata:** la IA intentó 3 veces darle `PLAY_ANIMATION`, las 3 bloqueadas. Con el comando propio y **solo actualizaciones de destino** (`FUN_006797a0`), el NPC **no se movió** mientras el jugador caminaba. En la corrida 21, cuando el mod le daba la orden de nuevo cada segundo, sí caminó. Conclusión: actualizar no recalcula el camino; una orden nueva sí.
+- **Crash:** a 14 m, el mod canceló con `SwitchCommand(ctrl, NULL)`: `EXCEPCIÓN 0xc0000005 en AI.exe+0x278e41, lectura en 0x00000028`. `SwitchCommand` arma un texto de debug con `cmd+0x28` sin chequear NULL. **Nunca pasarle NULL.**
+- **Arreglo (tests OK):**
+  - orden nueva (`FUN_0067e980`) cuando el objetivo se mueve más de 75 cm (`AIMP_GHOST_WALK_RESTART_CM`), como mucho cada 500 ms;
+  - a más de 12 m durante 1 s, teletransporte y orden nueva en el mismo frame (como mucho cada 3 s).
+- Las capturas de región no sirven si la ventana del juego está tapada. Las tomadas después del crash se borraron sin mirarlas.
