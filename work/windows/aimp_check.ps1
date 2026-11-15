@@ -150,7 +150,8 @@ function Do-Install {
         # Fase 4 (experimental): 3 = un NPC existente hace de avatar del otro jugador.
         $cfg += "AIMP_GHOST=$Ghost"
     }
-    foreach ($kv in $Extra) {
+    # Con -File, '-Extra A=1,B=1' llega como un solo string: se separa por comas.
+    foreach ($kv in @($Extra | ForEach-Object { $_ -split ',' } | Where-Object { $_ -ne '' })) {
         # Claves adicionales, p. ej. -Extra AIMP_SYNC_USE=1 (fase 5). Solo las AIMP_*.
         if ($kv -notmatch '^AIMP_[A-Z0-9_]+=') { throw "-Extra espera AIMP_CLAVE=valor (vino '$kv')." }
         $cfg += $kv
