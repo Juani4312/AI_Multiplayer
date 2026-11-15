@@ -160,3 +160,4 @@
 - 15:25 Corrida 35 (local, autorizada): con start_instantly + re-orden en quieto el avatar sigue 5 pasos cortos (1,1-1,6 m), 3 solo y 2 con re-orden, <=1 s. Por defecto FLAGS=2048, REARM_CM=100. Mod pasivo.
 - 16:45 Corrida 36 (dos máquinas): caminata OK; giro raro, arrojables caen distinto, matar al avatar = game over. Estático: invencibilidad (Character+0x2E8). Corridas 37-38 (locales, workspace 9): invencible puesto, plantado OK, sonda encuentra la posición de la bengala. Mod pasivo, dist actualizada.
 - 17:30 Corridas 39-45: segunda THE_PLAYER por el spawn de autoridad (sin crash) pero invisible (solo modelos FP); avatar NPC con velocidad del otro y paso por velocidad (corrida 45 OK). dist actualizada, mod pasivo.
+- 18:30 Corridas 46-51: títere con posición exacta por frame (SetTransform, 0,00 m) y animación por velocidad; agachado detectado pero el IDLE con postura no agacha al NPC. Mod pasivo, dist actualizada.
