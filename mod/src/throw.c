@@ -42,7 +42,7 @@ static int g_trace, g_sync, g_echo_ms, g_echo_cm = 75;
 static volatile uint32_t g_level;
 static volatile LONG g_n_local, g_n_remote;
 /* AIMP_THROW_PROBE y el último lanzamiento (local o remoto) */
-static int g_probe;
+static int g_probe, g_fix_test;
 static float g_last_start[3];
 static int g_have_start;
 
@@ -175,6 +175,9 @@ int throw_install(AimpNet *net)
     g_echo_ms = aimp_env_int(L"AIMP_THROW_ECHO", 0);
     g_echo_cm = aimp_env_int(L"AIMP_THROW_ECHO_CM", 75);
     g_probe = aimp_env_int(L"AIMP_THROW_PROBE", 0);
+    /* experimento (2026-11-15): a los 3 s la sonda corre +1 m en x todos los candidatos que se movieron, para ver
+     * si el objeto asentado se queda donde se lo escribe (corrección de la caída de la réplica) */
+    g_fix_test = aimp_env_int(L"AIMP_THROW_FIX_TEST", 0);
     if (!g_trace && !g_sync && g_echo_ms <= 0 && !g_probe)
         return 0;
     g_net = net;
@@ -284,7 +287,7 @@ typedef struct {
     float first[3], last[3];
 } PCand;
 typedef struct {
-    int on, sample;
+    int on, sample, fixed;
     uint32_t idx, obj;
     int64_t t0;
     uint32_t ncand;
@@ -460,6 +463,27 @@ static void probe_frame(int64_t now, int64_t freq)
         }
         if (shown > 24)
             log_printf("THROW sonda %u t=%d ms: %d candidatos más se movieron", p->idx, ms, shown - 24);
+        if (g_fix_test && !p->fixed && ms >= 3000) {
+            int nw = 0;
+            for (uint32_t k = 0; k < p->ncand; k++) {
+                PCand *c = &p->c[k];
+                float dx = c->last[0] - c->first[0], dy = c->last[1] - c->first[1], dz = c->last[2] - c->first[2];
+                if (dx * dx + dy * dy + dz * dz < 0.0001f)
+                    continue;
+                float v[3];
+                if (!mem_read(c->node + c->off, v, 12))
+                    continue;
+                v[0] += 1.0f;
+                if (mem_write(c->node + c->off, v, 12)) {
+                    aimp_memcpy(c->last, v, 12);
+                    nw++;
+                    log_printf("THROW prueba %u: nodo 0x%08x +0x%x -> (%.3f, %.3f, %.3f)", p->idx, c->node, c->off, (double)v[0],
+                               (double)v[1], (double)v[2]);
+                }
+            }
+            p->fixed = 1;
+            log_printf("THROW prueba %u t=%d ms: %d campos corridos +1 m en x; las muestras siguientes dicen si se quedan", p->idx, ms, nw);
+        }
     }
 }
 

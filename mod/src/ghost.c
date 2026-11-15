@@ -136,7 +136,8 @@ static uint32_t g_rm_seq, g_rm_ms;
 static float g_rm_p[3], g_rm_v[3], g_rm_speed, g_rm_camh = 1.57f;
 static int64_t g_rm_at, g_rm_cr_since;
 static IdleCmdFn g_idle_cmd;
-static int g_idle_on, g_crouch_stance = 2;
+static int g_idle_on, g_crouch_stance = 2, g_idle_notp, g_crouch_cycle;
+static int64_t g_idle_at;
 static volatile int g_allow_cmd; /* el filtro deja pasar el comando que da el mod (mismo thread) */
 static int g_puppet; /* AIMP_GHOST_PUPPET: 1 = SetTransform por frame, 2 = escribir la posición */
 static uint32_t g_pup_frames;
@@ -334,6 +335,9 @@ int ghost_install(void)
             else
                 log_printf("GHOST: el prólogo de FUN_0067db10 (IDLE) no coincide; el avatar no se agacha");
             g_crouch_stance = aimp_env_int(L"AIMP_GHOST_CROUCH_STANCE", 2);
+            /* experimentos del agachado (2026-11-15): sin teleport durante el IDLE; postura en ciclo 0..5 cada 4 s */
+            g_idle_notp = aimp_env_int(L"AIMP_GHOST_IDLE_NOTP", 0);
+            g_crouch_cycle = aimp_env_int(L"AIMP_GHOST_CROUCH_CYCLE", 0);
             g_move_update = (MoveCmdFn)(void *)pu;
             g_walk_type = aimp_env_int(L"AIMP_GHOST_WALK_TYPE", MOVE_TYPE_WALK);
             g_walk_type_far = aimp_env_int(L"AIMP_GHOST_WALK_TYPE_FAR", MOVE_TYPE_RUN); /* igual a TYPE: no cambia */
@@ -981,7 +985,9 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             float pyaw = tyaw;
             if (g_rm_speed > 0.5f)
                 pyaw = aimp_atan2f(g_rm_v[0], g_rm_v[2]);
-            if (g_puppet == 2) {
+            if (g_idle_on && g_idle_notp) {
+                /* experimento: el IDLE agachado sin SetTransform por frame */
+            } else if (g_puppet == 2) {
                 mem_write(g_chr + CHR_POS, s_p, 12);
                 mem_write(g_chr + CHR_YAW, &pyaw, 4);
             } else {
@@ -1001,7 +1007,17 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                 g_idle_cmd((void *)ctrl, NULL, g_cmd_a, g_cmd_b, (uint32_t)g_crouch_stance, 1.0f, 0, 0, 0, 0, 0, 1);
                 g_allow_cmd = 0;
                 g_idle_on = 1;
+                g_idle_at = now;
                 g_last_restart = now;
+                break;
+            }
+            if (g_idle_on && g_crouch_cycle && now - g_idle_at >= g_freq * 4 && g_rm_crouch) {
+                g_crouch_stance = (g_crouch_stance + 1) % 6;
+                log_printf("GHOST: títere: ciclo de postura: IDLE con postura %d", g_crouch_stance);
+                g_allow_cmd = 1;
+                g_idle_cmd((void *)ctrl, NULL, g_cmd_a, g_cmd_b, (uint32_t)g_crouch_stance, 1.0f, 0, 0, 0, 0, 0, 1);
+                g_allow_cmd = 0;
+                g_idle_at = now;
                 break;
             }
             if (g_idle_on) {
