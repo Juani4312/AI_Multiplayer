@@ -703,3 +703,32 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - El juego se cayó a los 3,7 s de cargar el nivel, antes de elegir al NPC: `EXCEPCIÓN 0xc0000005 en 0x00000004`, retorno `AI.exe+0x2D02DF` (`FUN_006d0260`, que llama a los nodos del árbol). Log en `run25-crash-ret8.log`.
 - **Causa:** `FUN_006d3630` termina con **`ret 8`** (dos argumentos; el segundo no se usa) y el detour lo había declarado con uno, porque el decompilador mostraba un solo parámetro. Corregido; el stub de `test_walk` ahora tiene el `ret 8` real.
 - **Lección:** antes de hookear, verificar siempre el `ret N` en el asm, no la firma del decompilador.
+
+## 2026-11-15 — Corrida 26 (automática): el agente es el `Character`; hay dos controladores de comandos
+- Log `run26-cinematica.log` (0 excepciones). El hook de la motivación funciona: `motivación cinemática forzada para el avatar … (agente = personaje + 0x0)`, unas 75 evaluaciones por segundo. Pero el NPC no siguió al objetivo (se movió 1,3 m).
+- **Causa:** el agente es el `Character` mismo, no `Character+0x2B0`. Entonces `ConditionHasScript` (`FUN_006eaa80`) mira `Character+0x3570`/`+0x3574`, y el mod daba la orden en `Character+0x3820`.
+- **Dos controladores de comandos consecutivos** de `0x2B0` bytes (`0x10` + 2 slots de `0x150`; `FUN_0067e980` construye el comando en `ctrl+0x10` o `ctrl+0x160`):
+  - `Character+0x3570` = **de scripts** (`[SCRIPT]` en la traza). `ActionScript` (`FUN_006d2830`) lo habilita al arrancar (`FUN_00679150(1)` con `ECX = Character+0x3570`) y ejecuta su comando; las entidades de comandos de los scripts (`FUN_007b58b0`, `FUN_007cec20`, `FUN_007cf2e0`…) también usan `LEA ECX,[X+0x3570]`.
+  - `Character+0x3820` = **de tareas** (`[TASK]`): ahí la IA pone `PLAY_ANIMATION`, `GOTO_COVER`, `IDLE`.
+  - Evidencia: `insn:\+ 0x357[04]\]` y `fn:0x006d2830` (Ghidra, scratchpad `hs1.txt`/`hs2.txt`).
+
+## 2026-11-15 — Corrida 27 (automática): con el controlador de scripts, el avatar camina detrás del jugador
+- Cambio: `CHR_SCRIPTCTRL 0x3570`; la caminata, el filtro y el chequeo usan ese controlador (`AIMP_GHOST_WALK_CTRL` permite volver a `0x3820`). El dueño (`+0x34`) del de scripts también es el personaje.
+- Log `run27-controlador-scripts.log` (0 excepciones, 0 comandos bloqueados): **el NPC sigue al objetivo caminando, a 1,1–1,2 m/s**, y se detiene a ~1 m. Después de la orden la IA no le volvió a dar comandos en el de tareas: manda la rama cinemática.
+- Se quedó quieto ~4 s (97–101 s) mientras el jugador se movía de costado; arrancó cuando el objetivo paró.
+- Las capturas (primera persona) no muestran al NPC: está detrás.
+
+## 2026-11-15 — Corrida 28 (automática): con solo actualizaciones del destino camina igual
+- `AIMP_GHOST_WALK_RESTART_CM=100000` (sin órdenes nuevas). Log `run28-solo-actualizaciones.log` (0 excepciones): **2 órdenes en toda la corrida** y la misma trayectoria que la 27. En el controlador de scripts, `FUN_006797a0` (actualización) alcanza.
+  - `FUN_006797a0`: `thiscall(ctrl, a, b, destino, params, flag)`, **`ret 0x14`**; busca el comando por sus ids en `ctrl+0`/`ctrl+4` (`FUN_00677990`, thiscall), pide `vt+0x64` (`FUN_004a4610` = `mov eax, ecx; ret` solo en `MOVE_TOWARDS`; el resto `FUN_00d0fb70` = 0) y `FUN_006776f0` escribe el destino en `cmd+0x60/+0x64/+0x68`, `+0x6c = 0` y los parámetros en `+0x80..+0x9C`.
+- La pausa de 97–101 s se repitió en el mismo lugar (z ≈ -22,8): no la causaban los reinicios. El objetivo (2,5 m detrás del jugador) quedaba fuera del navmesh y el NPC esperó en el punto más cercano.
+- **En las corridas 26–28, al ubicarlo por primera vez cayó del piso** (y de 20,5 a -31…-48) y a los ~3 s lo arregló la reubicación por "lejos".
+- Cambios: por defecto **sin órdenes nuevas** (`AIMP_GHOST_WALK_RESTART_CM=0`; `AIMP_GHOST_WALK_RESTART_MS` si se activa); la ubicación va con la orden en el mismo frame.
+
+## 2026-11-15 — Corrida 29 (automática): la caída al ubicarlo coincide con un `PLAY_ANIMATION`
+- Log `run29-ubicacion-mismo-frame.log` (0 excepciones). Con la orden en el mismo frame **se cayó igual**. 17 ms después de la orden, la IA de Dave arrancó un `PLAY_ANIMATION` en su controlador de tareas; la reubicación (3 s después, ya sin animación) funcionó. Pasó igual en la 27 y la 28.
+- Girando al jugador con el mando virtual (los tiempos `P` del guion son relativos a la aparición del jugador) se ve a Dave parado frente al jugador, con su animación normal (`shots/run29-avatar-de-frente.png`, local).
+- Con el jugador girado, el punto "detrás" quedó del otro lado y el NPC se le pegó al jugador (0,13 m) al ir en línea recta.
+- Cambios (tests OK):
+  - **preparación:** primero la orden desde donde está; se lo ubica cuando su controlador de tareas no tiene un `PLAY_ANIMATION` (al menos 500 ms, como mucho `AIMP_GHOST_WALK_PREP_MS`, 4000). `CMD_TYPE_PLAY_ANIMATION 7` (orden de la tabla de nombres);
+  - **seguimiento a distancia** en modo local (`AIMP_GHOST_WALK_FOLLOW_CM`, 200): el objetivo es el punto a esa distancia del jugador del lado donde está el NPC; la primera vez y si quedó lejos, detrás.

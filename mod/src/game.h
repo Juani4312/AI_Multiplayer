@@ -282,6 +282,11 @@ static const uint8_t AIMP_SWITCH_COMMAND_PROLOGUE[9] __attribute__((unused)) = {
  * MOVE_TOWARDS, FOLLOW, PLAY_ANIMATION... Corrida 29: la IA del avatar arranca un PLAY_ANIMATION en su
  * controlador de tareas al recibir la orden, y si se lo teletransporta mientras dura, cae del piso. */
 #define CMD_TYPE_PLAY_ANIMATION   7
+/* enum MOVE (tabla de nombres de los enums de los scripts en VA 0x0130FD18: "MOVE" y después SLOW_WALK, WALK,
+ * FAST_WALK, RUN, OBSOLETE_1, OBSOLETE_2, TELEPORT). WALK = 1 es el valor por defecto de los scripts y con él
+ * el avatar camina a ~1,2 m/s (corridas 27-30). */
+#define MOVE_TYPE_WALK            1
+#define MOVE_TYPE_RUN             3
 #define MOVE_PARAMS_SIZE          0x1C
 #define MOVE_PARAMS_F18           0x18
 /* Árbol de comportamiento del civil (DATA/BEHAVIOR/NPC_INNOCENT_BEHAVE.XML): los comandos de script solo se
