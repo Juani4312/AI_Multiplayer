@@ -258,5 +258,29 @@ static const uint8_t AIMP_SWITCH_COMMAND_PROLOGUE[9] __attribute__((unused)) = {
 #define COMMAND_TYPES             20
 #define CMD_TYPE                  0x28
 #define CMDCTRL_FLAGS             0x0A
+/* Controlador de comandos de un personaje: Character+0x3820, con +0x34 = el Character (corrida 20,
+ * 4 NPCs). +0x04 = comando actual. Un comando guarda sus dos ids de dueño (8 bytes c/u) en +0x34 y
+ * +0x3C (FUN_0067e660). MOVE_TOWARDS = tipo 5 (CMD_MoveTowards, hallazgo 19):
+ *   empezar   FUN_0067e980 thiscall(ctrl, a[8]*, b[8]*, destino 3x4*, parámetros*, never_succeed), ret 0x14
+ *   actualizar FUN_006797a0, misma firma (busca el comando por (a, b) y le cambia destino y parámetros)
+ * Del destino se lee la traslación (+0x0C, +0x1C, +0x2C). Parámetros (0x1C bytes, FUN_00677670):
+ * +0x00 move_type (enum MOVE; 1 por defecto en el script), +0x04 disallow_traversal, +0x08
+ * should_be_aiming, +0x09 use_current_target_as_aim, +0x10 id de AimTarget, +0x18 float (0,1). */
+#define CHR_CMDCTRL               0x3820
+#define CMDCTRL_OWNER             0x34
+#define CMDCTRL_CURRENT           0x04
+#define CMD_OWNER_A               0x34
+#define CMD_OWNER_B               0x3C
+#define CMD_TYPE_MOVE_TOWARDS     5
+#define MOVE_PARAMS_SIZE          0x1C
+#define MOVE_PARAMS_F18           0x18
+#define AIMP_RVA_CMD_MOVE_START   0x0027E980u
+#define AIMP_RVA_CMD_MOVE_UPDATE  0x002797A0u
+static const uint8_t AIMP_CMD_MOVE_START_PROLOGUE[10] __attribute__((unused)) = {
+    0x56, 0x8B, 0xF1, 0x8B, 0x4E, 0x04, 0x85, 0xC9, 0x74, 0x0E
+};
+static const uint8_t AIMP_CMD_MOVE_UPDATE_PROLOGUE[10] __attribute__((unused)) = {
+    0x8B, 0x44, 0x24, 0x08, 0x8B, 0x54, 0x24, 0x04, 0x50, 0x52
+};
 
 #endif

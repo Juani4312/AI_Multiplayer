@@ -135,3 +135,10 @@ add_executable(test_ctrl test/test_ctrl.c src/ctrl.c src/hook.c src/log.c src/me
 target_include_directories(test_ctrl PRIVATE src)
 target_compile_options(test_ctrl PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_ctrl PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+# test_walk: AIMP_GHOST_WALK (ghost.c, fase 4b) contra stubs con los prólogos y el `ret 0x14` reales de
+# FUN_0067e980 (MOVE_TOWARDS) y FUN_006797a0 (actualizar destino), más los del spawn y el teleport.
+add_executable(test_walk test/test_walk.c src/ghost.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+target_include_directories(test_walk PRIVATE src)
+target_compile_options(test_walk PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
+set_target_properties(test_walk PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)

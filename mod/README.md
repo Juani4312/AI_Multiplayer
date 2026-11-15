@@ -129,6 +129,10 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 | `AIMP_TRACE_THROW` | 0 | 1 = loguea cada objeto que tira o coloca el jugador (líneas `THROW`: plantilla, posición, velocidad, caller). Solo mira |
 | `AIMP_SYNC_THROW` | 0 | 1 = **experimental** (con red): lo que tira o coloca el jugador local se manda al otro, que llama a la misma función con los mismos datos (hallazgo 17) |
 | `AIMP_THROW_ECHO` | 0 | prueba local sin red: repite cada lanzamiento propio a los N ms, corrido `AIMP_THROW_ECHO_CM` cm (75) al costado. Si aparece la copia con la misma curva, la inyección funciona |
+| `AIMP_GHOST_WALK` | 0 | 1 = **fase 4b, experimental** (modos 2 y 3): el avatar camina hacia el objetivo con un comando `MOVE_TOWARDS` (su propia animación) en vez de teletransportarse en cada frame; solo se teletransporta si queda lejos. Apaga `AIMP_GHOST_NOAUTH` por defecto (hallazgo 19) |
+| `AIMP_GHOST_WALK_TYPE` | 1 | `move_type` del comando (enum MOVE del engine; 1 es el valor por defecto de los scripts) |
+| `AIMP_GHOST_WALK_MS` | 200 | cada cuánto se le actualiza el destino |
+| `AIMP_GHOST_WALK_TP_CM` | 600 | distancia (cm) a partir de la cual se lo teletransporta |
 | `AIMP_TRACE_CTRL` | 0 | 1 = vuelca el controlador de jugador del jugador 0 (`Character+0x31C`, 0x4C bytes) y su acción principal cada vez que cambian (líneas `CTRL`, como mucho cada `AIMP_TRACE_CTRL_MS` = 100 ms, hasta `AIMP_TRACE_CTRL_MAX` = 600 líneas). Solo mira (hallazgo 19) |
 | `AIMP_TRACE_CMD` | 0 | 1 = loguea los `SwitchCommand` de los personajes (líneas `CMD`: controlador de comandos, tipo y dueño). Solo mira (hallazgo 19) |
 | `AIMP_CRASHLOG` | 1 | registro de excepciones (VEH): código, módulo+RVA, registros y stack si el juego se cae |

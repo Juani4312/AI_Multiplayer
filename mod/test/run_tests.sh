@@ -27,6 +27,7 @@ run test_core test_core.exe || fail=1
 run test_probe test_probe.exe || fail=1
 run test_net test_net.exe || fail=1
 run test_ghost test_ghost.exe || fail=1
+run test_walk test_walk.exe || fail=1
 run test_sync test_sync.exe || fail=1
 run test_throw test_throw.exe || fail=1
 run test_ctrl test_ctrl.exe || fail=1
