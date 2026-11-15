@@ -330,7 +330,8 @@ int main(void)
         memcpy(local + CHR_POS, lp, 12);
         ghost_frame(now, &net, 16);
     }
-    CHECK(g_starts == 1 && g_updates >= 4 && g_updates <= 6, "un solo inicio y %u actualizaciones en 1 s", g_updates);
+    CHECK(g_starts == 2 && g_updates >= 2, "una orden nueva cuando el objetivo se movió más de 75 cm (inicios %u; actualizaciones %u)",
+          g_starts, g_updates);
     CHECK(g_teleports == 1, "sin teletransportes mientras camina (%u)", g_teleports);
     CHECK(g_last_target[3] > 1.4f + bx && g_last_target[3] < 2.0f + bx, "el destino sigue al objetivo (x=%.2f)", (double)g_last_target[3]);
 
@@ -341,7 +342,7 @@ int main(void)
     uint32_t up0 = g_updates;
     for (int i = 0; i < 70; i++, now += step)
         ghost_frame(now, &net, 16);
-    CHECK(g_starts == 1 && g_updates > up0, "no se lo vuelve a dar (inicios %u) y se le sigue actualizando el destino (%u)", g_starts,
+    CHECK(g_starts == 2 && g_updates > up0, "no se lo vuelve a dar (inicios %u) y se le sigue actualizando el destino (%u)", g_starts,
           g_updates - up0);
 
     printf("[la IA cambió el comando: se lo vuelve a dar]\n");
@@ -350,7 +351,7 @@ int main(void)
     putp(npc, CHR_CMDCTRL + CMDCTRL_EXEC, other);
     for (int i = 0; i < 70; i++, now += step)
         ghost_frame(now, &net, 16);
-    CHECK(g_starts == 2, "otro MOVE_TOWARDS (inicios %u)", g_starts);
+    CHECK(g_starts == 3, "otro MOVE_TOWARDS (inicios %u)", g_starts);
 
     printf("[filtro de SwitchCommand: la IA no puede cambiarle el comando al avatar]\n");
     uint32_t actrl = (uint32_t)(uintptr_t)npc + CHR_CMDCTRL, ours = get32(npc, CHR_CMDCTRL + CMDCTRL_CURRENT);
@@ -359,18 +360,19 @@ int main(void)
     CHECK(ghost_switch_filter(actrl, 0) == 1, "cambiar a ningún comando: pasa");
     CHECK(ghost_switch_filter((uint32_t)(uintptr_t)local + CHR_CMDCTRL, (uint32_t)(uintptr_t)other) == 1, "otro personaje: pasa");
 
-    printf("[lejos más de 1 s: se cancela el comando, se lo reubica y se lo vuelve a mandar]\n");
+    printf("[lejos más de 1 s: teletransporte y orden nueva en el mismo frame, nunca SwitchCommand(NULL)]\n");
     lp[0] = 20.0f;
     memcpy(local + CHR_POS, lp, 12);
     for (int i = 0; i < 30; i++, now += step) /* 500 ms: todavía no */
         ghost_frame(now, &net, 16);
-    CHECK(g_null_switches == 0 && g_teleports == 1, "a los 500 ms lejos no se hace nada (cancelaciones %u)", g_null_switches);
-    for (int i = 0; i < 90; i++, now += step) /* 1,5 s más */
+    CHECK(g_teleports == 1, "a los 500 ms lejos todavía no se lo teletransporta (%u)", g_teleports);
+    uint32_t st0 = g_starts;
+    for (int i = 0; i < 60; i++, now += step) /* 1 s más */
         ghost_frame(now, &net, 16);
-    CHECK(g_null_switches == 1, "se canceló el comando con SwitchCommand(ctrl, NULL) (%u)", g_null_switches);
-    CHECK(g_teleports == 2 && CLOSE(getf(npc, CHR_POS), 20.0f + bx), "reubicado sin comando activo (x=%.2f, %u)", (double)getf(npc, CHR_POS),
-          g_teleports);
-    CHECK(g_starts == 3, "y después de esperar, otro MOVE_TOWARDS (inicios %u)", g_starts);
+    CHECK(g_teleports == 2 && CLOSE(getf(npc, CHR_POS), 20.0f + bx), "reubicado (x=%.2f, %u)", (double)getf(npc, CHR_POS), g_teleports);
+    CHECK(g_starts > st0 && CLOSE(g_last_target[3], 20.0f + bx), "con una orden nueva al objetivo (inicios %u, destino x=%.2f)", g_starts,
+          (double)g_last_target[3]);
+    CHECK(g_null_switches == 0, "nunca SwitchCommand(ctrl, NULL), que hace caer el juego (%u)", g_null_switches);
     CHECK(g_misaligned == 0, "posiciones y destinos alineados a 16 (%u)", g_misaligned);
 
     log_close();
@@ -384,9 +386,10 @@ int main(void)
     expect(log, "(primera vez;", 1);
     expect(log, "(controlador 0x", 1);
     expect(log, "después de ubicarlo", 1);
-    expect(log, "se cancela el comando para reubicarlo", 1);
+    expect(log, "después de reubicarlo", 1);
+    expect(log, "el objetivo se movió", 1);
     expect(log, "el comando actual era GOTO", 1);
-    expect(log, "(lejos o en otro piso;", 1);
+    expect(log, "(lejos o en otro piso hace 1 s;", 1);
     expect(log, "caminata (caminando)", 1);
     expect(log, "comando propio tipo 5", 1);
     expect(log, "local detrás", 1);

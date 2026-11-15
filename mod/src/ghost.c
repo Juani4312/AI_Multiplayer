@@ -27,8 +27,9 @@
  * frame, se le da un comando MOVE_TOWARDS (CMD_MoveTowards: FUN_0067e980 sobre su controlador de
  * comandos, Character+0x3820) hacia el objetivo, y cada AIMP_GHOST_WALK_MS (200) se le actualiza el
  * destino (FUN_006797a0). Así camina con su propia animación. Solo se lo teletransporta la primera
- * vez o si queda a más de AIMP_GHOST_WALK_TP_CM (1200) u otro piso durante 1 s (cancelando antes el
- * comando: teletransportarlo caminando no se pega, corrida 22). Si la IA le cambia el comando,
+ * vez o si queda a más de AIMP_GHOST_WALK_TP_CM (1200) u otro piso durante 1 s (con una orden nueva en
+ * el mismo frame). Si el objetivo se movió más de AIMP_GHOST_WALK_RESTART_CM, orden nueva (corrida 23).
+ * Si la IA le cambia el comando,
  * se lo vuelve a dar (como mucho una vez por segundo). AIMP_GHOST_WALK_TYPE = move_type (1).
  * Con la caminata, AIMP_GHOST_NOAUTH queda apagado por defecto (un NPC sin autoridad no se mueve).
  * Corrida 21: camina, pero su IA (con autoridad) lo hacía huir del jugador. Con AIMP_GHOST_WALK_BLOCK=1
@@ -85,9 +86,9 @@ static int g_walk, g_walk_type = 1, g_walk_tp_cm = 600, g_walk_bad, g_walk_block
 static volatile uint32_t g_walk_ctrl; /* controlador del avatar, para el filtro (corre en otro thread) */
 static volatile LONG g_n_blocked;
 static int64_t g_walk_ticks, g_last_cmd, g_last_restart, g_wstate_at, g_far_since;
-static int g_wstate, g_walk_behind_cm = 250;
-typedef void(__attribute__((fastcall)) * SwitchCmdFn)(void *ctrl, void *edx, void *cmd);
-static SwitchCmdFn g_switch_cmd;
+static int g_wstate, g_walk_behind_cm = 250, g_walk_restart_cm = 75;
+static float g_cmd_t[3]; /* objetivo de la última orden (FUN_0067e980) */
+
 static uint32_t g_starts, g_updates;
 static uint8_t g_cmd_a[8] = { 'A', 'I', 'M', 'P', 'W', 'A', 'L', 'K' }, g_cmd_b[8];
 static float g_target[12] __attribute__((aligned(16)));
@@ -222,15 +223,11 @@ int ghost_install(void)
     if (g_walk) {
         uint8_t a[sizeof AIMP_CMD_MOVE_START_PROLOGUE], b[sizeof AIMP_CMD_MOVE_UPDATE_PROLOGUE];
         uintptr_t ps = g_aimp_exe + AIMP_RVA_CMD_MOVE_START, pu = g_aimp_exe + AIMP_RVA_CMD_MOVE_UPDATE;
-        uint8_t c[sizeof AIMP_SWITCH_COMMAND_PROLOGUE];
-        uintptr_t pc = g_aimp_exe + AIMP_RVA_SWITCH_COMMAND; /* todavía sin hookear: ctrl_install corre después */
         if (!mem_read(ps, a, sizeof a) || aimp_memcmp(a, AIMP_CMD_MOVE_START_PROLOGUE, sizeof a) != 0 || !mem_read(pu, b, sizeof b) ||
-            aimp_memcmp(b, AIMP_CMD_MOVE_UPDATE_PROLOGUE, sizeof b) != 0 || !mem_read(pc, c, sizeof c) ||
-            aimp_memcmp(c, AIMP_SWITCH_COMMAND_PROLOGUE, sizeof c) != 0) {
-            log_printf("GHOST: los prólogos de FUN_0067e980/FUN_006797a0/FUN_00678e20 (comandos) no coinciden; AIMP_GHOST_WALK queda apagado");
+            aimp_memcmp(b, AIMP_CMD_MOVE_UPDATE_PROLOGUE, sizeof b) != 0) {
+            log_printf("GHOST: los prólogos de FUN_0067e980/FUN_006797a0 (MOVE_TOWARDS) no coinciden; AIMP_GHOST_WALK queda apagado");
             g_walk = 0;
         } else {
-            g_switch_cmd = (SwitchCmdFn)(void *)pc;
             g_move_start = (MoveCmdFn)(void *)ps;
             g_move_update = (MoveCmdFn)(void *)pu;
             g_walk_type = aimp_env_int(L"AIMP_GHOST_WALK_TYPE", 1);
@@ -238,6 +235,7 @@ int ghost_install(void)
             g_walk_ticks = g_freq * (ms < 20 ? 20 : ms) / 1000;
             g_walk_tp_cm = aimp_env_int(L"AIMP_GHOST_WALK_TP_CM", 1200);
             g_walk_behind_cm = aimp_env_int(L"AIMP_GHOST_WALK_BEHIND_CM", 250);
+            g_walk_restart_cm = aimp_env_int(L"AIMP_GHOST_WALK_RESTART_CM", 75);
             aimp_memset(g_params, 0, sizeof g_params);
             uint32_t mt = (uint32_t)g_walk_type;
             float f18 = 0.1f; /* el valor por defecto del engine (DAT_011bb6ac) */
@@ -585,13 +583,18 @@ int ghost_switch_filter(uint32_t ctrl, uint32_t cmd)
 
 /* AIMP_GHOST_WALK: el NPC camina hacia el objetivo con MOVE_TOWARDS. 0 si no se pudo (se usa el teleport).
  * Corrida 22: teletransportarlo mientras camina no se pega (la locomoción lo devuelve en ~4 frames y el NPC
- * "corre" hacia donde cree estar). Por eso: ubicar -> esperar -> caminar; y si queda lejos, cancelar el
- * comando (SwitchCommand(ctrl, NULL)), esperar, y recién ahí volver a ubicarlo. */
-enum { W_PLACE, W_SETTLE, W_WALK, W_CANCEL };
-static const char *const g_wnames[] = { "ubicando", "esperando", "caminando", "cancelando" };
+ * "corre" hacia donde cree estar). Por eso: ubicar -> esperar -> caminar. Corrida 23: las actualizaciones
+ * de destino no lo hacen caminar; se le da una orden nueva cuando el objetivo se movió más de
+ * AIMP_GHOST_WALK_RESTART_CM (75), como mucho cada 500 ms. Si queda lejos 1 s: teletransporte y orden
+ * nueva en el mismo frame (como mucho cada 3 s). Nunca SwitchCommand(ctrl, NULL): el juego se cae. */
+enum { W_PLACE, W_SETTLE, W_WALK };
+static const char *const g_wnames[] = { "ubicando", "esperando", "caminando" };
 
 static void walk_start(uint32_t ctrl, const float *t, int64_t now, const char *why)
 {
+    g_cmd_t[0] = t[0];
+    g_cmd_t[1] = t[1];
+    g_cmd_t[2] = t[2];
     if (g_starts < 20)
         log_printf("GHOST: caminata: MOVE_TOWARDS a (%.2f, %.2f, %.2f) para 0x%08x (controlador 0x%08x; %s)", (double)t[0],
                    (double)t[1], (double)t[2], g_chr, ctrl, why);
@@ -644,15 +647,20 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             g_far_since = 0;
         else if (!g_far_since)
             g_far_since = now;
-        if (is_far && now - g_far_since >= g_freq && now - g_last_tp >= 2 * g_freq) {
-            log_printf("GHOST: caminata: a %.2f m (vertical %.2f) hace 1 s: se cancela el comando para reubicarlo", (double)aimp_sqrtf(d2),
-                       (double)dy);
-            g_switch_cmd((void *)ctrl, NULL, NULL); /* el filtro deja pasar el cambio a ningún comando */
-            g_wstate = W_CANCEL;
-            g_wstate_at = now;
+        if (is_far && now - g_far_since >= g_freq && now - g_last_tp >= 3 * g_freq) {
+            /* Corrida 23: SwitchCommand(ctrl, NULL) hace caer el juego (lee cmd+0x28). Se lo teletransporta
+             * y en el mismo frame se le da una orden nueva desde ahí. */
+            log_printf("GHOST: caminata: teletransporte de 0x%08x a (%.2f, %.2f, %.2f) [%s] (lejos o en otro piso hace 1 s; estaba a %.2f m en horizontal, %.2f m en vertical)",
+                       g_chr, (double)t[0], (double)t[1], (double)t[2], src, (double)aimp_sqrtf(d2), (double)dy);
+            teleport_to(t, tyaw);
+            g_last_tp = now;
+            g_far_since = 0;
+            walk_start(ctrl, t, now, "después de reubicarlo");
             break;
         }
         ours = walk_is_ours(ctrl, &type);
+        float mx = t[0] - g_cmd_t[0], mz = t[2] - g_cmd_t[2], rs = (float)g_walk_restart_cm / 100.0f;
+        int moved = mx * mx + mz * mz > rs * rs;
         if (!ours && now - g_last_restart >= g_freq) {
             char nm[32], why[48];
             uint32_t p = 0;
@@ -660,6 +668,9 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                 aimp_snprintf(nm, sizeof nm, "%s", type == 0xFFFFFFFFu ? "ninguno" : "?");
             aimp_snprintf(why, sizeof why, "el comando actual era %s", nm);
             walk_start(ctrl, t, now, why);
+        } else if (moved && now - g_last_restart >= g_freq / 2) {
+            /* Corrida 23: actualizar el destino (FUN_006797a0) no lo hace caminar; una orden nueva sí (corrida 21). */
+            walk_start(ctrl, t, now, "el objetivo se movió");
         } else if (ours && now - g_last_cmd >= g_walk_ticks) {
             g_move_update((void *)ctrl, NULL, g_cmd_a, g_cmd_b, g_target, g_params, 1);
             g_last_cmd = now;
@@ -667,10 +678,6 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
         }
         break;
     }
-    case W_CANCEL:
-        if (now - g_wstate_at >= g_freq * 3 / 10) /* 300 ms para que se frene */
-            g_wstate = W_PLACE;
-        break;
     }
     (void)tyaw;
     if (now - g_last_log >= g_freq) {
