@@ -134,7 +134,7 @@ static int rearm_allowed(const float *t)
 /* movimiento del otro jugador (remote_motion) */
 static uint32_t g_rm_seq, g_rm_ms;
 static float g_rm_p[3], g_rm_v[3], g_rm_speed, g_rm_camh = 1.57f;
-static int64_t g_rm_at;
+static int64_t g_rm_at, g_rm_cr_since;
 static IdleCmdFn g_idle_cmd;
 static int g_idle_on, g_crouch_stance = 2;
 static volatile int g_allow_cmd; /* el filtro deja pasar el comando que da el mod (mismo thread) */
@@ -1005,7 +1005,8 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                 break;
             }
             if (g_idle_on) {
-                if (want_idle)
+                /* corrida 48: sin histéresis salía del IDLE por un pico de velocidad; sale con 0,6 m/s o al pararse */
+                if (g_rm_crouch && g_rm_speed < 0.6f)
                     break;
                 g_idle_on = 0;
                 walk_start(ctrl, lt, now, "títere: deja el IDLE");
@@ -1253,8 +1254,12 @@ static void remote_motion(const AimpPkt *r, float *t, int64_t now)
         float h = r->cam_pos[1] - r->pos[1];
         if (h > 0.3f && h < 2.5f)
             g_rm_camh = h;
-        int cr = g_rm_camh < 1.25f;
-        if (cr != g_rm_crouch) {
+        /* corrida 49: la cámara del paquete a veces es otra (alterna 1,0-1,2 y 1,57 m cuadro a cuadro aunque el
+         * jugador esté parado): el estado cambia solo si la lectura se mantiene 300 ms seguidos */
+        int cr = g_rm_camh < 1.25f ? 1 : g_rm_camh > 1.40f ? 0 : g_rm_crouch;
+        if (cr == g_rm_crouch || !g_rm_cr_since)
+            g_rm_cr_since = now;
+        if (cr != g_rm_crouch && now - g_rm_cr_since >= g_freq * 3 / 10) {
             g_rm_crouch = cr;
             log_printf("GHOST: el otro %s (cámara a %.2f m de los pies)", cr ? "se agachó" : "se paró", (double)g_rm_camh);
         }
