@@ -21,7 +21,7 @@
 - **Cómo verificar en runtime:**
   - `AIMP_TRACE_CMD=1` (`mod/src/ctrl.c`): loguea cada `SwitchCommand` con el controlador, el tipo y el dueño (offset desde el `Character`);
   - `AIMP_TRACE_CTRL=1`: vuelca el controlador de jugador del jugador 0 cada vez que cambia. Con marcas F8 al caminar, correr, agacharse y girar, alcanza para mapear sus campos.
-- **Verificado en runtime:** **parcial** (corrida 20, 2026-11-15, `work/evidence/runtime/run20-arrojables-control.log`; ver "Corrida 20" abajo).
+- **Verificado en runtime:** **parcial** (corrida 20, 2026-11-15, `work/evidence/runtime/run20-arrojables-control.log`; ver "Corrida 20" abajo). **Camino 1 verificado** en una máquina (corridas 26–31, `run26`…`run31`): el avatar camina y corre detrás del jugador con `MOVE_TOWARDS` en el controlador de scripts. Ver "Corridas 21–31" abajo.
 
 ## Cómo se controla un personaje
 
@@ -61,9 +61,23 @@
   - **rumbo en u8 = yaw × 200 / 2π** (200 pasos por vuelta): 3,04 da 97, 2,215 da 70 y 1,586 da 50;
   - es el contenido de `update_action_continuous_block` (hallazgo 18): lo mínimo para reproducir la locomoción de otro.
 
+## Corridas 21–31 (2026-11-15): el avatar camina con `MOVE_TOWARDS` (camino 1)
+
+- **Dos controladores de comandos** consecutivos en el `Character`, de `0x2B0` bytes cada uno (`0x10` + 2 slots de `0x150`; `FUN_0067e980` construye el comando en `ctrl+0x10` o `ctrl+0x160`, cancela el pendiente con `vt+0x24` y llama a `SwitchCommand`). En los dos, `+0x00` = comando en ejecución, `+0x04` = pendiente y `+0x34` = el `Character`:
+  - **`Character+0x3570` = de scripts** (`[SCRIPT]`). `ConditionHasScript` (`FUN_006eaa80`) mira sus `+0`/`+4`; `ActionScript` (`FUN_006d2830`) lo habilita al arrancar (`FUN_00679150(1)`) y ejecuta su comando. Las entidades de comandos de los scripts (`FUN_007b58b0`, `FUN_007cec20`, `FUN_007cf2e0`…) usan `LEA ECX,[X+0x3570]`.
+  - **`Character+0x3820` = de tareas** (`[TASK]`): ahí la IA pone `PLAY_ANIMATION`, `GOTO_COVER`, `IDLE`. Un `MOVE_TOWARDS` ahí lo pisa la IA o no se ejecuta (corridas 21–26).
+- **Árbol de comportamiento del civil** (`DATA/BEHAVIOR/NPC_INNOCENT_BEHAVE.XML`): los comandos de script solo se ejecutan en `ConditionHasMotivation(CINEMATIC_MOTIVATION) → ConditionHasScript → ActionScript`. El mod hookea `ConditionHasMotivation` (`FUN_006d3630`, thiscall(nodo, agente, x), **`ret 8`**; `nodo+0x14` = tipo, CINEMATIC = 1) y devuelve verdadero para el avatar. El agente es el `Character` (corrida 26).
+- **Actualizar el destino alcanza** en el controlador de scripts (corrida 28): `FUN_006797a0` = thiscall(ctrl, a, b, destino, params, flag), **`ret 0x14`**; busca el comando por sus ids (`FUN_00677990`), `vt+0x64` solo es no nulo en `MOVE_TOWARDS` (`FUN_004a4610`) y `FUN_006776f0` escribe el destino en `cmd+0x60..+0x68` y los parámetros en `cmd+0x80..+0x9C`.
+- **Enum `MOVE`** (tabla de nombres de enums en VA `0x0130FD18`): `SLOW_WALK`, `WALK`, `FAST_WALK`, `RUN`, `OBSOLETE_1`, `OBSOLETE_2`, `TELEPORT`. `params+0x00` = `WALK` (1) camina a ~1,2 m/s y `RUN` (3) corre a ~4,8 m/s (corridas 27–31).
+- **Teletransporte:** sin orden nueva en el mismo frame, la locomoción lo devuelve (corrida 22). Si su IA tiene un `PLAY_ANIMATION` en el controlador de tareas, cae del piso (corridas 26–29). Por eso: primero la orden; teletransporte y orden nueva cuando ya no hay animación.
+- **Nunca `SwitchCommand(ctrl, NULL)`** desde el mod: se cae leyendo `cmd+0x28` (corrida 23).
+- Resultado (corrida 31): sigue al jugador a ~2 m, sin trabarse ni pegársele; corre si queda a más de 5 m. Capturas en `work/evidence/runtime/shots/` (locales).
+
 ## Preguntas abiertas
 
-1. ~~¿Dónde vive el controlador de comandos?~~ En `Character+0x3820` (corrida 20).
+1. ~~¿Dónde vive el controlador de comandos?~~ En `Character+0x3820` (corrida 20); el de scripts, en `Character+0x3570` (corrida 26).
 2. Layout del controlador de jugador: bit de movimiento y rumbo (corrida 20). La entrada cruda está en otro lado: ¿dónde? ¿Quién la escribe para el jugador 0?
 3. ¿Qué hace el resto de la vtable de `READ_GAMEPAD_1` (`0x012B19F0`: `+0x50` `FUN_00682830`, `+0x58` `FUN_00680990`, `+0x60` `FUN_00682b50`, `+0x68` `FUN_006816a0`, `+0x78` `FUN_00682560`, `+0x80` `FUN_00682b10`)?
 4. ¿Cómo se spawnea un personaje con la definición del jugador sin el crash de recursos (reutilizar los recursos del jugador 0)?
+5. ¿Qué controla el `+0x18` de los parámetros de `MOVE_TOWARDS` (0,1 por defecto) y cuál es el radio de llegada? Con el objetivo a menos de ~2,8 m el avatar no arranca (corrida 31).
+6. ¿Se puede hacer que el avatar mire hacia donde mira el otro jugador cuando está quieto (orientación del destino)?

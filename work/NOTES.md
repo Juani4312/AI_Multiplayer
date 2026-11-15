@@ -732,3 +732,19 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - Cambios (tests OK):
   - **preparación:** primero la orden desde donde está; se lo ubica cuando su controlador de tareas no tiene un `PLAY_ANIMATION` (al menos 500 ms, como mucho `AIMP_GHOST_WALK_PREP_MS`, 4000). `CMD_TYPE_PLAY_ANIMATION 7` (orden de la tabla de nombres);
   - **seguimiento a distancia** en modo local (`AIMP_GHOST_WALK_FOLLOW_CM`, 200): el objetivo es el punto a esa distancia del jugador del lado donde está el NPC; la primera vez y si quedó lejos, detrás.
+
+## 2026-11-15 — Corrida 30 (automática): sin caída al ubicarlo; seguimiento a distancia
+- Log `run30-preparacion-y-distancia.log` (0 excepciones, 0 comandos bloqueados).
+- **Preparación:** orden a las 71,667 con Dave en `PLAY_ANIMATION` (controlador de tareas); a los 1787 ms ya no había comando ahí y se lo ubicó. **No cayó** (y = 20,53 desde el primer segundo).
+- **Seguimiento a distancia** (`local a distancia`): distancia al jugador entre 1,2 y 8,8 m. Cuando el jugador se movió de costado (93–98 s) el NPC lo siguió sin trabarse (en la 27 y la 28 se quedaba 4 s quieto). Al final quedó a 1,93 m y no se le acercó cuando el jugador giró.
+- Captura después de girar 180°: Dave parado a ~2 m frente al jugador (`shots/run30-avatar-a-2m.png`, local).
+- **Falta:** caminando a ~1,2 m/s queda hasta 8,8 m atrás del jugador (~2,2 m/s).
+
+## 2026-11-15 — Enum `MOVE` y corrida 31 (automática): corre cuando queda lejos
+- **Tabla de nombres de los enums de los scripts** en VA `0x0130FD18` (punteros a cadenas, leída del archivo): cada enum es su nombre seguido de los valores. `MOVE`: `SLOW_WALK`, `WALK`, `FAST_WALK`, `RUN`, `OBSOLETE_1`, `OBSOLETE_2`, `TELEPORT`. Con índices desde 0, `WALK` = 1 (el valor por defecto que se venía usando). Vecinos con el mismo formato: `CHARACTER_STANCE`, `DEATH_STYLE`, `LOCOMOTION_TARGET_SPEED` (`SLOWEST`, `SLOW`, `FAST`, `FASTEST`), `DOOR_STATE`.
+- Cambio (tests OK): `MOVE_TYPE_RUN 3` si el NPC queda a más de `AIMP_GHOST_WALK_FAR_CM` (500) del objetivo y vuelta a `WALK` 2,5 m más cerca. El tipo va en `params+0x00` y se aplica con una orden nueva (como mucho una por segundo). Al ubicarlo o reubicarlo, `WALK`.
+- Log `run31-corre.log` (0 excepciones). Guion: el jugador gira 180° y camina hacia atrás 8 s por el pasillo del inicio.
+  - **`RUN` confirmado:** a 5,0 m del objetivo pasó a `move_type 3` y avanzó **4,79 m en 1 s**; a 2,5 m volvió a caminar. Distancia máxima al jugador: 9,3 m, y la recuperó en 2 s. Al final quedó a 2,1 m.
+  - En las capturas se lo ve venir hacia la cámara por el pasillo, caminando y corriendo (`shots/run31-avatar-t16/18/20.png`, local).
+  - Queda un retardo de ~3 s al arrancar: con el objetivo a menos de ~2,8 m, `MOVE_TOWARDS` lo da por llegado.
+- Mod reinstalado en pasivo (`AIMP_GHOST=0`).

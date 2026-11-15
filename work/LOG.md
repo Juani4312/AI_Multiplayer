@@ -144,3 +144,12 @@
 - 03:30 Arreglos: "es mío" en +0/+4, filtro de SwitchCommand que bloquea la IA del avatar (cancela con vt+0x24), objetivo local 1,2 m detrás. Tests OK. Mod desinstalado.
 - 03:15 Corrida 22 (local): caminata con bloqueo de la IA. Raro: teletransportes que no se pegan (la locomoción lo devuelve), el jugador chocaba con el NPC. El usuario pidió dejar el mod instalado: queda en pasivo (AIMP_GHOST=0).
 - 03:40 Caminata como máquina de estados (ubicar, esperar, caminar, cancelar, reubicar; sin teletransportes mientras camina; objetivo 2,5 m detrás). Tests OK.
+- 03:34 Corrida 23 (automática, mando virtual): crash al cancelar con SwitchCommand(ctrl, NULL) (lee cmd+0x28). Las actualizaciones del destino no lo hacían caminar (en el controlador de tareas).
+- 03:41 Corrida 24: el NPC ignora el MOVE_TOWARDS: su árbol (NPC_INNOCENT_BEHAVE.XML) solo ejecuta comandos de script en la rama CINEMATIC. Hook de ConditionHasMotivation (FUN_006d3630).
+- 03:49 Corrida 25: crash por declarar el hook con ret 4 (es ret 8). Lección: verificar siempre el RET N en el asm.
+- 03:53 Corrida 26: el agente es el Character; ConditionHasScript mira Character+0x3570. Hay dos controladores: de scripts (+0x3570) y de tareas (+0x3820).
+- 04:03 Corrida 27: con el controlador de scripts el avatar camina detrás del jugador (1,1-1,2 m/s). autoplay_continue.sh captura solo la ventana del juego.
+- 04:10 Corrida 28: con solo actualizaciones del destino camina igual (2 órdenes en toda la corrida). Por defecto, sin órdenes nuevas.
+- 04:17 Corrida 29: la caída del piso al ubicarlo coincide con un PLAY_ANIMATION de su IA. Captura del avatar de frente (girando al jugador con tiempos P relativos a su aparición).
+- 04:31 Corrida 30: preparación (orden primero, ubicarlo sin PLAY_ANIMATION): sin caída. Seguimiento a 2 m del lado del NPC: no se traba ni se le pega al jugador.
+- 04:34 Corrida 31: enum MOVE del binario (VA 0x0130FD18: SLOW_WALK, WALK, FAST_WALK, RUN...). Corre (RUN = 3, ~4,8 m/s) a más de 5 m y camina cerca. Capturas del avatar viniendo de frente. Juego cerrado, mod pasivo (AIMP_GHOST=0).
