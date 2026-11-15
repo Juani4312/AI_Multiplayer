@@ -22,7 +22,10 @@
 - **Evidencia:** `work/evidence/h17/w1.txt` … `w20.txt`, `zone.txt` (mapa de funciones y strings de `0x790000`–`0x7D8000`) y `z64.txt` (eventos de animación, `0x648000`–`0x668000`). Salidas de `work/scripts/ghidra/Dump.java`; se agregó el comando `fstr:INICIO:FIN`. Prólogos y relocations leídos del archivo con un parser PE propio.
 - **Confianza:** alta para la cadena de llamadas, las convenciones (`ret` y lectura de los argumentos en el asm) y el layout de los 64 bytes. Media para el significado de `a3` (15.0): `FUN_007b5050` no lo lee en el camino visto.
 - **Cómo verificar en runtime:** `AIMP_TRACE_THROW=1` loguea cada lanzamiento con la plantilla, la posición, la velocidad y el caller. `AIMP_THROW_ECHO=1500` repite cada lanzamiento propio 1,5 s después, 75 cm al costado: si aparece una segunda bengala con la misma curva, la inyección funciona. Con dos máquinas, `AIMP_SYNC_THROW=1`.
-- **Verificado en runtime:** no.
+- **Verificado en runtime:** **sí** (corrida 20, 2026-11-15, papito, `work/evidence/runtime/run20-arrojables-control.log`):
+  - `THROW local 1: tirar Thrown\flare desde (-63.87, 21.93, -26.88), vel (-19.93, -1.65, -0.40) |20.00|, a3 15.00, t 117.56, desde rva 0x3b95cf`. El caller es `FUN_007b9500`, la fuerza 20 y `time_left` 117,56 s (la duración de la bengala);
+  - el eco de `AIMP_THROW_ECHO=1500` salió 1,52 s después, 75 cm al costado, y **el usuario vio la segunda bengala con la misma trayectoria**;
+  - 0 excepciones. Crear el composite desde el thread principal, después de `ModeManager::Run`, no rompió nada (pregunta abierta 1).
 
 ## Cadena de un lanzamiento
 
@@ -86,7 +89,7 @@ La tabla de definiciones por tipo de arma o ítem es `[[0x16F182C]+0x20C][índic
 
 ## Preguntas abiertas
 
-1. ¿Crear el composite desde el thread principal, después de `ModeManager::Run`, es seguro? El juego lo hace dentro del update de animación del personaje. Se ve en la corrida con `AIMP_THROW_ECHO`.
+1. ~~¿Crear el composite desde el thread principal es seguro?~~ Sí en la corrida 20 (una bengala).
 2. ¿El composite usa al jugador local para algo, como dueño del daño o luz en la mano? Si es así, la copia remota quedaría atribuida al jugador de esa máquina.
 3. `FUN_0070f310` (aviso a la IA del lanzamiento): ¿hace falta repetirlo en la otra máquina para que el Alien reaccione igual?
 4. ¿Qué es el `a3` = 15.0 de `FUN_007b5050`?
