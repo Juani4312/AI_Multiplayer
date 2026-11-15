@@ -111,6 +111,10 @@ static float g_rearm_p[3];
 static int64_t g_rearm_since;
 static uint32_t g_rearms;
 static uint32_t g_walk_off = CHR_SCRIPTCTRL;
+/* AIMP_GHOST_INVINCIBLE */
+static int g_invincible = 1, g_inv_bad;
+static uint32_t g_inv_chr;
+static int64_t g_inv_last;
 /* plantado después de girar (no camina hasta que el otro se mueve) */
 static int g_hold;
 static float g_hold_p[4] __attribute__((aligned(16)));
@@ -323,6 +327,7 @@ int ghost_install(void)
      * solo. Por defecto en el modo 3, salvo con la caminata (que necesita que el NPC procese comandos);
      * AIMP_GHOST_NOAUTH=0/1 lo fuerza. */
     g_noauth = aimp_env_int(L"AIMP_GHOST_NOAUTH", g_mode == 3 && !g_walk);
+    g_invincible = aimp_env_int(L"AIMP_GHOST_INVINCIBLE", 1);
     static const char *const names[] = { "", "clon del jugador", "NPC existente y después clon", "solo NPC existente" };
     if (g_mode) {
         g_state = G_WAIT_PLAYER;
@@ -949,6 +954,37 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
     return 1;
 }
 
+/* AIMP_GHOST_INVINCIBLE (1 por defecto): el avatar no recibe daño (prueba con dos máquinas, 2026-11-15: el
+ * usuario mató al avatar y el juego dio game over por lastimar civiles). Se le pone el flag de
+ * CHR_SetInvincibility(INVINCIBLE) (Character+0x2E8 |= 8, +0x2EA |= 8; game.h), con la misma verificación
+ * que hace el engine: el componente de salud de Character+0x320 tiene que apuntar al personaje. Se repite cada
+ * segundo por si un script lo cambia. */
+static void invincible(int64_t now)
+{
+    if (!g_invincible || g_inv_bad || (g_inv_chr == g_chr && now - g_inv_last < g_freq))
+        return;
+    uint32_t owner = 0;
+    uint8_t a = 0, b = 0;
+    uint16_t hp = 0;
+    if (!mem_u32(g_chr + CHR_HEALTHCOMP + HEALTHCOMP_OWNER, &owner) || owner != g_chr || !mem_u8(g_chr + CHR_INVINCIBLE, &a) ||
+        !mem_u8(g_chr + CHR_PLAYER_ONLY_DAMAGE, &b)) {
+        log_printf("GHOST: invencible: el componente de salud de 0x%08x (+0x%x) apunta a 0x%08x, no al personaje; no se toca",
+                   g_chr, CHR_HEALTHCOMP + HEALTHCOMP_OWNER, owner);
+        g_inv_bad = 1;
+        return;
+    }
+    if (!(a & 8) || !(b & 8)) {
+        uint8_t na = a | 8, nb = b | 8;
+        mem_write(g_chr + CHR_INVINCIBLE, &na, 1);
+        mem_write(g_chr + CHR_PLAYER_ONLY_DAMAGE, &nb, 1);
+        mem_read(g_chr + CHR_HEALTH, &hp, 2);
+        log_printf("GHOST: invencible: avatar 0x%08x, +0x2e8 %02x -> %02x, +0x2ea %02x -> %02x (salud %u)%s", g_chr, a, na, b, nb, hp,
+                   g_inv_chr == g_chr ? "; alguien lo había cambiado" : "");
+    }
+    g_inv_chr = g_chr;
+    g_inv_last = now;
+}
+
 static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t now)
 {
     uint32_t idx;
@@ -964,6 +1000,7 @@ static void move_chr(const Chars *c, const AimpNet *net, uint32_t level, int64_t
         g_state = G_DONE;
         return;
     }
+    invincible(now);
     float lpos[3], lyaw, t[3], tyaw;
     if (!mem_read(g_player + CHR_POS, lpos, sizeof lpos) || !mem_f32(g_player + CHR_YAW, &lyaw))
         return;

@@ -324,4 +324,17 @@ static const uint8_t AIMP_CMD_MOVE_UPDATE_PROLOGUE[10] __attribute__((unused)) =
     0x8B, 0x44, 0x24, 0x08, 0x8B, 0x54, 0x24, 0x04, 0x50, 0x52
 };
 
+
+/* Invencibilidad (2026-11-15, estático): CHR_SetInvincibility (FUN_004937b0, parámetro damage_mode, enum
+ * DAMAGE_MODE = DAMAGED_BY_ALL, DAMAGED_BY_PLAYER_ONLY, INVINCIBLE) escribe en el Character: INVINCIBLE
+ * pone +0x2EA |= 8 y +0x2E8 |= 8; BY_PLAYER_ONLY solo +0x2EA; BY_ALL limpia los dos. La función central de
+ * daño FUN_007caac0 (thiscall sobre el componente de salud) sale sin hacer nada si (componente+0x24)->+0x2E8 != 0.
+ * El componente está embebido en Character+0x320 (salud u16 en componente+0x1C = Character+0x33C, máxima en
+ * +0x33E; FUN_00493ea0) y su +0x24 apunta al Character. */
+#define CHR_HEALTHCOMP            0x320
+#define HEALTHCOMP_OWNER          0x24
+#define CHR_INVINCIBLE            0x2E8
+#define CHR_PLAYER_ONLY_DAMAGE    0x2EA
+#define CHR_HEALTH                0x33C
+
 #endif
