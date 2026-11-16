@@ -15,6 +15,8 @@ int throw_sync_enabled(void);
 void throw_remote_event(const AimpEvt *e, uint32_t level);
 /* AIMP_EVT_THROW_REST recibido: si la réplica cayó lejos, se borra y se crea quieta donde cayó la del otro. */
 void throw_rest_event(const AimpEvt *e, uint32_t level);
+/* AIMP_EVT_PICKUP recibido: el otro recogió ese ítem; acá se lo saca del mundo (sin dárselo a nadie). */
+void throw_pickup_event(const AimpEvt *e, uint32_t level);
 /* Por frame (thread principal): ecos pendientes de AIMP_THROW_ECHO. */
 void throw_frame(int64_t now, int64_t freq, uint32_t level);
 
@@ -34,6 +36,13 @@ typedef struct {
 } ThrowEvt;
 /* Payload de AIMP_EVT_THROW_REST (2026-11-15): el objeto que tiró el emisor se quedó quieto ahí.
  * id = ThrowEvt.pad[0] del lanzamiento (contador del emisor, 1..255). */
+/* Payload de AIMP_EVT_PICKUP (2026-11-16): pickup recogido por el emisor. pid = ruta de composites (pins.c,
+ * determinista entre máquinas); ids = los 8 bytes de FUN_008c3360 en el emisor (pueden ser dinámicos). */
+typedef struct {
+    uint32_t pid, eid, type;
+    uint32_t ids[2];
+    uint32_t depth;
+} PickupEvt;
 typedef struct {
     uint8_t id;
     uint8_t pad[3];

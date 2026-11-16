@@ -28,6 +28,12 @@ int pins_fire(uint32_t id, uint32_t pin, uint32_t mflags);
  * cuántas entidades indexó. */
 uint32_t pins_index_build(const char *why);
 
+/* pid (ruta de composites) del objeto completo de una entidad. */
+uint32_t pins_path_id_of(uint32_t outer, uint32_t *depth);
+/* Objeto completo de la entidad con ese pid en el índice (0 si no está); con rebuild, si no está rearma el
+ * índice una vez y vuelve a buscar. */
+uint32_t pins_lookup_outer(uint32_t pid, int rebuild);
+
 /* Para tests: instalar el hook sobre una función con el mismo prólogo. */
 int pins_install_at(void *target, AimpNet *net);
 /* Para tests: cambiar de rol (1 host, 2 cliente) sin reinstalar. */

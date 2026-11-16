@@ -708,6 +708,18 @@ static uint32_t walk(uint32_t root, uint32_t *ncomp, uint32_t *maxd, uint32_t *b
     return nodes + 1;
 }
 
+uint32_t pins_path_id_of(uint32_t outer, uint32_t *depth) { return path_id(outer, depth); }
+
+uint32_t pins_lookup_outer(uint32_t pid, int rebuild)
+{
+    IxEnt *e = ix_find(pid);
+    if (!e && rebuild) {
+        pins_index_build("búsqueda de un pickup");
+        e = ix_find(pid);
+    }
+    return e ? e->outer : 0;
+}
+
 uint32_t pins_index_build(const char *why)
 {
     LARGE_INTEGER t0, t1;

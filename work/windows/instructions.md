@@ -245,6 +245,18 @@ Qué mirar (F8 en cada momento interesante):
 
 En el log: `títere: camina rápido`, `velocidad: avatar … el otro …`, `FUN_007cae20 (agacharse)`, `THROW fijo` (incluidas las líneas `diag`).
 
+### 8d. Ítems compartidos y disparadores del host (2026-11-16, DLL `e8315c89…`)
+
+Misma instalación que el paso 8, con `git pull`, sumando a `-Extra`: `AIMP_SYNC_PICKUP=1,AIMP_TRACE_PICKUP=1,AIMP_SYNC_PINS=1,AIMP_TRACE_PINS=1` (lo mismo en `papito`). Novedades:
+- **Ítems:** cuando un jugador levanta un ítem, en la otra máquina tendría que desaparecer sin que nadie lo reciba. Hasta ahora cada uno tenía su copia.
+- **Zonas de los scripts (fase 6):** el host decide las zonas (entrar o salir de áreas que arrancan diálogos o eventos); el cliente aplica las del host y no dispara las suyas. Ya funcionó por red en una sola máquina.
+
+Qué mirar (F8 en cada momento):
+1. Uno levanta un ítem (balas, piezas, una bengala del piso): ¿desaparece en la pantalla del otro? ¿El otro lo puede levantar igual?
+2. El host entra en una zona con diálogo o música: ¿arranca también en el cliente? Y si el cliente entra solo, ¿no arranca?
+
+En el log: `PICKUP recogido` (con `pid` e `ids`) del lado que levantó, y `PICKUP remoto: … acá … (la entidad local con el mismo pid | los ids del otro)` del otro lado. `PINSYNC al cliente`, `PINSYNC aplicado`, `PINSYNC bloqueado`.
+
 ## Problemas conocidos
 
 - **No aparece `aimp.log`:** el proxy no cargó. Revisar KnownDLLs, que `winmm.dll` esté al lado de `AI.exe` (no en una subcarpeta) y que el juego haya llegado a arrancar.

@@ -25,6 +25,7 @@
 #include "game.h"
 #include "hook.h"
 #include "log.h"
+#include "pins.h"
 
 #define LOG_MAX 64
 #define NAMES_MAX 16
@@ -432,7 +433,172 @@ static float sqrt_f(float x)
     return r;
 }
 
-int throw_sync_enabled(void) { return g_sync; }
+/* ---- Pickups compartidos (2026-11-16, estático) ----
+ * Al recoger un ítem, el composite del pickup dispara "pickup_collected"; el callback 0x7AFDC0 llama a
+ * FUN_007a2b30 thiscall(gestor = [0x016F0DE8], Handle **h), ret 4: toma los ids (FUN_008c3360) de la
+ * entidad (*h)+0xC y llama a FUN_00795ee0 thiscall(gestor+0x18, ids*, 0), ret 8, que lo aplica acá
+ * (gestor+0x18 vt+4: lo saca del mundo) y encola el RPC A 0x23 (hallazgo 11; handler A 0x418D60 valida con
+ * vt+8, handler de sesión 0x418CE0 aplica con vt+4). El otro hace lo mismo con FUN_00795ee0: el ítem
+ * desaparece y nadie más lo recibe. La entidad se busca por pid (pins.c, determinista); si no está en el
+ * índice, se usan los ids del otro (corrida 3: "5d9b3722 00000000", quizá dinámicos).
+ *   AIMP_TRACE_PICKUP=1  loguea cada pickup recogido (solo mira).
+ *   AIMP_SYNC_PICKUP=1   además lo manda (AIMP_EVT_PICKUP) y aplica los del otro (con AIMP_NET). */
+#define AIMP_RVA_PICKUP_COLLECTED 0x003A2B30u
+#define AIMP_RVA_PICKUP_APPLY     0x00395EE0u
+#define AIMP_RVA_PICKUP_MGR       0x012F0DE8u
+#define PICKUP_MGR_RPC            0x18u
+static const uint8_t AIMP_PICKUP_PROLOGUE[9] = { 0x8B, 0x44, 0x24, 0x04, 0x8B, 0x00, 0x83, 0xEC, 0x08 };
+static const uint8_t AIMP_PICKUP_APPLY_PROLOGUE[7] = { 0x55, 0x8B, 0xEC, 0x56, 0x57, 0x8B, 0xF9 };
+typedef void(__attribute__((fastcall)) * PickupFn)(void *mgr, void *edx, void *h);
+typedef void(__attribute__((fastcall)) * PickupApplyFn)(void *rpc, void *edx, const uint32_t *ids, uint32_t flag);
+static AimpHook g_hk_pick;
+static PickupFn g_pick_orig;
+static PickupApplyFn g_pick_apply;
+static int g_pick_trace, g_pick_sync;
+static volatile LONG g_pick_n;
+#define PICK_Q 8
+static PickupEvt g_pick_q[PICK_Q];
+static int g_npick_q;
+
+static void __attribute__((fastcall)) det_pick(void *mgr, void *edx, void *h)
+{
+    uint32_t hh = 0, o = 0, ids[2] = { 0, 0 };
+    PickupEvt pe;
+    aimp_memset(&pe, 0, sizeof pe);
+    if (h && mem_u32((uintptr_t)h, &hh) && hh && mem_u32(hh + HANDLE_OBJ, &o) && o) {
+        mem_u32(o + 0xC, &pe.eid);
+        mem_u32(o + 0x10, &pe.type);
+        if (g_ids)
+            g_ids((void *)o, NULL, ids);
+        pe.pid = pins_path_id_of(o, &pe.depth);
+    }
+    pe.ids[0] = ids[0];
+    pe.ids[1] = ids[1];
+    LONG n = InterlockedIncrement(&g_pick_n);
+    log_printf("PICKUP recogido %ld: gestor 0x%08x, entidad 0x%08x id %08x tipo %08x pid %08x (profundidad %u), ids %08x %08x", (long)n,
+               (uint32_t)mgr, o, pe.eid, pe.type, pe.pid, pe.depth, ids[0], ids[1]);
+    if (g_pick_sync && o && g_cs_ok) {
+        EnterCriticalSection(&g_cs);
+        if (g_npick_q < PICK_Q)
+            g_pick_q[g_npick_q++] = pe;
+        LeaveCriticalSection(&g_cs);
+    }
+    g_pick_orig(mgr, edx, h);
+}
+
+/* Creación de un pickup (para ubicarlos en las pruebas): FUN_007afe00 thiscall(this, desc, char), ret 8; desc+0x04..+0x30
+ * es la matriz 3x4 (traslación en +0x10, +0x20, +0x30; la copia a locales), desc+0x48/+0x4C dos ids. Prólogo SEH:
+ * 6A FF 68 <imm32 reubicable> 64 A1 00 00 00 00; se roban los 7 bytes de los dos push, tal como están en memoria. */
+#define AIMP_RVA_PICKUP_SPAWN 0x003AFE00u
+typedef void(__attribute__((fastcall)) * PickSpawnFn)(void *self, void *edx, void *desc, uint32_t flag);
+static AimpHook g_hk_pspawn;
+static PickSpawnFn g_pspawn_orig;
+static volatile LONG g_pspawn_n;
+static void __attribute__((fastcall)) det_pspawn(void *self, void *edx, void *desc, uint32_t flag)
+{
+    float m[12];
+    uint32_t id2[2] = { 0, 0 };
+    LONG n = InterlockedIncrement(&g_pspawn_n);
+    if (n <= 400 && desc && mem_read((uintptr_t)desc + 4, m, sizeof m)) {
+        mem_read((uintptr_t)desc + 0x48, id2, sizeof id2);
+        log_printf("PICKUP creado %ld: en (%.2f, %.2f, %.2f), ids del descriptor %08x %08x, flag %u", (long)n, (double)m[3], (double)m[7],
+                   (double)m[11], id2[0], id2[1], flag & 0xFF);
+    }
+    g_pspawn_orig(self, edx, desc, flag);
+}
+
+static void pickup_install(void)
+{
+    g_pick_trace = aimp_env_int(L"AIMP_TRACE_PICKUP", 0);
+    g_pick_sync = aimp_env_int(L"AIMP_SYNC_PICKUP", 0);
+    if (!g_pick_trace && !g_pick_sync)
+        return;
+    uint8_t a[sizeof AIMP_PICKUP_APPLY_PROLOGUE], b[sizeof AIMP_ENT_IDS_PROLOGUE];
+    uintptr_t pa = g_aimp_exe + AIMP_RVA_PICKUP_APPLY, pi = g_aimp_exe + AIMP_RVA_ENT_IDS;
+    if (mem_read(pi, b, sizeof b) && !aimp_memcmp(b, AIMP_ENT_IDS_PROLOGUE, sizeof b))
+        g_ids = (IdsFn)(void *)pi;
+    if (mem_read(pa, a, sizeof a) && !aimp_memcmp(a, AIMP_PICKUP_APPLY_PROLOGUE, sizeof a))
+        g_pick_apply = (PickupApplyFn)(void *)pa;
+    else if (g_pick_sync) {
+        log_printf("PICKUP: el prólogo de FUN_00795ee0 no coincide; no se aplican los del otro");
+        g_pick_sync = 0;
+    }
+    if (!g_cs_ok) {
+        InitializeCriticalSection(&g_cs);
+        g_cs_ok = 1;
+    }
+    int ok = hook_install(&g_hk_pick, "pickup recogido (FUN_007a2b30)", (void *)(g_aimp_exe + AIMP_RVA_PICKUP_COLLECTED),
+                          AIMP_PICKUP_PROLOGUE, sizeof AIMP_PICKUP_PROLOGUE, sizeof AIMP_PICKUP_PROLOGUE, (void *)det_pick,
+                          (void **)&g_pick_orig);
+    if (!ok)
+        g_pick_sync = g_pick_trace = 0;
+    if (g_pick_trace) {
+        uint8_t sp[13];
+        uintptr_t ps = g_aimp_exe + AIMP_RVA_PICKUP_SPAWN;
+        static const uint8_t tail[6] = { 0x64, 0xA1, 0x00, 0x00, 0x00, 0x00 };
+        if (mem_read(ps, sp, sizeof sp) && sp[0] == 0x6A && sp[1] == 0xFF && sp[2] == 0x68 && !aimp_memcmp(sp + 7, tail, sizeof tail))
+            hook_install(&g_hk_pspawn, "pickup creado (FUN_007afe00)", (void *)ps, sp, sizeof sp, 7, (void *)det_pspawn,
+                         (void **)&g_pspawn_orig);
+        else
+            log_printf("PICKUP: el prólogo de FUN_007afe00 no coincide; sin log de creación");
+    }
+    log_printf("PICKUP: AIMP_TRACE_PICKUP=%d AIMP_SYNC_PICKUP=%d; hook %s; ids %s", g_pick_trace, g_pick_sync, ok ? "ok" : "NO",
+               g_ids ? "ok" : "NO");
+}
+
+/* Por frame: manda los recogidos (no en el detour: net_event no es para otro thread). */
+static void pickup_frame(void)
+{
+    PickupEvt q[PICK_Q];
+    int n = 0;
+    if (!g_pick_sync || !g_cs_ok)
+        return;
+    EnterCriticalSection(&g_cs);
+    n = g_npick_q;
+    aimp_memcpy(q, g_pick_q, sizeof(PickupEvt) * (size_t)n);
+    g_npick_q = 0;
+    LeaveCriticalSection(&g_cs);
+    for (int i = 0; i < n; i++) {
+        int sent = g_net && g_net->mode && net_event(g_net, AIMP_EVT_PICKUP, g_level, &q[i], sizeof q[i]);
+        log_printf("PICKUP   pid %08x %s", q[i].pid, sent ? "mandado al otro jugador" : "no se pudo mandar (sin red o sin el otro)");
+    }
+}
+
+void throw_pickup_event(const AimpEvt *e, uint32_t level)
+{
+    PickupEvt pe;
+    if (!g_pick_sync || e->size != sizeof pe)
+        return;
+    aimp_memcpy(&pe, e->data, sizeof pe);
+    if (e->level != level) {
+        log_printf("PICKUP remoto: pid %08x del nivel %u; acá el nivel es %u: se descarta", pe.pid, e->level, level);
+        return;
+    }
+    uint32_t mgr = *(volatile uint32_t *)(g_aimp_exe + AIMP_RVA_PICKUP_MGR), ids[2] = { pe.ids[0], pe.ids[1] }, o = 0;
+    const char *src = "los ids del otro";
+    if (pe.pid && (o = pins_lookup_outer(pe.pid, 1)) != 0 && g_ids) {
+        uint32_t loc[2] = { 0, 0 }, eid = 0;
+        mem_u32(o + 0xC, &eid);
+        g_ids((void *)o, NULL, loc);
+        if (eid == pe.eid && (loc[0] || loc[1])) {
+            ids[0] = loc[0];
+            ids[1] = loc[1];
+            src = "la entidad local con el mismo pid";
+        }
+    }
+    if (!mgr || !g_pick_apply) {
+        log_printf("PICKUP remoto: pid %08x sin gestor de pickups (0x%08x); no se aplica", pe.pid, mgr);
+        return;
+    }
+    static uint32_t s_ids[4] __attribute__((aligned(16)));
+    s_ids[0] = ids[0];
+    s_ids[1] = ids[1];
+    log_printf("PICKUP remoto: pid %08x id %08x, ids del otro %08x %08x, acá %08x %08x (%s; entidad 0x%08x): FUN_00795ee0", pe.pid, pe.eid,
+               pe.ids[0], pe.ids[1], ids[0], ids[1], src, o);
+    g_pick_apply((void *)(mgr + PICKUP_MGR_RPC), NULL, s_ids, 0);
+}
+
+int throw_sync_enabled(void) { return g_sync || g_pick_sync; }
 
 static void log_evt(const char *what, LONG n, const ThrowEvt *t, uint32_t from)
 {
@@ -543,8 +709,10 @@ int throw_install(AimpNet *net)
     /* experimento (2026-11-15): a los 3 s la sonda corre +1 m en x todos los candidatos que se movieron, para ver
      * si el objeto asentado se queda donde se lo escribe (corrección de la caída de la réplica) */
     g_fix_test = aimp_env_int(L"AIMP_THROW_FIX_TEST", 0);
+    g_net = net;
+    pickup_install();
     if (!g_trace && !g_sync && g_echo_ms <= 0 && !g_probe)
-        return 0;
+        return g_pick_trace || g_pick_sync;
     g_fix = g_sync ? aimp_env_int(L"AIMP_THROW_FIX", 1) : 0;
     g_fix_cm = aimp_env_int(L"AIMP_THROW_FIX_CM", 15);
     if (g_fix) {
@@ -1107,6 +1275,7 @@ void throw_frame(int64_t now, int64_t freq, uint32_t level)
     g_level = level;
     if (!g_cs_ok)
         return;
+    pickup_frame();
     if (g_probe)
         probe_frame(now, freq);
     Item loc[ECHO_MAX];
