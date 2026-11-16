@@ -172,3 +172,4 @@
 - 04:20 (2026-11-16) Corrida 78: IDLE con posturas 0-5 no agacha al humano armado. Agachado descartado por ahora.
 - 04:35 (2026-11-16) DESIGN_ALIEN.md: percepción (FUN_00730c30: estímulos 0/1/2 de cualquier personaje, 6 fijo en jugadores[0]), plan con host autoridad + Alien títere. Falta una partida con Alien.
 - 04:55 (2026-11-16) Corrida 79: hkpRigidBody (vtable 0x01413974) no alcanzable desde el objeto del pool (0/4). Arrojables quedan así. dist 23dcb754.
+- 05:20 (2026-11-16) Corridas 80-81: hkpRigidBody por su constructor (FUN_00b49ea0), 4/4, posición en +0x120 que sigue a la bengala hasta el piso. El que tira la usa para el THROW_REST. dist 072c93b7. Falta con dos máquinas.

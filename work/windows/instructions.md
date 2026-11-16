@@ -245,13 +245,16 @@ Qué mirar (F8 en cada momento interesante):
 
 En el log: `títere: camina rápido`, `velocidad: avatar … el otro …`, `FUN_007cae20 (agacharse)`, `THROW fijo` (incluidas las líneas `diag`).
 
-### 8d. Ítems compartidos y disparadores del host (2026-11-16, DLL `23dcb754…`)
+### 8d. Ítems compartidos y disparadores del host (2026-11-16, DLL `072c93b7…`)
 
 Misma instalación que el paso 8, con `git pull`, sumando a `-Extra`: `AIMP_SYNC_PICKUP=1,AIMP_TRACE_PICKUP=1,AIMP_SYNC_PINS=1,AIMP_TRACE_PINS=1` (lo mismo en `papito`). Novedades:
 - **Ítems:** cuando un jugador levanta un ítem, en la otra máquina tendría que desaparecer sin que nadie lo reciba. Hasta ahora cada uno tenía su copia.
 - **Zonas de los scripts (fase 6):** el host decide las zonas (entrar o salir de áreas que arrancan diálogos o eventos); el cliente aplica las del host y no dispara las suyas. Ya funcionó por red en una sola máquina.
 
+- **Arrojables:** el que tira ahora lee la posición real de su bengala del cuerpo físico (Havok) y le avisa al otro dónde quedó; la réplica salta a ese punto. Con `AIMP_SYNC_THROW=1` (como en 8b).
+
 Qué mirar (F8 en cada momento):
+0. Bengalas desde cada máquina, contra paredes y el piso: ¿la réplica termina donde la original? En el log del que tira: `hkpRigidBody … camino constructor` y `el propio se asentó en … mandado`.
 1. Uno levanta un ítem (balas, piezas, una bengala del piso): ¿desaparece en la pantalla del otro? ¿El otro lo puede levantar igual?
 2. El host entra en una zona con diálogo o música: ¿arranca también en el cliente? Y si el cliente entra solo, ¿no arranca?
 

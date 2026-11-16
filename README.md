@@ -99,8 +99,8 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 - **Censo de personajes (`AIMP_CENSUS`):** en la partida actual no hay Alien. Hay un humano armado, que sirve como avatar (`AIMP_GHOST_NPC_TYPE=4`).
 - **Agachado:** descartado por ahora: en el armado rompe la pose. Queda apagado por defecto.
 - **Alien compartido:** plan en `work/DESIGN_ALIEN.md`; hace falta una partida con el Alien activo.
-- **Arrojables:** la búsqueda del cuerpo de Havok no dio resultado. Se dejan como están.
-- Limitaciones: `work/CONTINGENCIAS.md`. DLL para la laptop: `23dcb754…`.
+- **Arrojables:** se encontró el cuerpo físico (Havok) de cada bengala enganchando su constructor; su posición sigue a la bengala hasta que queda quieta (corridas 80–81). El que tira la usa para avisar dónde quedó. Falta probarlo con dos máquinas.
+- Limitaciones: `work/CONTINGENCIAS.md`. DLL para la laptop: `072c93b7…`.
 
 **2026-11-16 (corridas 65–68, locales):**
 - **Paso del avatar:** el "se desliza" probablemente venía de que el civil animaba `WALK` (~1,2 m/s) mientras el otro caminaba a 2,46 m/s. Ahora hay tres pasos: `WALK`, `FAST_WALK` (de 1,8 a 3 m/s) y `RUN`.

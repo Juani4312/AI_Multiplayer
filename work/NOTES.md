@@ -875,3 +875,13 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **Corrida 79:** BFS desde el objeto del pool (4096 nodos, 6 niveles) buscando esa vtable: **0 en 4 bengalas**. O el cuerpo no cuelga de esa cadena de punteros (lo registra la entidad física del composite en el mundo de Havok), o es de una subclase con otra vtable. El composite (camino fijo) se encontró en 2 de 4.
 - Si se retoma: buscar quién crea el cuerpo de la bengala (constructor de `hkpRigidBody` llamado desde `CATHODE::PhysicsSystem` o desde la entidad del modelo dinámico) y enganchar ahí, en vez de recorrer punteros.
 - dist `23dcb754`. Mod en pasivo.
+
+## 2026-11-16 — Arrojables: el cuerpo de Havok por su constructor (corridas 80–81) ✅ en una máquina
+- **Constructor de `hkpRigidBody`:** `FUN_00b49ea0` thiscall(this, cinfo*), `ret 4`, escribe la vtable `0x01413974` (25 callers; prólogo `55 8B EC 83 E4 F0 83 EC 14`). El mod (`AIMP_THROW_RB=1`, por defecto con `AIMP_SYNC_THROW`) registra cada cuerpo construido con su hora. A cada lanzamiento le asocia el creado entre 100 ms antes y 300 ms después que tenga un triplete a menos de 1,5 m de la parábola.
+- **Corrida 80:** 4 de 4 bengalas con su cuerpo, siempre **un solo candidato**. La posición está en **`cuerpo+0x120`** y vale exactamente la salida del evento (sin los 0,62 m del composite).
+- **Corrida 81:** `+0x120` sigue a la bengala:
+  - bengala 1: (−109,69; 21,42; −14,26) a los 0,25 s, (−107,52; 21,42; −24,33) al segundo y quieta en el piso (y 20,56) a los 3 s;
+  - bengala 2: chocó contra una pared a unos 2 m y cayó al piso (−107,95; 20,58; −9,65);
+  - bengala 3: quedó en el piso a 1 m.
+- **Cambio:** para detectar dónde se asentó, el que tira usa primero el cuerpo (`ent_pos` → `rb_pos`) y después el composite. No pude tirar una bengala propia con el mando virtual (RT, LT+RT): el ítem equipado no era la bengala. Falta la prueba del lado que tira, con dos máquinas.
+- dist `072c93b7`. Mod en pasivo.
