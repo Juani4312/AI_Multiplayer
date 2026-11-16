@@ -48,7 +48,7 @@ _Última actualización: 2026-11-16._
 ## Otras cosas sin sincronizar
 
 ### 6. IA, Alien y progreso
-- La IA de los NPCs y del Alien corre por separado en cada máquina. El Alien persigue a cada jugador en su propia máquina.
+- La IA de los NPCs y del Alien corre por separado en cada máquina. El Alien persigue a cada jugador en su propia máquina. Plan y lo que se sabe: `work/DESIGN_ALIEN.md` (hace falta una partida con el Alien activo para seguir).
 - Los disparadores de los scripts (fase 6, `AIMP_SYNC_PINS`) están escritos y con tests, pero no se probaron con dos máquinas.
 - El guardado y los checkpoints no se sincronizan. Las dos partidas tienen que estar en el mismo nivel.
 
