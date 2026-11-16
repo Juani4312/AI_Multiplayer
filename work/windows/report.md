@@ -1656,3 +1656,155 @@ Hipótesis y lo que falta:
 [  783.263]    J0 pos=(-109.783, 20.513, -15.915) yaw=-0.0229 rad (-1.3 grados) | se movió 0.000 desde el ST anterior
 ```
 - Sin eventos de error de AI.exe en el Visor de eventos (últimas 3 h).
+
+## Instalación (2026-11-15 21:02:25)
+- Copiado `winmm.dll` (SHA-256 `3D086A3843A0B024E72311107BD7011D631BDD39D4E0D4F72193299A74AC0740`) a `c:\program files (x86)\steam\steamapps\common\Alien Isolation`.
+- `aimp.cfg`: AIMP_NET=join; AIMP_NET_PEER=100.126.161.126:47811; AIMP_GHOST=3; AIMP_GHOST_WALK=1; AIMP_SYNC_USE=1; AIMP_SYNC_THROW=1
+- Para deshacer: `-Action revert`.
+
+## Resultado: conjunta (2026-11-15 21:05:39)
+- Log copiado a `.\work\windows\logs\aimp-conjunta-20261115-210539.log` (267195 bytes, modificado 11/15/2026 21:05:27).
+```text
+[    0.001] AI_Multiplayer 0.2.0 (fases 1-3: proxy, hook por frame, sonda de estado, UDP del jugador), commit eae55e8+cambios, compilado Nov 16 2026 01:31:20
+[    0.001] DLL: C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation\WINMM.dll (0x72180000), link 0x6afa8bac, pid 8732
+[    0.001] config: 1 archivo(s) aimp.cfg leídos; aplicadas: AIMP_NET=join AIMP_NET_PEER=100.126.161.126:47811 AIMP_GHOST=3 AIMP_GHOST_WALK=1 AIMP_SYNC_USE=1 AIMP_SYNC_THROW=1
+[    0.001] plataforma: Windows 10.0.19045
+[    0.001] proxy: winmm real = C:\Windows\system32\winmm.dll (0x747b0000)
+[    0.001] proxy: 195 exports resueltos, 10 ausentes en la winmm real (2 de ellos son solo de Windows)
+[    0.002] proxy: ausentes: DrvClose DrvDefDriverProc DrvOpen DrvOpenA DrvSendMessage GetDriverFlags OpenDriverA mmioInstallIOProc16 winmmDbgOut winmmSetDebugLevel
+[    0.002] build: TimeDateStamp 0x54e3199d OK | SizeOfImage 0x01f81000 OK
+[    0.002] build: RVA ovr_Initialize 0xba83b0 OK | RVA curl_easy_init 0xceab20 OK
+[    0.002] build: prólogo de ModeManager::Run (RVA 0x3a8460) OK
+[    0.002] build reconocida (AI.exe dde66521...19a90, buildid 4940658)
+[    0.004] NET: join hacia 100.126.161.126:47811, 20 paquetes/s
+[    0.004] sonda: muestra cada 250 ms, resumen cada 1000 ms, tecla de volcado 0x78, tecla de marca 0x77, primeros 3 frames al detalle
+[    0.004] hook ModeManager::Run: instalado en 0x010e8460 (bytes robados [51 53 55 56 8b f1], trampolín 0x00bb0000, detour 0x721828a0)
+[    0.004] hook spawn de autoridad (FUN_00797490): instalado en 0x010d7490 (bytes robados [55 8b ec 53 56 57], trampolín 0x00d10000, detour 0x7218ea30)
+[    0.004] hook SpawnCharacter (FUN_007d3b50): instalado en 0x01113b50 (bytes robados [51 53 55 56 57], trampolín 0x00d20000, detour 0x7218e7f0)
+[    0.004] hook ConditionHasMotivation (FUN_006d3630): instalado en 0x01013630 (bytes robados [8b 44 24 04 8b 80 ec 31 00 00], trampolín 0x02e90000, detour 0x7218e380)
+[    0.004] hook usar (FUN_00795d00): instalado en 0x010d5d00 (bytes robados [55 8b ec 56 57], trampolín 0x03110000, detour 0x721942f0)
+[    0.004] hook handler A del uso (FUN_00418a10): instalado en 0x00d58a10 (bytes robados [55 8b ec 53 56 57], trampolín 0x03120000, detour 0x721941d0)
+[    0.004] hook handler de sesión del uso (FUN_00418980): instalado en 0x00d58980 (bytes robados [55 8b ec 56 57], trampolín 0x048e0000, detour 0x72194180)
+[    0.004] hook tirar (FUN_007b5050): instalado en 0x010f5050 (bytes robados [64 a1 00 00 00 00], trampolín 0x048f0000, detour 0x72196350)
+[    0.004] hook colocar (FUN_007b5190): instalado en 0x010f5190 (bytes robados [64 a1 00 00 00 00], trampolín 0x04900000, detour 0x721952e0)
+[    0.004] hook SwitchCommand (FUN_00678e20): instalado en 0x00fb8e20 (bytes robados [81 ec 00 01 00 00], trampolín 0x04910000, detour 0x72198cb0)
+[   33.731] FASE 1: primer frame dentro de ModeManager::Run (this=0x090f1fb4)
+[   33.732] Run tardó 32.75 s (¿carga?)
+[   33.733]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   33.733] NET join: enviados 1, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   34.746]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   34.746] NET join: enviados 20, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   35.762]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   35.762] NET join: enviados 20, recibidos 0, inválidos 0 | sin datos del otro jugador (par: 100.126.161.126:47811
+[   36.062] NET: primer estado del otro jugador: nivel 10, sin jugador, pos=(0.00, 0.00, 0.00) yaw=0.000
+[   36.779]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   36.779] NET join 100.126.161.126:47811: enviados 20, recibidos 1, perdidos 0, inválidos 0 | remoto: nivel 10 sin jugador pos=(0.000, 0.000, 0.000) yaw=0.000 seq 1, hace 717 ms
+[   37.795]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   37.795] NET join 100.126.161.126:47811: enviados 21, recibidos 0, perdidos 0, inválidos 0 | remoto: nivel 10 sin jugador pos=(0.000, 0.000, 0.000) yaw=0.000 seq 1, hace 1733 ms
+[   38.810]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   38.810] NET join 100.126.161.126:47811: enviados 20, recibidos 0, perdidos 0, inválidos 0 | remoto: nivel 10 sin jugador pos=(0.000, 0.000, 0.000) yaw=0.000 seq 1, hace 2749 ms
+[   39.827]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   39.827] NET join 100.126.161.126:47811: enviados 20, recibidos 15, perdidos 1, inválidos 0 | remoto: nivel 10 con jugador pos=(-109.688, 20.547, -9.640) yaw=-2.611 seq 17, hace 33 ms
+[   40.842]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   40.842] NET join 100.126.161.126:47811: enviados 21, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-109.688, 20.547, -9.640) yaw=-2.531 seq 38, hace 0 ms
+[   41.843]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   41.843] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-109.688, 20.547, -9.640) yaw=-2.531 seq 58, hace 0 ms
+[   42.858]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   42.858] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-109.688, 20.547, -9.640) yaw=-2.531 seq 78, hace 0 ms
+[   43.875]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   43.875] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-109.688, 20.547, -9.640) yaw=-2.531 seq 98, hace 34 ms
+[   44.891]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   44.891] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-109.688, 20.547, -9.640) yaw=-2.531 seq 118, hace 50 ms
+[   45.907]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   45.907] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-109.688, 20.547, -9.640) yaw=-2.531 seq 139, hace 17 ms
+[   46.923]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   46.923] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-109.688, 20.547, -9.640) yaw=-2.531 seq 159, hace 34 ms
+[   47.939]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   47.939] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-109.688, 20.547, -9.640) yaw=-2.531 seq 179, hace 33 ms
+[   55.582] Run tardó 6.64 s (¿carga?)
+[   55.582] EV nivel actual 0 "Production\Frontend" -> 10 "Production\HAB_ShoppingCentre"
+[   55.582]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   55.582] NET join 100.126.161.126:47811: enviados 21, recibidos 150, perdidos 3, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 332, hace 0 ms
+[   59.001]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000000:00000000 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   59.001] NET join 100.126.161.126:47811: enviados 1, recibidos 66, perdidos 2, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 400, hace 0 ms
+[   59.267] EV jugador 0: 0x00000000 -> 0x2b07f3b0 (vtable rva 0xef5d80 = Character(ok); def 0x090f7160 tipo 0 flags 1c=1 1f=1)
+[   59.268] NETZ +0x000 @ 0x090f22e0 (0x20 bytes)
+[   59.268] NETZ +0x690 @ 0x090f2970 (0x10 bytes)
+[   60.017]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 00000001:00000001 (1 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   60.017] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 421, hace 23 ms
+[   61.033]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (1 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   61.033] NET join 100.126.161.126:47811: enviados 19, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 441, hace 17 ms
+[   62.049]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   62.049] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 462, hace 0 ms
+[   63.065]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   63.065] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 482, hace 17 ms
+[   64.081]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   64.081] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 502, hace 17 ms
+[   64.282] NETZ +0x000 @ 0x090f22e0 (0x20 bytes)
+[   64.282] NETZ +0x690 @ 0x090f2970 (0x10 bytes)
+[   65.097]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   65.097] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 523, hace 0 ms
+[   66.114]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   66.114] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 543, hace 17 ms
+[   67.130]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   67.130] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 563, hace 33 ms
+[   68.146]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   68.146] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 584, hace 0 ms
+[   69.162]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   69.162] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 604, hace 0 ms
+[   70.178]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   70.178] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 624, hace 33 ms
+[   71.195]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   71.195] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 645, hace 0 ms
+[   72.211]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   72.211] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 665, hace 17 ms
+[   73.227]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   73.227] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 685, hace 17 ms
+[   74.243]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   74.243] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 706, hace 0 ms
+[   75.259]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   75.259] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 726, hace 17 ms
+[   76.275]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   76.275] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 746, hace 17 ms
+[   77.291]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   77.291] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.940 seq 767, hace 0 ms
+[   78.307]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   78.307] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.941 seq 787, hace 0 ms
+[   79.324]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   79.324] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.974 seq 807, hace 0 ms
+[   80.340]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   80.340] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.653, 20.504, -17.801) yaw=0.728 seq 827, hace 17 ms
+[   81.356]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   81.356] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.426, 20.504, -17.634) yaw=0.936 seq 847, hace 33 ms
+[   82.372]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   82.372] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.659, 20.504, -17.805) yaw=0.936 seq 868, hace 0 ms
+[   83.388]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   83.389] NET join 100.126.161.126:47811: enviados 20, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.663, 20.504, -17.809) yaw=0.936 seq 888, hace 17 ms
+[   84.405]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   84.405] NET join 100.126.161.126:47811: enviados 21, recibidos 20, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.663, 20.504, -17.809) yaw=0.936 seq 908, hace 50 ms
+[   85.421]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+[   85.421] NET join 100.126.161.126:47811: enviados 20, recibidos 21, perdidos 0, inválidos 0 | remoto: nivel 10 con jugador pos=(-111.663, 20.504, -17.809) yaw=0.936 seq 929, hace 0 ms
+[   86.437]    red: NETZ 0x090f22e0 transporte 0x00000000 máscara 0000001f:00000001 (0 cambios) | sesión 0x090edef8 proveedor 0x00000000 +2C=0 +2D=0
+```
+Últimas posiciones del jugador:
+```text
+[  159.517]    J0 pos=(-107.068, 20.504, -14.468) yaw=-2.1481 rad (-123.1 grados) | se movió 0.000 desde el ST anterior
+[  160.533]    J0 pos=(-107.068, 20.504, -14.468) yaw=-2.1481 rad (-123.1 grados) | se movió 0.000 desde el ST anterior
+[  161.550]    J0 pos=(-107.068, 20.504, -14.468) yaw=-2.1481 rad (-123.1 grados) | se movió 0.000 desde el ST anterior
+```
+- Sin eventos de error de AI.exe en el Visor de eventos (últimas 3 h).
+
+### Resumen de la prueba conjunta 8c (2026-11-15 21:02–21:05, laptop en join, DLL `3d086a38…`)
+
+Hechos del log (`logs/aimp-conjunta-20261115-210539.log`):
+- Mismo nivel en las dos: `HAB_ShoppingCentre` (nivel 10). Red: ~20 enviados/s, ~20 recibidos/s, 0 perdidos en régimen (3 y 2 "perdidos" solo durante la carga). Sin ninguna `EXCEPCIÓN`; cierre limpio (`DLL_PROCESS_DETACH` a los 162 s).
+- Avatar: NPCs[1] "Dave", teletransportado al empezar (estaba a 59,67 m). Después, siempre a ≤0,96 m del objetivo.
+- Paso: `títere: camina rápido` (move_type 2) se activó 3 veces. Velocidad avatar/otro con move_type 2: 2,33/2,37 y 2,18/2,21 m/s (111,7 s y 112,7 s). Nunca hubo `RUN` (move_type 3): el otro no pasó de 2,37 m/s.
+- Agachado: 2 veces (81,6 s y 103,9 s). En las dos, `FUN_007cae20 (agacharse)`: `+0x2AF 0 -> 1`, postura efectiva `+0x3E3A = 1`, `agachado 1/1`. Al pararse, `FUN_007cae90`: `+0x2AF 1 -> 0`.
+- Arrojables, 3 bengalas:
+  - 2 remotas (de papito, 117,9 s y 126,8 s): `THROW fijo N (réplica): no se encontró el composite en el primer segundo (… composite sin triplete a menos de 1 m …)`. Las 12 líneas `diag` del composite muestran `+0x24..+0x124` en (0,0,0) durante todo el vuelo.
+  - 1 local (141,8 s): `mandado al otro jugador (evento 1)`; después `THROW fijo 1 (propio): no se encontró el composite …` y a los 156,8 s `no se pudo leer la posición del objeto propio (vtable distinta); no se manda`.
+  - Resultado: el arreglo de posición final no se aplicó en ninguna de las 3.
+- No se apretó F8 (no hay `MARCA`).
+
+Lo que vio el usuario: pendiente (se agrega cuando lo cuente).
