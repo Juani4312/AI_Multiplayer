@@ -13,7 +13,7 @@ No contiene ni redistribuye binarios, assets ni código del juego.
 | 4b | Avatar títere: posición exacta del otro cada frame, con animación de caminar, caminar rápido y correr | ✅ dos máquinas (corrida 52); agachado: el civil no tiene la animación (corridas 65–67) |
 | 5 | "Usar" compartido: botones, cajas e ítems se replican y en la otra máquina los hace el avatar | ✅ botones; los ítems quedan uno por jugador |
 | 5b | Objetos arrojados y colocados (bengala, noisemaker, molotov, minas…): aparecen en la otra máquina con la misma trayectoria y quedan donde cayó el original | 🟡 vuelo ✅ con dos máquinas; corrección de dónde cae verificada en una (corridas 55–64), falta con dos |
-| 6 | Disparadores de los scripts decididos por el host (zonas que arrancan diálogos, eventos…) | 🟡 código y tests; índice de entidades verificado en el juego; falta probar con dos máquinas |
+| 6 | Disparadores de los scripts decididos por el host (zonas que arrancan diálogos, eventos…) | 🟡 por red en una máquina (corridas 72–73: el cliente aplica los del host y bloquea los suyos); falta con dos máquinas |
 
 El detalle de cada paso está en `work/PROGRESS.md`. La evidencia de ingeniería inversa está en `work/findings/` (hallazgos 01–19).
 
@@ -97,6 +97,8 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 - **Paso del avatar:** el "se desliza" probablemente venía de que el civil animaba `WALK` (~1,2 m/s) mientras el otro caminaba a 2,46 m/s. Ahora hay tres pasos: `WALK`, `FAST_WALK` (de 1,8 a 3 m/s) y `RUN`.
 - **Agacharse:** se encontró la función del juego que agacha a un NPC (`FUN_007cae20`) y la tabla de posturas del personaje. Las banderas quedan bien, pero el civil sigue parado: lo más probable es que no tenga animaciones de agachado.
 - **Arrojables:** el composite se encuentra por un camino fijo de punteros, pero no siempre es el vivo; la tasa sigue en ~50–75 %. Falta leer el cuerpo físico.
+- **Fase 6 por red (corridas 72–73, una máquina con el peer):** el cliente aplicó los 9 disparos de zona que mandó el host, con los mismos identificadores, y bloqueó los suyos al caminar. Falta la prueba con dos máquinas.
+- Limitaciones conocidas en `work/CONTINGENCIAS.md`.
 - **Prueba conjunta (corrida 69):** el deslizamiento quedó aceptado (es responsivo), el agachado se aplica pero el civil no tiene la animación, y los arrojables reales no se ubicaron (0 de 5). Corridas 70–71: la bengala no vuela con `ProjectileMotion` sino con la física; lo siguiente sería leer su cuerpo de Havok.
 
 **2026-11-15, noche (corridas 52–64):**
