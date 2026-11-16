@@ -862,3 +862,9 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **Sin probar en el juego:** no encontré un ítem cerca del punto de partida con el mando virtual. Queda para la prueba con dos máquinas (`instructions.md` 8d). Riesgo: si los ids del otro no coinciden y el pid no está en el índice, `FUN_00795ee0` recibe ids desconocidos (se espera que no haga nada).
 - `aimp_peer.py --event T:tipo:hex` manda un evento crudo (para probar `AIMP_EVT_PICKUP` cuando se conozcan un pid y sus ids).
 - dist `e8315c89`. Mod en pasivo.
+
+## 2026-11-16 — Censo de personajes y avatar armado (corridas 76–77)
+- **`AIMP_CENSUS=1`** (`ghost.c`): 10 s después de que aparece el jugador, una vez por nivel, describe a todos los personajes. **Corrida 76** (HAB_ShoppingCentre, sala del transit): jugador (tipo 0), un **"Riot Pistol" tipo 4** (humano armado con casco) y tres civiles "Dave" tipo 6. **No hay Alien** en esta parte: el Alien compartido necesita otra partida (no se cargan otras para no pisar el progreso del usuario).
+- **Corrida 77 (`AIMP_GHOST_NPC_TYPE=4`):** el humano armado sirve como avatar (títere, IA bloqueada, sin problemas en 1 min; se ve con casco y en pose de arma). Con el agachado del juego (`AIMP_GHOST_CROUCH=1`) **queda con los brazos abiertos**, quieto y caminando, y al pararse vuelve a la normalidad (`shots/run77-*`). **El agachado por banderas queda apagado por defecto** (`AIMP_GHOST_CROUCH=0`).
+- **Alien (estático, parcial):** el cerebro de IA está en `Character+0x34A8`; el objetivo actual en `cerebro+0x10`. Los registros de objetivo percibido los arma `FUN_006e2770` (personaje en `+0x42C`, handle `+0x430`, posición `+0x3E8`), llamada desde el sistema de percepción (`FUN_00730c30`). La visibilidad (`FUN_00725330`) recorre jugadores y NPCs, así que el avatar (un NPC) puede ser percibido por el Alien del host. Falta saber cómo se elige el objetivo actual entre los percibidos.
+- dist `5476af66`. Mod en pasivo.
