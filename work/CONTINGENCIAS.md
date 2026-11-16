@@ -41,6 +41,7 @@ _Última actualización: 2026-11-16._
 
 ### 5. El botín es por jugador
 - Levantar un ítem es un "usar" (`0x26`) y se replica, pero el ítem no desaparece del mundo en la otra máquina: cada jugador tiene el suyo.
+- **En curso (2026-11-16):** `AIMP_SYNC_PICKUP` saca el ítem en la otra máquina con la función del juego (`FUN_00795ee0`), buscándolo por pid. Escrito, sin probar en el juego (NOTES, "Ítems compartidos").
 
 ## Otras cosas sin sincronizar
 

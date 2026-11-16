@@ -78,6 +78,8 @@ def main():
     ap.add_argument("--replay", type=float, default=0, help="segundos de retraso para repetir el recorrido del juego")
     ap.add_argument("--offset", default="0,0,0", help="corrimiento dx,dy,dz de las posiciones repetidas")
     ap.add_argument("--throw", action="append", default=[], help="T:plantilla:dx,dy,dz:vx,vy,vz[:time_left]")
+    ap.add_argument("--event", action="append", default=[],
+                    help="T:tipo:hex -> evento crudo (AIMP_EVT_<tipo>, datos en hex) T segundos después del jugador")
     ap.add_argument("--record-events", help="archivo donde grabar los eventos del juego (t desde el jugador, paquete en hex)")
     ap.add_argument("--play-events", help="archivo grabado con --record-events: reproduce esos eventos al juego")
     ap.add_argument("--play-offset", type=float, default=0.0, help="segundos que se suman a los tiempos de --play-events")
@@ -116,6 +118,10 @@ def main():
         rests.append([float(p[0]), int(p[1]), [float(v) for v in p[2].split(",")], False])
     t_player, eseq = None, 0
     seen_evt = set()
+    raws = []
+    for spec in a.event:
+        t, k, h = spec.split(":")
+        raws.append([float(t), int(k), bytes.fromhex(h), False])
     rec_f = open(a.record_events, "w") if a.record_events else None
     plays = []
     if a.play_events:
@@ -193,6 +199,16 @@ def main():
                     s.sendto(pkt, peer)
                 print(f"[{now - t0:6.1f}s] THROW {eseq}: {th[1]} desde ({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f}) "
                       f"vel {th[3]} nivel {last[6]}")
+            for rw in raws:
+                if rw[3] or t_player is None or not peer or now - t_player < rw[0]:
+                    continue
+                rw[3] = True
+                eseq += 1
+                pkt = struct.pack(EVT_FMT, MAGIC, VERSION, EVENT, 0, eseq, int(time.monotonic() * 1000) & 0xFFFFFFFF,
+                                  rw[1], len(rw[2]), last[6]) + rw[2].ljust(112, b"\0")
+                for _ in range(3):
+                    s.sendto(pkt, peer)
+                print(f"[{now - t0:6.1f}s] EVENTO crudo {eseq} tipo {rw[1]} ({len(rw[2])} bytes, nivel {last[6]})")
             for pe in plays:
                 if pe[2] or t_player is None or not peer or now - t_player < pe[0]:
                     continue

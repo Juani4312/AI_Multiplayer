@@ -21,6 +21,7 @@
 #define AIMP_EVT_PIN 2      /* pin de CATHODE decidido por el host (fase 6): pid | pin | tipo | id | flags del mensaje (5 x u32) */
 #define AIMP_EVT_THROW 3    /* objeto arrojado o colocado por el jugador (hallazgo 17): ThrowEvt de throw.h (112 bytes) */
 #define AIMP_EVT_THROW_REST 4 /* el arrojable del que tiró se asentó (throw.c): ThrowRest de throw.h */
+#define AIMP_EVT_PICKUP 5   /* ítem recogido (pickup_collected, throw.c): PickupEvt de throw.h */
 #define AIMP_EVT_DATA 112
 #define AIMP_EVT_QUEUE 16
 #define AIMP_EVT_REPEAT 3
