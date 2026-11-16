@@ -338,6 +338,27 @@ static const uint8_t AIMP_HAS_MOTIVATION_PROLOGUE[10] __attribute__((unused)) = 
  * ShortGuids vecinos: DONT_CHANGE, DEFAULT, CROUCHED, IN_COVER...; el orden no está verificado). Mismo prólogo
  * que FUN_0067e980. */
 #define AIMP_RVA_CMD_IDLE         0x0027DB10u
+/* Agacharse (2026-11-16, estático): FUN_007cae20 thiscall(Character), ret simple: si el personaje no tiene
+ * controlador de jugador activo (Character+0x31C nulo o su +0x48 en 0) y Character+0x2AF == 0, pone +0x2AF = 1
+ * y le agrega la etiqueta de animación "CROUCHED" (FUN_007e0400). FUN_007cae90 hace lo contrario
+ * (FUN_007e0460). Las llaman el nodo de script de agacharse, un comando (FUN_00687b60) y FUN_007cfd10.
+ * ConditionIsCrouching (FUN_006eaf00) lee Character+0x2AF. */
+#define AIMP_RVA_CHR_CROUCH       0x003CAE20u
+#define AIMP_RVA_CHR_UNCROUCH     0x003CAE90u
+#define CHR_CROUCHED              0x2AF /* u8 */
+/* Tabla de posturas de locomoción en Character+0x3E2C (FUN_00784df0 thiscall(tabla, i, valor)): [i] = puede,
+ * [6+i] = forzada, [0xC+i] = efectiva (= puede ? valor : 0, o la forzada si no es 0). i = 2 es agacharse:
+ * FUN_007cae20 pone la efectiva (+0x3E3A) en 1 solo si +0x3E2E != 0. La locomoción (0x64xxxx-0x67xxxx) lee +0x3E3A.
+ * Corrida 65: en el civil +0x3E2E = 0, +0x2AF queda en 1 y sigue parado. */
+#define CHR_STANCE_CAN_CROUCH     0x3E2E
+#define CHR_STANCE_CROUCH         0x3E3A
+static const uint8_t AIMP_CHR_CROUCH_PROLOGUE[10] __attribute__((unused)) = {
+    0x56, 0x8B, 0xF1, 0x80, 0xBE, 0x2E, 0x3E, 0x00, 0x00, 0x00
+};
+static const uint8_t AIMP_CHR_UNCROUCH_PROLOGUE[9] __attribute__((unused)) = {
+    0x56, 0x8B, 0xF1, 0x8A, 0x86, 0x34, 0x3E, 0x00, 0x00
+};
+#define MOVE_TYPE_FAST_WALK       2
 static const uint8_t AIMP_CMD_MOVE_START_PROLOGUE[10] __attribute__((unused)) = {
     0x56, 0x8B, 0xF1, 0x8B, 0x4E, 0x04, 0x85, 0xC9, 0x74, 0x0E
 };

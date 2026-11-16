@@ -10,7 +10,7 @@ No contiene ni redistribuye binarios, assets ni código del juego.
 | 1 y 2 | `winmm.dll` proxy, hook en el loop principal, lectura de estado y posición del jugador | ✅ Proton y Windows 10 nativo |
 | 3 | Red UDP propia (20 paquetes/s con el estado del jugador) | ✅ por Tailscale, 0 pérdidas |
 | 4 | Avatar del otro jugador: un NPC civil del nivel, sin IA, teletransportado a su posición | ✅ en los dos sentidos |
-| 4b | Avatar títere: posición exacta del otro cada frame, con animación de caminar y correr | ✅ dos máquinas (corrida 52); falta que se agache |
+| 4b | Avatar títere: posición exacta del otro cada frame, con animación de caminar, caminar rápido y correr | ✅ dos máquinas (corrida 52); agachado: el civil no tiene la animación (corridas 65–67) |
 | 5 | "Usar" compartido: botones, cajas e ítems se replican y en la otra máquina los hace el avatar | ✅ botones; los ítems quedan uno por jugador |
 | 5b | Objetos arrojados y colocados (bengala, noisemaker, molotov, minas…): aparecen en la otra máquina con la misma trayectoria y quedan donde cayó el original | 🟡 vuelo ✅ con dos máquinas; corrección de dónde cae verificada en una (corridas 55–64), falta con dos |
 | 6 | Disparadores de los scripts decididos por el host (zonas que arrancan diálogos, eventos…) | 🟡 código y tests; índice de entidades verificado en el juego; falta probar con dos máquinas |
@@ -91,6 +91,12 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 5. Al terminar: cerrar el juego (`pkill -TERM -x AI.exe`), guardar el log en `work/evidence/runtime/` y **dejar el mod instalado en pasivo** (`runtime_setup.sh install --cfg "AIMP_GHOST=0"`).
 
 ## Último trabajo y siguiente paso
+
+**2026-11-16 (corridas 65–68, locales):**
+- **Paso del avatar:** el "se desliza" probablemente venía de que el civil animaba `WALK` (~1,2 m/s) mientras el otro caminaba a 2,46 m/s. Ahora hay tres pasos: `WALK`, `FAST_WALK` (de 1,8 a 3 m/s) y `RUN`.
+- **Agacharse:** se encontró la función del juego que agacha a un NPC (`FUN_007cae20`) y la tabla de posturas del personaje. Las banderas quedan bien, pero el civil sigue parado: lo más probable es que no tenga animaciones de agachado.
+- **Arrojables:** el composite se encuentra por un camino fijo de punteros, pero no siempre es el vivo; la tasa sigue en ~50–75 %. Falta leer el cuerpo físico.
+- **Siguiente:** prueba conjunta con dos máquinas (`work/windows/instructions.md`, 8c; DLL `3d086a38…`).
 
 **2026-11-15, noche (corridas 52–64):**
 - **Títere con dos máquinas (corrida 52):** "funciona perfecto… responsivo y exacto el movimiento". 0,00 m en las dos máquinas, 20 paquetes/s, 0 excepciones.

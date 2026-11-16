@@ -129,25 +129,106 @@ static uint32_t comp_pos_off(uint32_t comp, const float *p)
     return 0;
 }
 
+/* Con el composite seguro (camino fijo): el triplete más cercano a p a menos de 3 m, entre los parámetros
+ * (+0x24 + 0x40*k: corridas 60-66), sin las copias quietas del punto de salida o (misma x y z, a partir de
+ * 150 ms; son start_position y similares). Corrida 66: la bengala chocaba enseguida y a 1 m de la parábola no había nada. */
+static uint32_t comp_pos_off_near(uint32_t comp, const float *p, const float *o, int skip_o)
+{
+    static uint8_t buf[0x600];
+    if (!mem_read(comp, buf, sizeof buf))
+        return 0;
+    uint32_t best = 0;
+    float bd = 9.0f;
+    for (uint32_t off = 0x24; off + 12 <= sizeof buf; off += 0x40) {
+        float v[3];
+        aimp_memcpy(v, buf + off, 12);
+        /* horizontal: el motor la pone 0,62 m más arriba que la matriz del evento (corridas 64-66) */
+        float ox = v[0] - o[0], oz = v[2] - o[2];
+        if (skip_o && ox * ox + oz * oz < 0.0001f)
+            continue;
+        float dx = v[0] - p[0], dy = v[1] - p[1], dz = v[2] - p[2], d = dx * dx + dy * dy + dz * dz;
+        if (d < bd) {
+            bd = d;
+            best = off;
+        }
+    }
+    return best;
+}
+
 #define FP_NODES 2048
 #define FP_HASH 4096
-static uint32_t find_pos_ent(uint32_t obj, const float *start, uint32_t *poff)
+static char g_fp_path[256];
+#define FP_FIXED_A 0x24u
+#define FP_FIXED_B 0x0Cu
+static int g_fp_fixed_diag; /* 1: composite sin triplete cerca, 2: vtable o id distintos, 3: punteros ilegibles */
+static uint32_t g_fp_fixed_c, g_fp_dumps;
+static uint32_t find_pos_ent(uint32_t obj, const float *start, const float *origin, uint32_t age_ms, uint32_t *poff)
 {
     static uint32_t q[FP_NODES], hs[FP_HASH];
-    static uint8_t qd[FP_NODES];
+    static uint8_t qd[FP_NODES], qo[FP_NODES];
+    static uint16_t qp[FP_NODES];
     uint32_t id = 0, vtc = (uint32_t)g_aimp_exe + AIMP_RVA_VT_COMPOSITE, nq = 0, head = 0;
     if (!obj || !mem_u32(obj + OUT_ID, &id) || !id)
         return 0;
+    {
+        /* camino fijo (corrida 65: "obj +0x24 -> +0xc -> composite"); si no da, la búsqueda */
+        uint32_t p1 = 0, c = 0, cw[4] = { 0, 0, 0, 0 };
+        if (mem_u32(obj + FP_FIXED_A, &p1) && p1 && mem_u32(p1 + FP_FIXED_B, &c) && c && mem_read(c, cw, sizeof cw)) {
+            if (cw[0] == vtc && cw[OUT_ID / 4] == id) {
+                if ((*poff = comp_pos_off(c, start)) != 0 || (*poff = comp_pos_off_near(c, start, origin, age_ms > 150)) != 0) {
+                    aimp_snprintf(g_fp_path, sizeof g_fp_path, "fijo obj +0x%x->0x%08x +0x%x->0x%08x", FP_FIXED_A, p1, FP_FIXED_B, c);
+                    return c;
+                }
+                g_fp_fixed_diag = 1; /* el composite está, pero ningún triplete cerca de la parábola */
+                if (g_fp_dumps < 12) {
+                    /* corrida 67: 0 de 3; se vuelcan los parámetros (+0x24 + 0x40*k) para ver qué hay */
+                    static uint8_t db[0x600];
+                    char out[640];
+                    size_t n = 0;
+                    g_fp_dumps++;
+                    if (mem_read(c, db, sizeof db))
+                        for (uint32_t off = 0x24; off + 12 <= sizeof db && n + 48 < sizeof out; off += 0x40) {
+                            float v[3];
+                            aimp_memcpy(v, db + off, 12);
+                            n += (size_t)aimp_snprintf(out + n, sizeof out - n, " +0x%x(%.2f,%.2f,%.2f)", off, (double)v[0], (double)v[1],
+                                                       (double)v[2]);
+                        }
+                    out[n] = 0;
+                    log_printf("THROW fijo diag: composite 0x%08x a los %u ms, parábola (%.2f, %.2f, %.2f):%s", c, age_ms, (double)start[0],
+                               (double)start[1], (double)start[2], out);
+                }
+            } else {
+                g_fp_fixed_diag = 2;
+            }
+            g_fp_fixed_c = c;
+        } else {
+            g_fp_fixed_diag = 3;
+        }
+    }
     aimp_memset(hs, 0, sizeof hs);
+    g_fp_path[0] = 0;
     q[nq] = obj;
+    qp[nq] = 0;
+    qo[nq] = 0;
     qd[nq++] = 0;
     hs[(obj >> 2) & (FP_HASH - 1)] = obj;
     while (head < nq) {
         uint32_t o = q[head], d = qd[head++], w[64];
         if (!mem_read(o, w, sizeof w)) /* una sola lectura por nodo: vtable en w[0], id en w[3] (+0xC) */
             continue;
-        if (o != obj && w[0] == vtc && w[OUT_ID / 4] == id && (*poff = comp_pos_off(o, start)) != 0)
+        if (o != obj && w[0] == vtc && w[OUT_ID / 4] == id && (*poff = comp_pos_off(o, start)) != 0) {
+            /* camino desde el objeto (2026-11-16): para buscar uno fijo con varios lanzamientos */
+            uint32_t chain[8], nc = 0, j = head - 1;
+            while (j && nc < 8) {
+                chain[nc++] = j;
+                j = qp[j];
+            }
+            size_t n = (size_t)aimp_snprintf(g_fp_path, sizeof g_fp_path, "obj");
+            while (nc--)
+                n += (size_t)aimp_snprintf(g_fp_path + n, sizeof g_fp_path - n, " +0x%x->0x%08x", 4u * qo[chain[nc]], q[chain[nc]]);
+            aimp_snprintf(g_fp_path + n, sizeof g_fp_path - n, " (%u nodos)", nq);
             return o;
+        }
         if (d >= 5)
             continue;
         for (int i = 1; i < 64 && nq < FP_NODES; i++) {
@@ -167,6 +248,8 @@ static uint32_t find_pos_ent(uint32_t obj, const float *start, uint32_t *poff)
                 continue;
             hs[h] = v;
             q[nq] = v;
+            qp[nq] = (uint16_t)(head - 1);
+            qo[nq] = (uint8_t)i;
             qd[nq++] = (uint8_t)(d + 1);
         }
     }
@@ -477,14 +560,22 @@ static void track_find_ents(Track *arr, const char *who)
         k->still = age ? age : 1; /* acá "still" guarda cuándo se buscó; se pone en 0 al encontrarlo */
         float t = (float)age / 1000.0f;
         float st[3] = { k->ev.m[3] + k->ev.vel[0] * t, k->ev.m[7] + k->ev.vel[1] * t - 4.905f * t * t, k->ev.m[11] + k->ev.vel[2] * t };
-        k->ent = find_pos_ent(k->obj, st, &k->off);
+        float org[3] = { k->ev.m[3], k->ev.m[7], k->ev.m[11] };
+        k->ent = find_pos_ent(k->obj, st, org, age, &k->off);
         if (k->ent) {
             k->still = 0;
             comp_diag(k, "al encontrarlo");
         }
         if (k->ent)
-            log_printf("THROW fijo %u (%s): posición en el composite 0x%08x +0x%x, a los %lu ms", k->id, who, k->ent, k->off,
-                       (unsigned long)(GetTickCount() - k->t0));
+            log_printf("THROW fijo %u (%s): posición en el composite 0x%08x +0x%x, a los %lu ms; camino: %s", k->id, who, k->ent, k->off,
+                       (unsigned long)(GetTickCount() - k->t0), g_fp_path);
+        else if (age >= 900)
+            log_printf("THROW fijo %u (%s): no se encontró el composite en el primer segundo (objeto 0x%08x; camino fijo: %s, 0x%08x)", k->id,
+                       who, k->obj,
+                       g_fp_fixed_diag == 1   ? "composite sin triplete a menos de 1 m"
+                       : g_fp_fixed_diag == 2 ? "vtable o id distintos"
+                                              : "punteros ilegibles",
+                       g_fp_fixed_c);
     }
 }
 

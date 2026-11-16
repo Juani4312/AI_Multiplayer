@@ -142,6 +142,18 @@ static volatile int g_allow_cmd; /* el filtro deja pasar el comando que da el mo
 static int g_puppet; /* AIMP_GHOST_PUPPET: 1 = SetTransform por frame, 2 = escribir la posición */
 static uint32_t g_pup_frames;
 static int g_rm_valid, g_rm_crouch, g_walk_lead_ms = 400, g_walk_run_mms = 3000;
+/* AIMP_GHOST_CROUCH (2026-11-16): 1 = FUN_007cae20/FUN_007cae90 sobre el avatar (por defecto), 2 = el IDLE con
+ * postura de las corridas 51-53 (no agacha), 3 = las dos cosas, 0 = nada. */
+typedef void(__attribute__((fastcall)) * ChrFn)(void *chr, void *edx);
+static ChrFn g_chr_crouch, g_chr_uncrouch;
+static int g_crouch_mode = 1, g_av_crouched, g_crouch_can = 1, g_crouch_restart;
+static uint32_t g_crouch_calls, g_crouch_lost;
+static int64_t g_crouch_chk;
+/* AIMP_GHOST_WALK_FAST_MMS (2026-11-16): el jugador camina a 2,46 m/s y el WALK del civil anima a ~1,2 m/s; con
+ * el títere las piernas iban a la mitad del ritmo ("se desliza"). Entre este umbral y el de correr va FAST_WALK. */
+static int g_walk_fast_mms = 1800, g_walk_type_mid = MOVE_TYPE_FAST_WALK;
+static float g_spd_p[3];
+static int64_t g_spd_at;
 /* AIMP_GHOST_INVINCIBLE */
 static int g_invincible = 1, g_inv_bad;
 static uint32_t g_inv_chr;
@@ -338,6 +350,24 @@ int ghost_install(void)
             /* experimentos del agachado (2026-11-15): sin teleport durante el IDLE; postura en ciclo 0..5 cada 4 s */
             g_idle_notp = aimp_env_int(L"AIMP_GHOST_IDLE_NOTP", 0);
             g_crouch_cycle = aimp_env_int(L"AIMP_GHOST_CROUCH_CYCLE", 0);
+            g_crouch_mode = aimp_env_int(L"AIMP_GHOST_CROUCH", 1);
+            g_crouch_can = aimp_env_int(L"AIMP_GHOST_CROUCH_CAN", 1);
+            {
+                uint8_t c1[sizeof AIMP_CHR_CROUCH_PROLOGUE], c2[sizeof AIMP_CHR_UNCROUCH_PROLOGUE];
+                uintptr_t p1 = g_aimp_exe + AIMP_RVA_CHR_CROUCH, p2 = g_aimp_exe + AIMP_RVA_CHR_UNCROUCH;
+                if (mem_read(p1, c1, sizeof c1) && aimp_memcmp(c1, AIMP_CHR_CROUCH_PROLOGUE, sizeof c1) == 0 && mem_read(p2, c2, sizeof c2) &&
+                    aimp_memcmp(c2, AIMP_CHR_UNCROUCH_PROLOGUE, sizeof c2) == 0) {
+                    g_chr_crouch = (ChrFn)(void *)p1;
+                    g_chr_uncrouch = (ChrFn)(void *)p2;
+                } else if (g_crouch_mode == 1 || g_crouch_mode == 3) {
+                    log_printf("GHOST: los prólogos de FUN_007cae20/FUN_007cae90 (agacharse) no coinciden; el avatar no se agacha");
+                    g_crouch_mode = 0;
+                }
+            }
+            g_walk_fast_mms = aimp_env_int(L"AIMP_GHOST_WALK_FAST_MMS", 1800);
+            g_walk_type_mid = aimp_env_int(L"AIMP_GHOST_WALK_TYPE_MID", MOVE_TYPE_FAST_WALK); /* 0: sin paso intermedio */
+            log_printf("AIMP_GHOST_CROUCH=%d; paso: WALK hasta %d mm/s, tipo %d hasta %d mm/s, después tipo %d", g_crouch_mode,
+                       g_walk_fast_mms, g_walk_type_mid, g_walk_run_mms, MOVE_TYPE_RUN);
             g_move_update = (MoveCmdFn)(void *)pu;
             g_walk_type = aimp_env_int(L"AIMP_GHOST_WALK_TYPE", MOVE_TYPE_WALK);
             g_walk_type_far = aimp_env_int(L"AIMP_GHOST_WALK_TYPE_FAR", MOVE_TYPE_RUN); /* igual a TYPE: no cambia */
@@ -529,6 +559,9 @@ static void start_moving(uint32_t p, int64_t now)
     g_hold = 0;
     g_yaw_since = 0;
     g_idle_on = 0;
+    g_av_crouched = 0;
+    g_crouch_chk = 0;
+    g_spd_at = 0;
     g_walk_ctrl = g_walk ? p + g_walk_off : 0;
     g_walk_chr = g_walk && g_walk_cine ? p : 0;
     aimp_memcpy(g_cmd_b, &p, 4); /* el segundo id del comando: el avatar y "GH" */
@@ -1000,7 +1033,45 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             g_target[11] = s_p[2] + g_rm_v[2] * lk;
             float lt[3] = { g_target[3], g_target[7], g_target[11] };
             /* agachado y quieto: comando IDLE con la postura (AIMP_GHOST_CROUCH_STANCE); al moverse o pararse, MOVE */
-            int want_idle = g_idle_cmd && g_rm_crouch && g_rm_speed < 0.3f;
+            if ((g_crouch_mode == 1 || g_crouch_mode == 3) && g_chr_crouch) {
+                /* agachado del juego (FUN_007cae20/FUN_007cae90): al cambiar el otro, y cada 500 ms se verifica que
+                 * Character+0x2AF siga como corresponde (un comando nuevo podría pararlo: FUN_00685c00 lo hace) */
+                uint8_t cr = 0;
+                int chk = now - g_crouch_chk >= g_freq / 2;
+                if (chk)
+                    g_crouch_chk = now;
+                if (g_rm_crouch != g_av_crouched || chk) {
+                    mem_u8(g_chr + CHR_CROUCHED, &cr);
+                    int want_cr = g_rm_crouch != 0;
+                    if (want_cr != (cr != 0)) {
+                        if (g_rm_crouch == g_av_crouched && ++g_crouch_lost <= 10)
+                            log_printf("GHOST: títere: el avatar perdió el %s (+0x2AF = %u); se vuelve a aplicar (%u veces)",
+                                       want_cr ? "agachado" : "parado", cr, g_crouch_lost);
+                        uint8_t can = 0;
+                        if (want_cr && g_crouch_can && mem_u8(g_chr + CHR_STANCE_CAN_CROUCH, &can) && !can) {
+                            /* el civil no "puede" agacharse (+0x3E2E = 0): se habilita (AIMP_GHOST_CROUCH_CAN) */
+                            uint8_t one = 1;
+                            mem_write(g_chr + CHR_STANCE_CAN_CROUCH, &one, 1);
+                            log_printf("GHOST: títere: el avatar 0x%08x no podía agacharse (+0x3E2E = 0); se pone en 1", g_chr);
+                        }
+                        if (want_cr)
+                            g_chr_crouch((void *)g_chr, NULL);
+                        else
+                            g_chr_uncrouch((void *)g_chr, NULL);
+                        g_crouch_calls++;
+                        uint8_t after = 0xFF, eff = 0xFF;
+                        mem_u8(g_chr + CHR_CROUCHED, &after);
+                        mem_u8(g_chr + CHR_STANCE_CROUCH, &eff);
+                        if (g_rm_crouch != g_av_crouched || g_crouch_calls <= 4)
+                            log_printf("GHOST: títere: el otro %s; FUN_007cae%s sobre 0x%08x: +0x2AF %u -> %u, postura efectiva +0x3E3A = %u",
+                                       want_cr ? "se agachó" : "se paró", want_cr ? "20 (agacharse)" : "90 (pararse)", g_chr, cr, after, eff);
+                    }
+                    if (g_rm_crouch != g_av_crouched)
+                        g_crouch_restart = 1; /* corrida 66: la locomoción copia +0x3E3A a la acción al arrancarla */
+                    g_av_crouched = g_rm_crouch;
+                }
+            }
+            int want_idle = (g_crouch_mode == 2 || g_crouch_mode == 3) && g_idle_cmd && g_rm_crouch && g_rm_speed < 0.3f;
             if (want_idle && !g_idle_on && now - g_last_restart >= g_freq / 2) {
                 log_printf("GHOST: títere: el otro está agachado y quieto; IDLE con postura %d", g_crouch_stance);
                 g_allow_cmd = 1;
@@ -1028,15 +1099,26 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                 walk_start(ctrl, lt, now, "títere: deja el IDLE");
                 break;
             }
-            int want = g_cur_type; /* histéresis: corre por encima del umbral, camina por debajo del 80 % (corrida 46) */
-            if (g_rm_speed * 1000.0f > (float)g_walk_run_mms)
+            /* histéresis: sube de paso por encima del umbral y baja por debajo del 80 % (corrida 46). Tres pasos desde
+             * 2026-11-16: WALK, FAST_WALK (AIMP_GHOST_WALK_TYPE_MID) y RUN; agachado, siempre WALK. */
+            int want = g_cur_type;
+            float mms = g_rm_speed * 1000.0f, run = (float)g_walk_run_mms, fast = (float)g_walk_fast_mms;
+            if (g_rm_crouch && (g_crouch_mode == 1 || g_crouch_mode == 3))
+                want = g_walk_type;
+            else if (mms > run)
                 want = g_walk_type_far;
-            else if (g_rm_speed * 1000.0f < (float)g_walk_run_mms * 0.8f)
+            else if (g_walk_type_mid > 0 && mms > fast && (mms < run * 0.8f || g_cur_type != g_walk_type_far))
+                want = g_walk_type_mid;
+            else if (mms < (g_walk_type_mid > 0 ? fast : run) * 0.8f)
                 want = g_walk_type;
             ours = walk_is_ours(ctrl, &type);
-            if (want != g_cur_type && now - g_last_restart >= g_freq * 3 / 10) {
+            if (g_crouch_restart) {
+                g_crouch_restart = 0;
                 set_move_type(want);
-                walk_start(ctrl, lt, now, want == g_walk_type_far ? "títere: corre" : "títere: camina");
+                walk_start(ctrl, lt, now, g_av_crouched ? "títere: se agachó (acción nueva)" : "títere: se paró (acción nueva)");
+            } else if (want != g_cur_type && now - g_last_restart >= g_freq * 3 / 10) {
+                set_move_type(want);
+                walk_start(ctrl, lt, now, want == g_walk_type_far ? "títere: corre" : want == g_walk_type_mid ? "títere: camina rápido" : "títere: camina");
             } else if (!ours && now - g_last_restart >= g_freq) {
                 walk_start(ctrl, lt, now, "títere: el comando no era el nuestro");
             } else if (ours && now - g_last_cmd >= g_walk_ticks / 2) {
@@ -1198,6 +1280,17 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
     if (now - g_last_log >= g_freq) {
         float cyaw = 0.0f;
         mem_f32(g_chr + CHR_YAW, &cyaw);
+        /* velocidad horizontal medida del avatar desde el log anterior (para calibrar los pasos, 2026-11-16) */
+        if (g_spd_at) {
+            float ex = cur[0] - g_spd_p[0], ez = cur[2] - g_spd_p[2], dt = (float)(now - g_spd_at) / (float)g_freq;
+            uint8_t cr = 0;
+            mem_u8(g_chr + CHR_CROUCHED, &cr);
+            if (dt > 0.0f)
+                log_printf("GHOST: velocidad: avatar %.2f m/s, el otro %.2f m/s, move_type %d, agachado %u/%d", (double)(aimp_sqrtf(ex * ex + ez * ez) / dt),
+                           (double)g_rm_speed, g_cur_type, cr, g_rm_crouch);
+        }
+        aimp_memcpy(g_spd_p, cur, 12);
+        g_spd_at = now;
         log_printf("GHOST: caminata (%s): personaje en (%.2f, %.2f, %.2f) yaw %.2f, objetivo (%.2f, %.2f, %.2f) yaw %.2f [%s] a %.2f m; comando %s tipo %d, move_type %d; %u inicios, %u actualizaciones, %u teletransportes, %ld cinemáticas; %s[%u]",
                    g_wnames[g_wstate], (double)cur[0], (double)cur[1], (double)cur[2], (double)cyaw, (double)t[0], (double)t[1], (double)t[2],
                    (double)tyaw, src, (double)aimp_sqrtf(d2), ours ? "propio" : "ajeno", (int)type, g_cur_type, g_starts, g_updates, g_tps,
