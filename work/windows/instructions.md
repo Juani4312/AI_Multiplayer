@@ -245,7 +245,7 @@ Qué mirar (F8 en cada momento interesante):
 
 En el log: `títere: camina rápido`, `velocidad: avatar … el otro …`, `FUN_007cae20 (agacharse)`, `THROW fijo` (incluidas las líneas `diag`).
 
-### 8d. Ítems compartidos y disparadores del host (2026-11-16, DLL `e8315c89…`)
+### 8d. Ítems compartidos y disparadores del host (2026-11-16, DLL `5476af66…`)
 
 Misma instalación que el paso 8, con `git pull`, sumando a `-Extra`: `AIMP_SYNC_PICKUP=1,AIMP_TRACE_PICKUP=1,AIMP_SYNC_PINS=1,AIMP_TRACE_PINS=1` (lo mismo en `papito`). Novedades:
 - **Ítems:** cuando un jugador levanta un ítem, en la otra máquina tendría que desaparecer sin que nadie lo reciba. Hasta ahora cada uno tenía su copia.
