@@ -87,6 +87,8 @@ typedef struct {
     uint32_t pm;
     float pm_pos[3], pm_t, pm_dur;
     int pm_done;
+    uint32_t rb, rboff; /* hkpRigidBody de la bengala y offset de su posición (2026-11-16) */
+    int rb_tries;
 } Track;
 static Track g_trk_local[TRK_MAX], g_trk_rep[TRK_MAX];
 
@@ -389,8 +391,105 @@ static uint32_t find_pos_ent(uint32_t obj, const float *start, const float *orig
     return 0;
 }
 
+/* Cuerpo rígido de Havok (2026-11-16): corridas 70-71, la bengala no usa ProjectileMotion; vuela con la física.
+ * RTTI: hkpRigidBody vtable VA 0x01413974 (TypeDescriptor 0x016652E8 -> COL -> vtable). Se busca desde el objeto
+ * del pool (BFS por punteros, 4096 nodos, 6 niveles) un nodo con esa vtable, y adentro el triplete más cercano a
+ * la parábola (< 1,5 m). Es un criterio firme: no depende del id de plantilla como el composite. */
+#define AIMP_RVA_VT_HKP_RIGIDBODY 0x01013974u
+#define RB_NODES 4096
+#define RB_HASH 8192
+static char g_rb_path[200];
+static uint32_t rb_pos_off(uint32_t rb, const float *p)
+{
+    static uint8_t buf[0x400];
+    if (!mem_read(rb, buf, sizeof buf))
+        return 0;
+    uint32_t best = 0;
+    float bd = 2.25f;
+    for (uint32_t off = 0x10; off + 12 <= sizeof buf; off += 4) {
+        float v[3];
+        aimp_memcpy(v, buf + off, 12);
+        float dx = v[0] - p[0], dy = v[1] - p[1], dz = v[2] - p[2], d = dx * dx + dy * dy + dz * dz;
+        if (d < bd) {
+            bd = d;
+            best = off;
+        }
+    }
+    return best;
+}
+static uint32_t find_rigid(uint32_t obj, const float *p, uint32_t *poff, uint32_t *nfound)
+{
+    static uint32_t q[RB_NODES], hs[RB_HASH];
+    static uint16_t qp[RB_NODES];
+    static uint8_t qd[RB_NODES], qo[RB_NODES];
+    uint32_t vtr = (uint32_t)g_aimp_exe + AIMP_RVA_VT_HKP_RIGIDBODY, nq = 0, head = 0, first = 0;
+    *nfound = 0;
+    g_rb_path[0] = 0;
+    aimp_memset(hs, 0, sizeof hs);
+    q[nq] = obj;
+    qp[nq] = 0;
+    qo[nq] = 0;
+    qd[nq++] = 0;
+    while (head < nq) {
+        uint32_t o = q[head], d = qd[head++], w[64];
+        if (!mem_read(o, w, sizeof w))
+            continue;
+        if (w[0] == vtr) {
+            (*nfound)++;
+            uint32_t off = rb_pos_off(o, p);
+            if (!first || off) {
+                uint32_t chain[8], nc = 0, j = head - 1;
+                while (j && nc < 8) {
+                    chain[nc++] = j;
+                    j = qp[j];
+                }
+                size_t n = (size_t)aimp_snprintf(g_rb_path, sizeof g_rb_path, "obj");
+                while (nc--)
+                    n += (size_t)aimp_snprintf(g_rb_path + n, sizeof g_rb_path - n, " +0x%x", 4u * qo[chain[nc]]);
+                first = o;
+                *poff = off;
+                if (off)
+                    return o;
+            }
+            continue;
+        }
+        if (d >= 6)
+            continue;
+        for (int i = 1; i < 64 && nq < RB_NODES; i++) {
+            uint32_t v = w[i];
+            if (v < 0x10000 || (v & 3) || v >= 0x7FFF0000u || (v >= (uint32_t)g_aimp_exe && v < (uint32_t)g_aimp_exe + AIMP_EXPECT_SIZEOFIMAGE))
+                continue;
+            uint32_t h = (v >> 2) & (RB_HASH - 1);
+            int dup = 0;
+            while (hs[h]) {
+                if (hs[h] == v) {
+                    dup = 1;
+                    break;
+                }
+                h = (h + 1) & (RB_HASH - 1);
+            }
+            if (dup)
+                continue;
+            hs[h] = v;
+            q[nq] = v;
+            qp[nq] = (uint16_t)(head - 1);
+            qo[nq] = (uint8_t)i;
+            qd[nq++] = (uint8_t)(d + 1);
+        }
+    }
+    return first && *poff ? first : 0;
+}
+static int rb_pos(const Track *k, float out[3])
+{
+    uint32_t vt = 0;
+    return k->rb && k->rboff && mem_u32(k->rb, &vt) && vt == (uint32_t)g_aimp_exe + AIMP_RVA_VT_HKP_RIGIDBODY &&
+           mem_read(k->rb + k->rboff, out, 12);
+}
+
 static int ent_pos(const Track *k, float out[3])
 {
+    if (!k->ent && rb_pos(k, out))
+        return 1;
     uint32_t vt = 0;
     return k->ent && mem_u32(k->ent, &vt) && vt == (uint32_t)g_aimp_exe + AIMP_RVA_VT_COMPOSITE && mem_read(k->ent + k->off, out, 12);
 }
@@ -868,6 +967,22 @@ static void track_find_ents(Track *arr, const char *who)
         k->still = age ? age : 1; /* acá "still" guarda cuándo se buscó; se pone en 0 al encontrarlo */
         float t = (float)age / 1000.0f;
         float st[3] = { k->ev.m[3] + k->ev.vel[0] * t, k->ev.m[7] + k->ev.vel[1] * t - 4.905f * t * t, k->ev.m[11] + k->ev.vel[2] * t };
+        if (!k->rb && k->rb_tries < 4) {
+            uint32_t nf = 0, off = 0;
+            k->rb_tries++;
+            uint32_t rb = find_rigid(k->obj, st, &off, &nf);
+            if (rb) {
+                k->rb = rb;
+                k->rboff = off;
+                float v[3];
+                mem_read(rb + off, v, 12);
+                log_printf("THROW fijo %u (%s): hkpRigidBody 0x%08x, posición en +0x%x (%.2f, %.2f, %.2f), a los %lu ms; camino %s", k->id, who, rb,
+                           off, (double)v[0], (double)v[1], (double)v[2], (unsigned long)age, g_rb_path);
+            } else {
+                log_printf("THROW fijo %u (%s): sin hkpRigidBody con posición cerca (%u con la vtable; camino del primero: %s), a los %lu ms",
+                           k->id, who, nf, nf ? g_rb_path : "-", (unsigned long)age);
+            }
+        }
         float org[3] = { k->ev.m[3], k->ev.m[7], k->ev.m[11] };
         k->ent = find_pos_ent(k->obj, st, org, age, &k->off);
         if (k->ent) {

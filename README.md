@@ -93,6 +93,15 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 
 ## Último trabajo y siguiente paso
 
+**2026-11-16, madrugada (trabajo autónomo, corridas 72–79):**
+- **Fase 6 por red en una máquina:** el cliente aplica los disparos de zona del host (9 de 9) y bloquea los suyos.
+- **Ítems compartidos (`AIMP_SYNC_PICKUP`):** al levantar un ítem, en la otra máquina se saca con la función del juego; se busca por pid. Escrito, falta probarlo de a dos (instructions.md 8d).
+- **Censo de personajes (`AIMP_CENSUS`):** en la partida actual no hay Alien. Hay un humano armado, que sirve como avatar (`AIMP_GHOST_NPC_TYPE=4`).
+- **Agachado:** descartado por ahora: en el armado rompe la pose. Queda apagado por defecto.
+- **Alien compartido:** plan en `work/DESIGN_ALIEN.md`; hace falta una partida con el Alien activo.
+- **Arrojables:** la búsqueda del cuerpo de Havok no dio resultado. Se dejan como están.
+- Limitaciones: `work/CONTINGENCIAS.md`. DLL para la laptop: `23dcb754…`.
+
 **2026-11-16 (corridas 65–68, locales):**
 - **Paso del avatar:** el "se desliza" probablemente venía de que el civil animaba `WALK` (~1,2 m/s) mientras el otro caminaba a 2,46 m/s. Ahora hay tres pasos: `WALK`, `FAST_WALK` (de 1,8 a 3 m/s) y `RUN`.
 - **Agacharse:** se encontró la función del juego que agacha a un NPC (`FUN_007cae20`) y la tabla de posturas del personaje. Las banderas quedan bien, pero el civil sigue parado: lo más probable es que no tenga animaciones de agachado.

@@ -869,3 +869,9 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **Alien (estático, parcial):** el cerebro de IA está en `Character+0x34A8`; el objetivo actual en `cerebro+0x10`. Los registros de objetivo percibido los arma `FUN_006e2770` (personaje en `+0x42C`, handle `+0x430`, posición `+0x3E8`), llamada desde el sistema de percepción (`FUN_00730c30`). La visibilidad (`FUN_00725330`) recorre jugadores y NPCs, así que el avatar (un NPC) puede ser percibido por el Alien del host. Falta saber cómo se elige el objetivo actual entre los percibidos.
 - dist `5476af66`. Mod en pasivo.
 - **Corrida 78 (`AIMP_GHOST_NPC_TYPE=4;AIMP_GHOST_CROUCH=2;AIMP_GHOST_CROUCH_CYCLE=1;AIMP_GHOST_IDLE_NOTP=1`):** el `IDLE` con posturas 0 a 5 tampoco agacha al humano armado: queda parado con la pistola baja en las 6 (`shots/run78-armado-posturas-0a5.png`). Pendiente si se retoma: el valor de `desired_stance` podría no ser el índice (los vecinos del enum parecen ShortGuids).
+
+## 2026-11-16 — Arrojables: búsqueda del `hkpRigidBody` (corrida 79)
+- **RTTI de Havok en el binario:** `hkpRigidBody` vtable VA `0x01413974` (TypeDescriptor `0x016652E8`); `hkpEntity` `0x014132B0`; movimientos `hkpBoxMotion` `0x01413144`, `hkpSphereMotion` `0x014130D4`, `hkpKeyframedRigidMotion` `0x01412F64`; `CATHODE::PhysicsSystem` `0x013C40B4`.
+- **Corrida 79:** BFS desde el objeto del pool (4096 nodos, 6 niveles) buscando esa vtable: **0 en 4 bengalas**. O el cuerpo no cuelga de esa cadena de punteros (lo registra la entidad física del composite en el mundo de Havok), o es de una subclase con otra vtable. El composite (camino fijo) se encontró en 2 de 4.
+- Si se retoma: buscar quién crea el cuerpo de la bengala (constructor de `hkpRigidBody` llamado desde `CATHODE::PhysicsSystem` o desde la entidad del modelo dinámico) y enganchar ahí, en vez de recorrer punteros.
+- dist `23dcb754`. Mod en pasivo.
