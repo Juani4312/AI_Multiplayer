@@ -169,3 +169,4 @@
 - 03:05 (2026-11-16) CONTINGENCIAS.md. Fase 6 por red en una máquina (corridas 72-73): 9/9 pines del host aplicados en el cliente, y el cliente bloquea los suyos. aimp_peer.py --record-events/--play-events. Mod pasivo.
 - 03:40 (2026-11-16) Ítems compartidos: hook de pickup_collected (FUN_007a2b30) y aplicación con FUN_00795ee0 por pid; AIMP_EVT_PICKUP; sin probar en el juego (no hay ítems a mano). instructions 8d. dist e8315c89.
 - 04:05 (2026-11-16) Censo (corrida 76): no hay Alien en la partida; hay un humano armado tipo 4. Corrida 77: el armado sirve de avatar, pero el agachado por banderas le rompe la pose: AIMP_GHOST_CROUCH=0 por defecto. dist 5476af66.
+- 04:20 (2026-11-16) Corrida 78: IDLE con posturas 0-5 no agacha al humano armado. Agachado descartado por ahora.
