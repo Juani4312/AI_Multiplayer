@@ -11,6 +11,9 @@ Opciones: --hz 20, --center x,y,z (centro del círculo), --level N, --seconds S 
 --replay S: en vez del círculo, repite el recorrido del jugador del juego con S segundos de
 retraso (posición, yaw y nivel que manda el juego). Sirve para probar el avatar que camina
 (AIMP_GHOST_WALK) en una sola máquina: el "otro jugador" pisa siempre lugares transitables.
+--record-events F / --play-events F [--play-offset S]: graba los eventos que manda el juego (p. ej. los
+AIMP_EVT_PIN de la fase 6, con el juego de host) y los reproduce a otro juego (de join), a los mismos
+segundos desde que aparece el jugador. Para probar AIMP_SYNC_PINS en una sola máquina.
 --offset dx,dy,dz: corrimiento de las posiciones repetidas (para que el avatar no termine
 encima del jugador).
 --throw "T:plantilla:dx,dy,dz:vx,vy,vz[:time_left]" (repetible): T segundos después del primer estado
@@ -75,6 +78,9 @@ def main():
     ap.add_argument("--replay", type=float, default=0, help="segundos de retraso para repetir el recorrido del juego")
     ap.add_argument("--offset", default="0,0,0", help="corrimiento dx,dy,dz de las posiciones repetidas")
     ap.add_argument("--throw", action="append", default=[], help="T:plantilla:dx,dy,dz:vx,vy,vz[:time_left]")
+    ap.add_argument("--record-events", help="archivo donde grabar los eventos del juego (t desde el jugador, paquete en hex)")
+    ap.add_argument("--play-events", help="archivo grabado con --record-events: reproduce esos eventos al juego")
+    ap.add_argument("--play-offset", type=float, default=0.0, help="segundos que se suman a los tiempos de --play-events")
     ap.add_argument("--rest", action="append", default=[],
                     help="T:id:dx,dy,dz -> AIMP_EVT_THROW_REST del lanzamiento id (1 = el primer --throw) en la "
                          "posición del jugador del juego + (dx, dy, dz)")
@@ -109,6 +115,15 @@ def main():
         p = spec.split(":")
         rests.append([float(p[0]), int(p[1]), [float(v) for v in p[2].split(",")], False])
     t_player, eseq = None, 0
+    seen_evt = set()
+    rec_f = open(a.record_events, "w") if a.record_events else None
+    plays = []
+    if a.play_events:
+        for line in open(a.play_events):
+            if line.strip():
+                t, h = line.split()
+                plays.append([float(t) + a.play_offset, bytes.fromhex(h), False])
+        print(f"{len(plays)} eventos para reproducir")
     try:
         while not a.seconds or time.monotonic() - t0 < a.seconds:
             now = time.monotonic()
@@ -122,6 +137,17 @@ def main():
                 if len(data) < SIZE:
                     continue
                 f = struct.unpack(FMT, data[:SIZE])
+                if f[0] == MAGIC and f[1] == VERSION and f[2] == EVENT and len(data) >= struct.calcsize(EVT_FMT):
+                    e = struct.unpack(EVT_FMT, data[:struct.calcsize(EVT_FMT)])
+                    if e[4] not in seen_evt:  # el juego manda cada evento 3 veces
+                        seen_evt.add(e[4])
+                        rel = now - t_player if t_player is not None else 0.0
+                        print(f"[{now - t0:6.1f}s] EVENTO {e[4]} tipo {e[6]} ({e[7]} bytes, nivel {e[8]}) a {rel:.2f} s del "
+                              f"jugador: {data[24:24 + e[7]].hex()}")
+                        if rec_f:
+                            rec_f.write(f"{rel:.3f} {data.hex()}\n")
+                            rec_f.flush()
+                    continue
                 if f[0] != MAGIC or f[1] != VERSION or f[2] not in (STATE, BYE):
                     continue
                 if a.host and peer != addr:
@@ -167,6 +193,14 @@ def main():
                     s.sendto(pkt, peer)
                 print(f"[{now - t0:6.1f}s] THROW {eseq}: {th[1]} desde ({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f}) "
                       f"vel {th[3]} nivel {last[6]}")
+            for pe in plays:
+                if pe[2] or t_player is None or not peer or now - t_player < pe[0]:
+                    continue
+                pe[2] = True
+                for _ in range(3):
+                    s.sendto(pe[1], peer)
+                e = struct.unpack(EVT_FMT, pe[1][:struct.calcsize(EVT_FMT)])
+                print(f"[{now - t0:6.1f}s] REPRODUCIDO evento {e[4]} tipo {e[6]}: {pe[1][24:24 + e[7]].hex()}")
             for r in rests:
                 if r[3] or t_player is None or not peer or now - t_player < r[0]:
                     continue

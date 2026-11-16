@@ -53,7 +53,7 @@ Limitaciones conocidas y contingencias para el futuro: `work/CONTINGENCIAS.md`.
 | Hallazgo 14 (armas, arrojables e ítems) | 🟡 `findings/14-armas-e-items.md`: disparar no genera un RPC, pero sus efectos sí (daño 0x18, agresión 0x0C). Bengala, nada. **Levantar un ítem es un "usar" (0x26) y ya se replica** (falta probarlo con dos máquinas) |
 | Hallazgo 15 (pines de CATHODE) | ✅ `findings/15-pines-de-cathode.md`: despacho `FUN_008be0d0` (`vt+0x394`), identidad estable **pid** (ruta de composites; único y determinista entre procesos), reinyección `FIRE` verificada (se propaga como un disparo natural). Traza `AIMP_TRACE_PINS=1` |
 | Hallazgo 16 (árbol de composites) | 🟡 `findings/16-arbol-de-composites.md`: hijos en `CompositeInstance+0x2C`, índice pid → entidad, mensaje de `on_entered` (entró/salió en `msg+0x20`). Código y tests listos; **falta runtime** |
-| Mod fase 6 (disparadores del host) | 🟡 `AIMP_SYNC_PINS=1` en `mod/src/pins.c`: el host manda los pines de zona y el cliente bloquea los suyos y aplica los del host. Tests OK; sin probar en el juego |
+| Mod fase 6 (disparadores del host) | 🟡 `AIMP_SYNC_PINS=1` en `mod/src/pins.c`: **verificado por red en una máquina** (corridas 72–73: 9/9 pines del host aplicados, y el cliente bloquea los suyos). Falta con dos máquinas y una zona con efecto visible |
 | Hallazgo 17 (arrojables y equipo) | 🟡 `findings/17-arrojables.md`: tirar = `FUN_007b5050` (pool `0x16F0DE4`, composite `Thrown\X` + `spawn_explosive`; el vuelo lo simula `ProjectileMotion` con la posición y la velocidad dadas), colocar = `FUN_007b5190`. Las armas de fuego son composites (`Weapons\…`); su disparo no se siguió |
 | Hallazgo 18 (replicación de personajes de NETZ) | 🟡 `findings/18-replicacion-de-personajes.md`: replicador por personaje con 11 tipos de mensaje (acciones, animación, armas, salud), pero la capa de canales es un **stub** en retail (`FUN_00a2abb0`/`FUN_00a2ab80`). La opción C no es camino corto; la animación va a mano |
 | Avatar caminando (fase 4b) | ✅ **en una máquina** (corridas 27–31): `AIMP_GHOST_WALK=1` en `mod/src/ghost.c`. `MOVE_TOWARDS` en el **controlador de scripts** (`Character+0x3570`) con la motivación CINEMATIC forzada (hook de `FUN_006d3630`); se actualiza el destino cada 200 ms; corre (`MOVE` `RUN` = 3) si queda a más de 5 m; se lo ubica cuando su IA no tiene un `PLAY_ANIMATION`. Sin red sigue al jugador a 2 m. Por red, probado en una máquina con `aimp_peer.py --replay` (corridas 32–34): sigue el recorrido del otro y, quieto, mira hacia donde mira el otro (`AIMP_GHOST_WALK_FACE`). **Falta con dos máquinas**; el v1 (teletransporte sin IA) sigue siendo el valor por defecto |
@@ -98,11 +98,8 @@ Limitaciones conocidas y contingencias para el futuro: `work/CONTINGENCIAS.md`.
 
 ## Siguiente paso
 0. **Prueba conjunta hecha (corrida 69):** deslizamiento aceptado (responsivo), agachado sin animación del civil, arrojables 0 de 5. Corridas 70–71: la bengala no usa `ProjectileMotion`; siguiente: el cuerpo de Havok de la bengala, o aceptar la diferencia (decisión del usuario).
-1. **Fase 3:** ✅ cerrada por Tailscale (Windows nativo ↔ Proton). Mejoras chicas en `mod/src/net.c`:
-   - mantener 20 paquetes/s con `last_send += send_ticks` (hoy salen ~16/s a 60 fps);
-   - en el primer `net_poll`, vaciar el backlog sin contar huecos (hoy da 361 "perdidos" falsos y un estado viejo de 35 s).
-
-   ENet queda para la fase 5, si hacen falta eventos confiables; descargarlo requiere confirmación.
+1. **Fase 3:** ✅ cerrada (las mejoras de ritmo y backlog de `net.c` ya están hechas).
+   **Fase 6:** ✅ por red en una máquina (corridas 72–73); siguiente: dos máquinas con una zona de diálogo (`AIMP_SYNC_PINS=1` en las dos).
 2. **Siguiente** (a elegir con el usuario):
    - **Fase 6, scripts:** pasos 1–3 hechos (hallazgo 15). Paso 4 escrito (hallazgo 16, `AIMP_SYNC_PINS`). **Siguiente, en el juego:**
      1. **Corrida 20 (local, una máquina)**, con `AIMP_TRACE_PINS=1` y `AIMP_PINS_FILE`:
