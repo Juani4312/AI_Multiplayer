@@ -96,7 +96,7 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 - **Paso del avatar:** el "se desliza" probablemente venía de que el civil animaba `WALK` (~1,2 m/s) mientras el otro caminaba a 2,46 m/s. Ahora hay tres pasos: `WALK`, `FAST_WALK` (de 1,8 a 3 m/s) y `RUN`.
 - **Agacharse:** se encontró la función del juego que agacha a un NPC (`FUN_007cae20`) y la tabla de posturas del personaje. Las banderas quedan bien, pero el civil sigue parado: lo más probable es que no tenga animaciones de agachado.
 - **Arrojables:** el composite se encuentra por un camino fijo de punteros, pero no siempre es el vivo; la tasa sigue en ~50–75 %. Falta leer el cuerpo físico.
-- **Siguiente:** prueba conjunta con dos máquinas (`work/windows/instructions.md`, 8c; DLL `3d086a38…`).
+- **Prueba conjunta (corrida 69):** el deslizamiento quedó aceptado (es responsivo), el agachado se aplica pero el civil no tiene la animación, y los arrojables reales no se ubicaron (0 de 5). Corridas 70–71: la bengala no vuela con `ProjectileMotion` sino con la física; lo siguiente sería leer su cuerpo de Havok.
 
 **2026-11-15, noche (corridas 52–64):**
 - **Títere con dos máquinas (corrida 52):** "funciona perfecto… responsivo y exacto el movimiento". 0,00 m en las dos máquinas, 20 paquetes/s, 0 excepciones.
