@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-15, 05:20, cierre de sesión; se sigue con la prueba con dos máquinas (ver README, "Último trabajo y siguiente paso") (corridas 23–34 automáticas con el mando virtual: el avatar camina y corre con `MOVE_TOWARDS` en el controlador de scripts, también por red contra `aimp_peer.py --replay`, y quieto mira hacia donde mira el otro; mod instalado en pasivo). Antes: 2026-11-15, 03:00 (corrida 20)_
+_Última actualización: 2026-11-16, 02:00: agachado del NPC (banderas del juego OK, el civil no se agacha), paso FAST_WALK, camino fijo del arrojable (no siempre sirve); corridas 65–68; prueba conjunta en `work/windows/instructions.md` 8c. Antes: 2026-11-15, 05:20, cierre de sesión; se sigue con la prueba con dos máquinas (ver README, "Último trabajo y siguiente paso") (corridas 23–34 automáticas con el mando virtual: el avatar camina y corre con `MOVE_TOWARDS` en el controlador de scripts, también por red contra `aimp_peer.py --replay`, y quieto mira hacia donde mira el otro; mod instalado en pasivo). Antes: 2026-11-15, 03:00 (corrida 20)_
 
 ## Decisiones vigentes
 - Build objetivo: **Windows `AI.exe` PE32 i386**, SHA-256 `dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90`. El usuario juega con Proton 9.0-203 y el amigo en Windows nativo.
@@ -95,6 +95,7 @@ _Última actualización: 2026-11-15, 05:20, cierre de sesión; se sigue con la p
 3. KnownDLLs en el Windows del amigo; hash de su `AI.exe` cuando reinstale; que use el mismo COMMANDS.PAK (mod de saltear la misión 9) o los dos el vanilla.
 
 ## Siguiente paso
+0. **Prueba conjunta con dos máquinas (instructions.md 8c, DLL `3d086a38`):** ¿el civil anima al ritmo (FAST_WALK), se agacha (esperable que no), y la bengala réplica termina donde la original? Después: agachado con otro NPC humano (seguridad) si hay en algún nivel; arrojables por el cuerpo físico o `ProjectileMotion` en vez del composite.
 1. **Fase 3:** ✅ cerrada por Tailscale (Windows nativo ↔ Proton). Mejoras chicas en `mod/src/net.c`:
    - mantener 20 paquetes/s con `last_send += send_ticks` (hoy salen ~16/s a 60 fps);
    - en el primer `net_poll`, vaciar el backlog sin contar huecos (hoy da 361 "perdidos" falsos y un estado viejo de 35 s).

@@ -231,6 +231,20 @@ Qué mirar: tirar bengalas desde cada máquina y comparar dónde quedan en las d
 - del lado que tiró: `el propio se asentó en (...) ... mandado` (si sale `no se pudo leer la posición`, no se manda nada y la réplica queda donde cayó);
 - del lado que recibe: `la réplica cayó a N m ... se borra y se pone en (...)` o `se deja`.
 
+### 8c. Prueba conjunta: pasos, agachado y arrojables (2026-11-16, DLL `3d086a38…`)
+
+Misma instalación que el paso 8, con `git pull` (DLL nueva; el protocolo sigue en v2). Novedades:
+- **Paso del avatar:** entre caminar y correr ahora hay "caminar rápido" (`FAST_WALK`). El jugador camina a 2,46 m/s y antes el civil animaba un `WALK` de ~1,2 m/s ("se desliza"); ahora usa `WALK` hasta 1,8 m/s, `FAST_WALK` hasta 3 m/s y `RUN` por encima.
+- **Agachado:** cuando el otro se agacha, el mod llama a la función del juego que agacha a un NPC. En las pruebas locales el civil **siguió parado** (seguramente no tiene animación de agachado); queda para confirmar a ojo.
+- **Arrojables:** más diagnóstico en el log para ubicar la posición del objeto.
+
+Qué mirar (F8 en cada momento interesante):
+1. El otro camina normal: ¿las piernas del civil van al ritmo o se desliza? Lo mismo corriendo.
+2. El otro se agacha, quieto y caminando: ¿el civil se agacha? (esperable: no).
+3. Bengalas desde cada máquina, contra el piso y contra paredes: ¿la réplica termina donde la original?
+
+En el log: `títere: camina rápido`, `velocidad: avatar … el otro …`, `FUN_007cae20 (agacharse)`, `THROW fijo` (incluidas las líneas `diag`).
+
 ## Problemas conocidos
 
 - **No aparece `aimp.log`:** el proxy no cargó. Revisar KnownDLLs, que `winmm.dll` esté al lado de `AI.exe` (no en una subcarpeta) y que el juego haya llegado a arrancar.
