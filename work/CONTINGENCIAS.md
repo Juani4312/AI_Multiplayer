@@ -39,7 +39,7 @@ _Última actualización: 2026-11-16._
   - El que tira no encuentra la posición de su propio objeto. La búsqueda del composite sirvió con tiros suaves de prueba (~3 de 4), pero falló **0 de 5** con tiros reales (corrida 69). El camino fijo `obj+0x24 → +0xC` no siempre da el composite vivo (corridas 66–68).
   - `ProjectileMotion` **no se usa** en la bengala tirada: los hooks de `FUN_0060b6d0` y `FUN_0060b980` no se llamaron (corridas 70–71). La bengala vuela con la física de Havok.
 - **Estado:** queda como está (decisión del usuario, 2026-11-16).
-- **Para resolverlo:** encontrar el cuerpo rígido de Havok de la bengala, a partir del `TemporaryEntity` del pool (`0x16F0DE4`) o del composite `Thrown\X`, y leer su transformación. Con eso, el resto ya está hecho.
+- **Para resolverlo:** encontrar el cuerpo rígido de Havok de la bengala y leer su transformación. Con eso, el resto ya está hecho. La vtable de `hkpRigidBody` está ubicada (`0x01413974`), pero no se llega a ese cuerpo recorriendo punteros desde el objeto del pool (corrida 79). Lo próximo sería enganchar su creación.
 
 ### 5. El botín es por jugador
 - Levantar un ítem es un "usar" (`0x26`) y se replica, pero el ítem no desaparece del mundo en la otra máquina: cada jugador tiene el suyo.
