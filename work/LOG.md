@@ -175,3 +175,4 @@
 - 05:20 (2026-11-16) Corridas 80-81: hkpRigidBody por su constructor (FUN_00b49ea0), 4/4, posición en +0x120 que sigue a la bengala hasta el piso. El que tira la usa para el THROW_REST. dist 072c93b7. Falta con dos máquinas.
 - 05:35 (2026-11-16) Corrida 82: no pude equipar ni tirar una bengala con el mando virtual (RT, LT+RT, D-pad izquierda, LB). El lado que tira queda para la prueba de a dos. Juego cerrado, mod pasivo.
 - 03:30 (2026-11-16, reloj del sistema) saves/: safezone.tar.gz (partida actual, sala del transit, sin enemigos) y work/scripts/saves.sh (list/save/load con backup).
+- (2026-11-16) Cierre de sesión a pedido del usuario. Todo documentado (README, PROGRESS, NOTES, CONTINGENCIAS, DESIGN_ALIEN, saves/). Juego cerrado, mod pasivo.

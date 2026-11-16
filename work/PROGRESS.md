@@ -3,7 +3,17 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-16, 02:00: agachado del NPC (banderas del juego OK, el civil no se agacha), paso FAST_WALK, camino fijo del arrojable (no siempre sirve); corridas 65–68; prueba conjunta en `work/windows/instructions.md` 8c. Antes: 2026-11-15, 05:20, cierre de sesión; se sigue con la prueba con dos máquinas (ver README, "Último trabajo y siguiente paso") (corridas 23–34 automáticas con el mando virtual: el avatar camina y corre con `MOVE_TOWARDS` en el controlador de scripts, también por red contra `aimp_peer.py --replay`, y quieto mira hacia donde mira el otro; mod instalado en pasivo). Antes: 2026-11-15, 03:00 (corrida 20)_
+_Última actualización: 2026-11-16, cierre de sesión. Hecho hoy (corridas 65–82):
+- paso FAST_WALK del títere;
+- agachado descartado (apagado por defecto);
+- pines de la fase 6 por red en una máquina;
+- ítems compartidos escritos (`AIMP_SYNC_PICKUP`);
+- arrojables con el cuerpo de Havok (`+0x120`, por su constructor);
+- humano armado como avatar;
+- diseño del Alien;
+- `CONTINGENCIAS.md` y saves de prueba (`saves/`).
+
+**Siguiente:** la prueba con dos máquinas de `work/windows/instructions.md` 8d (DLL `072c93b7`) y una partida con el Alien activo. Mod en pasivo._ Antes: 2026-11-16, 02:00: agachado del NPC (banderas del juego OK, el civil no se agacha), paso FAST_WALK, camino fijo del arrojable (no siempre sirve); corridas 65–68; prueba conjunta en `work/windows/instructions.md` 8c. Antes: 2026-11-15, 05:20, cierre de sesión; se sigue con la prueba con dos máquinas (ver README, "Último trabajo y siguiente paso") (corridas 23–34 automáticas con el mando virtual: el avatar camina y corre con `MOVE_TOWARDS` en el controlador de scripts, también por red contra `aimp_peer.py --replay`, y quieto mira hacia donde mira el otro; mod instalado en pasivo). Antes: 2026-11-15, 03:00 (corrida 20)_
 
 Limitaciones conocidas y contingencias para el futuro: `work/CONTINGENCIAS.md`.
 Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safezone` = la partida de las corridas 20–82 (sin enemigos).
