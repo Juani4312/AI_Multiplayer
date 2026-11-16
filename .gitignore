@@ -30,3 +30,6 @@ mod/build/
 # Varios
 .DS_Store
 *.swp
+
+# Backups locales de saves (saves.sh load)
+saves/backups/
