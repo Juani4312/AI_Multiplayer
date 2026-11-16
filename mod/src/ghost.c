@@ -142,11 +142,12 @@ static volatile int g_allow_cmd; /* el filtro deja pasar el comando que da el mo
 static int g_puppet; /* AIMP_GHOST_PUPPET: 1 = SetTransform por frame, 2 = escribir la posición */
 static uint32_t g_pup_frames;
 static int g_rm_valid, g_rm_crouch, g_walk_lead_ms = 400, g_walk_run_mms = 3000;
-/* AIMP_GHOST_CROUCH (2026-11-16): 1 = FUN_007cae20/FUN_007cae90 sobre el avatar (por defecto), 2 = el IDLE con
- * postura de las corridas 51-53 (no agacha), 3 = las dos cosas, 0 = nada. */
+/* AIMP_GHOST_CROUCH (2026-11-16): 1 = FUN_007cae20/FUN_007cae90 sobre el avatar, 2 = el IDLE con postura de las
+ * corridas 51-53 (no agacha), 3 = las dos cosas, 0 = nada (por defecto: corridas 65-67 el civil no se agacha; corrida
+ * 77, el humano armado "Riot Pistol" queda con los brazos abiertos). */
 typedef void(__attribute__((fastcall)) * ChrFn)(void *chr, void *edx);
 static ChrFn g_chr_crouch, g_chr_uncrouch;
-static int g_crouch_mode = 1, g_av_crouched, g_crouch_can = 1, g_crouch_restart;
+static int g_crouch_mode = 0, g_av_crouched, g_crouch_can = 1, g_crouch_restart;
 static uint32_t g_crouch_calls, g_crouch_lost;
 static int64_t g_crouch_chk;
 /* AIMP_GHOST_WALK_FAST_MMS (2026-11-16): el jugador camina a 2,46 m/s y el WALK del civil anima a ~1,2 m/s; con
@@ -350,7 +351,7 @@ int ghost_install(void)
             /* experimentos del agachado (2026-11-15): sin teleport durante el IDLE; postura en ciclo 0..5 cada 4 s */
             g_idle_notp = aimp_env_int(L"AIMP_GHOST_IDLE_NOTP", 0);
             g_crouch_cycle = aimp_env_int(L"AIMP_GHOST_CROUCH_CYCLE", 0);
-            g_crouch_mode = aimp_env_int(L"AIMP_GHOST_CROUCH", 1);
+            g_crouch_mode = aimp_env_int(L"AIMP_GHOST_CROUCH", 0); /* corrida 77: en el humano armado rompe la pose */
             g_crouch_can = aimp_env_int(L"AIMP_GHOST_CROUCH_CAN", 1);
             {
                 uint8_t c1[sizeof AIMP_CHR_CROUCH_PROLOGUE], c2[sizeof AIMP_CHR_UNCROUCH_PROLOGUE];
@@ -1496,8 +1497,44 @@ int ghost_enabled(void) { return g_mode != 0; }
 
 uint32_t ghost_avatar(void) { return g_mode && (g_state == G_NPC || g_state == G_ACTIVE) ? g_chr : 0; }
 
+/* AIMP_CENSUS=1 (2026-11-16): 10 s después de que aparece el jugador, una vez por nivel, describe todos los
+ * personajes (jugadores y NPCs: nombre, tipo, posición). Para saber si hay un Alien cargado y de qué tipo es. */
+static int g_census = -1;
+static uint32_t g_census_player;
+static int64_t g_census_at;
+static void census_frame(int64_t now)
+{
+    if (g_census < 0) {
+        LARGE_INTEGER f;
+        QueryPerformanceFrequency(&f);
+        if (g_freq <= 1)
+            g_freq = f.QuadPart;
+        g_census = aimp_env_int(L"AIMP_CENSUS", 0);
+    }
+    if (!g_census)
+        return;
+    Chars c;
+    if (!read_chars(&c))
+        return;
+    uint32_t local = c.npl ? c.pl[0] : 0;
+    if (local != g_census_player) {
+        g_census_player = local;
+        g_census_at = local ? now : 0;
+        return;
+    }
+    if (!g_census_at || now - g_census_at < g_freq * 10)
+        return;
+    g_census_at = 0;
+    log_printf("CENSO: %u jugadores, %u NPCs, %u pendientes", c.npl, c.nnpc, c.npend);
+    for (uint32_t i = 0; i < c.npl; i++)
+        describe("CENSO jugador", c.pl[i], "jugadores", i);
+    for (uint32_t i = 0; i < c.nnpc; i++)
+        describe("CENSO NPC", c.npc[i], "NPCs", i);
+}
+
 void ghost_frame(int64_t now, const AimpNet *net, uint32_t level)
 {
+    census_frame(now);
     if (!g_mode || g_state == G_OFF)
         return;
     if (!g_obs_logged) {

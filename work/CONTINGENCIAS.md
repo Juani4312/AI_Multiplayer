@@ -17,7 +17,9 @@ _Última actualización: 2026-11-16._
 - **Agacharse:** el civil no tiene animación de agachado.
   - Con `FUN_007cae20` el juego marca al personaje como agachado (`Character+0x2AF = 1` y postura efectiva `+0x3E3A = 1`). El usuario ve un leve movimiento de costado y nada más (corridas 65–67 y 69).
   - El comando `IDLE` con las posturas 0 a 5 tampoco lo agacha (corrida 53).
-  - Para resolverlo: usar como avatar un NPC humano que sí se agache (seguridad u otros con arma), si hay en el nivel. `AIMP_GHOST_NPC_TYPE` elige el tipo.
+  - Con el humano armado ("Riot Pistol", tipo 4, corrida 77) es peor: queda con los brazos abiertos. Por eso el agachado está apagado por defecto (`AIMP_GHOST_CROUCH=0`).
+  - El humano armado sirve como avatar (`AIMP_GHOST_NPC_TYPE=4`, si hay uno en el nivel), con casco y en pose de arma.
+  - Para resolverlo: encontrar el estado de animación de agachado de los humanos (lo que usan los NPCs que se cubren en combate) en vez de las banderas de locomoción.
 - **Deslizamiento:** las piernas no siempre van al ritmo del desplazamiento. El títere se pone cada frame en la posición exacta del otro, y la animación sale de un `MOVE_TOWARDS` aparte.
   - Desde la corrida 65 hay tres pasos (`WALK`, `FAST_WALK`, `RUN`), pero en la prueba conjunta se siguió viendo deslizar.
   - **El usuario lo aceptó** (2026-11-16): "no me molesta siempre y cuando sea responsivo, y lo es".
