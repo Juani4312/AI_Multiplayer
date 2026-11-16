@@ -82,8 +82,140 @@ typedef struct {
     DWORD t0, still;
     float last[3];
     ThrowEvt ev;
+    /* ProjectileMotion de este lanzamiento (2026-11-16): estado, última posición y cuándo se actualizó */
+    uint32_t pm;
+    float pm_pos[3], pm_t, pm_dur;
+    int pm_done;
 } Track;
 static Track g_trk_local[TRK_MAX], g_trk_rep[TRK_MAX];
+
+/* ProjectileMotion (2026-11-16, estático): FUN_0060b6d0 thiscall(estado, entidad, x), ret 8, es su actualización por
+ * frame. Calcula la posición analítica (FUN_0060b470 sobre estado-0x14) y la deja en la matriz de estado+0x40
+ * (traslación en +0x4C, +0x5C, +0x6C); salida en +0x0C, velocidad en +0x18, duración en +0x24, tiempo en +0x28,
+ * terminado en +0x2C (FUN_0060b740 los inicializa). Prueba conjunta 8c: el composite no se encontró en 0 de 5
+ * lanzamientos reales (20 m/s contra paredes); si la actualización se corta antes de la duración, el punto es el
+ * del choque. */
+#define AIMP_RVA_PM_UPDATE 0x0020B6D0u
+#define PM_START 0x0C
+#define PM_VEL   0x18
+#define PM_DUR   0x24
+#define PM_T     0x28
+#define PM_FIN   0x2C
+#define PM_MX    0x4C
+#define PM_MY    0x5C
+#define PM_MZ    0x6C
+#define PM_MAX   32
+typedef uint32_t(__attribute__((fastcall)) * PmUpdFn)(void *st, void *edx, void *ent, uint32_t x);
+typedef uint32_t(__attribute__((fastcall)) * PmUpd1Fn)(void *st, void *edx, void *ent);
+static const uint8_t AIMP_PM_UPD_PROLOGUE[7] = { 0x53, 0x56, 0x57, 0x8B, 0x7C, 0x24, 0x10 };
+/* FUN_0060b980 thiscall(estado, entidad), ret 4: el otro que llama a FUN_0060b470 (slot +0x1C del vtable
+ * 0x01299F80, el de FUN_0060b740). Corrida 70: FUN_0060b6d0 no se llamó para las bengalas. */
+#define AIMP_RVA_PM_UPDATE2 0x0020B980u
+static const uint8_t AIMP_PM_UPD2_PROLOGUE[7] = { 0x53, 0x8B, 0x5C, 0x24, 0x08, 0x56, 0x57 };
+static AimpHook g_hk_pm, g_hk_pm2;
+static PmUpdFn g_pm_orig;
+static PmUpd1Fn g_pm2_orig;
+static volatile LONG g_pm_calls;
+typedef struct {
+    volatile uint32_t st;
+    volatile DWORD first, last;
+    int logged;
+} PmSlot;
+static PmSlot g_pm[PM_MAX];
+static int g_pm_on;
+
+static void pm_seen(uint32_t s);
+static uint32_t __attribute__((fastcall)) det_pm(void *st, void *edx, void *ent, uint32_t x)
+{
+    uint32_t r = g_pm_orig(st, edx, ent, x);
+    pm_seen((uint32_t)st);
+    return r;
+}
+static uint32_t __attribute__((fastcall)) det_pm2(void *st, void *edx, void *ent)
+{
+    uint32_t r = g_pm2_orig(st, edx, ent);
+    pm_seen((uint32_t)st);
+    return r;
+}
+static void pm_seen(uint32_t s)
+{
+    InterlockedIncrement(&g_pm_calls);
+    DWORD now = GetTickCount();
+    int i, fr = -1;
+    for (i = 0; i < PM_MAX; i++) {
+        if (g_pm[i].st == s)
+            break;
+        if (fr < 0 && (!g_pm[i].st || now - g_pm[i].last > 20000))
+            fr = i;
+    }
+    if (i == PM_MAX) {
+        if (fr < 0)
+            return;
+        i = fr;
+        g_pm[i].st = s;
+        g_pm[i].first = now;
+        g_pm[i].logged = 0;
+    }
+    g_pm[i].last = now;
+}
+
+/* Sigue el ProjectileMotion del lanzamiento k. Devuelve 1 la vez que detecta que se detuvo (sin actualizaciones hace
+ * 300 ms): pm_pos = última posición, pm_t = tiempo de vuelo, pm_dur = duración. */
+static int pm_track(Track *k, const char *who)
+{
+    DWORD now = GetTickCount();
+    if (!g_pm_on || k->pm_done)
+        return 0;
+    for (int i = 0; i < PM_MAX; i++) {
+        /* diagnóstico (corrida 70): cada estado nuevo con su salida y velocidad */
+        uint32_t s = g_pm[i].st;
+        float w[6];
+        if (s && !g_pm[i].logged && mem_read(s + PM_START, w, sizeof w)) {
+            g_pm[i].logged = 1;
+            log_printf("THROW pm: estado nuevo 0x%08x: salida (%.2f, %.2f, %.2f), vel (%.2f, %.2f, %.2f); %ld llamadas", s, (double)w[0],
+                       (double)w[1], (double)w[2], (double)w[3], (double)w[4], (double)w[5], (long)g_pm_calls);
+        }
+    }
+    if (!k->pm) {
+        if (now - k->t0 > 1000)
+            return 0;
+        for (int i = 0; i < PM_MAX; i++) {
+            uint32_t s = g_pm[i].st;
+            float w[6];
+            if (!s || now - g_pm[i].last > 200 || !mem_read(s + PM_START, w, sizeof w))
+                continue;
+            float dx = w[0] - k->ev.m[3], dz = w[2] - k->ev.m[11], vx = w[3] - k->ev.vel[0], vy = w[4] - k->ev.vel[1], vz = w[5] - k->ev.vel[2];
+            if (dx * dx + dz * dz < 0.0025f && vx * vx + vy * vy + vz * vz < 0.01f) {
+                k->pm = s;
+                log_printf("THROW pm %u (%s): ProjectileMotion 0x%08x (salida y %.2f; el evento %.2f)", k->id, who, s, (double)w[1],
+                           (double)k->ev.m[7]);
+                break;
+            }
+        }
+        if (!k->pm)
+            return 0;
+    }
+    int i;
+    for (i = 0; i < PM_MAX; i++)
+        if (g_pm[i].st == k->pm)
+            break;
+    DWORD last = i < PM_MAX ? g_pm[i].last : 0;
+    if (i < PM_MAX && now - last < 300) {
+        float v[3], t = 0, d = 0;
+        if (mem_f32(k->pm + PM_MX, &v[0]) && mem_f32(k->pm + PM_MY, &v[1]) && mem_f32(k->pm + PM_MZ, &v[2]) && mem_f32(k->pm + PM_T, &t) &&
+            mem_f32(k->pm + PM_DUR, &d)) {
+            aimp_memcpy(k->pm_pos, v, 12);
+            k->pm_t = t;
+            k->pm_dur = d;
+        }
+        return 0;
+    }
+    k->pm_done = 1;
+    log_printf("THROW pm %u (%s): ProjectileMotion se detuvo a los %.2f s de %.2f en (%.2f, %.2f, %.2f)%s", k->id, who, (double)k->pm_t,
+               (double)k->pm_dur, (double)k->pm_pos[0], (double)k->pm_pos[1], (double)k->pm_pos[2],
+               k->pm_t < k->pm_dur - 0.05f ? " (antes de terminar: choque)" : "");
+    return k->pm_t > 0.0f && k->pm_t < k->pm_dur - 0.05f;
+}
 
 static uint32_t pool_ptr(void) { return *(volatile uint32_t *)(g_aimp_exe + AIMP_RVA_THROW_POOL); }
 
@@ -438,6 +570,14 @@ int throw_install(AimpNet *net)
     int ok2 = hook_install(&g_hk_place, "colocar (FUN_007b5190)", (void *)(g_aimp_exe + AIMP_RVA_THROW_PLACE),
                            AIMP_THROW_PROLOGUE, sizeof AIMP_THROW_PROLOGUE, AIMP_THROW_STEAL, (void *)det_place,
                            (void **)&g_place_orig);
+    if (g_fix && aimp_env_int(L"AIMP_THROW_PM", 0) /* corridas 70-71: las bengalas no pasan por acá */)
+        g_pm_on = hook_install(&g_hk_pm, "ProjectileMotion (FUN_0060b6d0)", (void *)(g_aimp_exe + AIMP_RVA_PM_UPDATE),
+                               AIMP_PM_UPD_PROLOGUE, sizeof AIMP_PM_UPD_PROLOGUE, sizeof AIMP_PM_UPD_PROLOGUE, (void *)det_pm,
+                               (void **)&g_pm_orig);
+    if (g_pm_on)
+        g_pm_on = hook_install(&g_hk_pm2, "ProjectileMotion (FUN_0060b980)", (void *)(g_aimp_exe + AIMP_RVA_PM_UPDATE2),
+                               AIMP_PM_UPD2_PROLOGUE, sizeof AIMP_PM_UPD2_PROLOGUE, sizeof AIMP_PM_UPD2_PROLOGUE, (void *)det_pm2,
+                               (void **)&g_pm2_orig);
     if (!ok || !ok2) {
         g_sync = 0;
         g_echo_ms = 0;
@@ -585,6 +725,9 @@ static void track_local_frame(void)
     DWORD ms = GetTickCount();
     track_find_ents(g_trk_local, "propio");
     track_find_ents(g_trk_rep, "réplica");
+    for (int i = 0; i < TRK_MAX; i++)
+        if (g_trk_rep[i].on)
+            pm_track(&g_trk_rep[i], "réplica"); /* solo para el log: comparar con el del otro */
     for (int i = 0; i < TRK_MAX; i++) {
         Track *k = &g_trk_local[i];
         if (!k->on)
@@ -593,6 +736,19 @@ static void track_local_frame(void)
         float p[3];
         if (entry_obj(pool, k->idx) != k->obj) {
             log_printf("THROW fijo %u: el objeto propio desapareció antes de asentarse (%lu ms)", k->id, (unsigned long)age);
+            k->on = 0;
+            continue;
+        }
+        if (pm_track(k, "propio") && !k->ent) {
+            /* sin composite: el punto del choque de ProjectileMotion (los rebotes de Havok después no se ven) */
+            ThrowRest r;
+            aimp_memset(&r, 0, sizeof r);
+            r.id = k->id;
+            aimp_memcpy(r.pos, k->pm_pos, 12);
+            r.ms = age;
+            int sent = g_net && g_net->mode && net_event(g_net, AIMP_EVT_THROW_REST, g_level, &r, sizeof r);
+            log_printf("THROW fijo %u: sin composite; se usa el punto del choque (%.2f, %.2f, %.2f); %s", k->id, (double)r.pos[0],
+                       (double)r.pos[1], (double)r.pos[2], sent ? "mandado" : "no se pudo mandar");
             k->on = 0;
             continue;
         }

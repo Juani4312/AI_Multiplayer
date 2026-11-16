@@ -95,7 +95,7 @@ _Última actualización: 2026-11-16, 02:00: agachado del NPC (banderas del juego
 3. KnownDLLs en el Windows del amigo; hash de su `AI.exe` cuando reinstale; que use el mismo COMMANDS.PAK (mod de saltear la misión 9) o los dos el vanilla.
 
 ## Siguiente paso
-0. **Prueba conjunta con dos máquinas (instructions.md 8c, DLL `3d086a38`):** ¿el civil anima al ritmo (FAST_WALK), se agacha (esperable que no), y la bengala réplica termina donde la original? Después: agachado con otro NPC humano (seguridad) si hay en algún nivel; arrojables por el cuerpo físico o `ProjectileMotion` en vez del composite.
+0. **Prueba conjunta hecha (corrida 69):** deslizamiento aceptado (responsivo), agachado sin animación del civil, arrojables 0 de 5. Corridas 70–71: la bengala no usa `ProjectileMotion`; siguiente: el cuerpo de Havok de la bengala, o aceptar la diferencia (decisión del usuario).
 1. **Fase 3:** ✅ cerrada por Tailscale (Windows nativo ↔ Proton). Mejoras chicas en `mod/src/net.c`:
    - mantener 20 paquetes/s con `last_send += send_ticks` (hoy salen ~16/s a 60 fps);
    - en el primer `net_poll`, vaciar el backlog sin contar huecos (hoy da 361 "perdidos" falsos y un estado viejo de 35 s).
