@@ -88,7 +88,7 @@ typedef struct {
     float pm_pos[3], pm_t, pm_dur;
     int pm_done;
     uint32_t rb, rboff; /* hkpRigidBody de la bengala y offset de su posición (2026-11-16) */
-    int rb_tries;
+    int rb_tries, rb_logged;
 } Track;
 static Track g_trk_local[TRK_MAX], g_trk_rep[TRK_MAX];
 
@@ -479,6 +479,45 @@ static uint32_t find_rigid(uint32_t obj, const float *p, uint32_t *poff, uint32_
     }
     return first && *poff ? first : 0;
 }
+/* Constructor de hkpRigidBody: FUN_00b49ea0 thiscall(this, cinfo*), ret 4 (escribe la vtable 0x01413974). Se
+ * registran los cuerpos que se construyen con su hora; a cada lanzamiento se le asocia uno creado entre 100 ms antes
+ * y 300 ms después que tenga un triplete cerca de la parábola. Corrida 79: por punteros desde el pool no se llega. */
+#define AIMP_RVA_HKP_RB_CTOR 0x00749EA0u
+static const uint8_t AIMP_HKP_RB_CTOR_PROLOGUE[9] = { 0x55, 0x8B, 0xEC, 0x83, 0xE4, 0xF0, 0x83, 0xEC, 0x14 };
+typedef void *(__attribute__((fastcall)) * RbCtorFn)(void *self, void *edx, void *cinfo);
+static AimpHook g_hk_rbctor;
+static RbCtorFn g_rbctor_orig;
+#define RB_RING 64
+static volatile uint32_t g_rb_ring[RB_RING];
+static volatile DWORD g_rb_ring_t[RB_RING];
+static volatile LONG g_rb_ring_n;
+static void *__attribute__((fastcall)) det_rbctor(void *self, void *edx, void *cinfo)
+{
+    void *r = g_rbctor_orig(self, edx, cinfo);
+    LONG i = InterlockedIncrement(&g_rb_ring_n) - 1;
+    g_rb_ring_t[i % RB_RING] = GetTickCount();
+    g_rb_ring[i % RB_RING] = (uint32_t)self;
+    return r;
+}
+static uint32_t rb_from_ring(DWORD t0, const float *p, uint32_t *poff, uint32_t *ncand)
+{
+    LONG n = g_rb_ring_n;
+    *ncand = 0;
+    for (LONG k = n - 1; k >= 0 && k >= n - RB_RING; k--) {
+        DWORD t = g_rb_ring_t[k % RB_RING];
+        uint32_t rb = g_rb_ring[k % RB_RING];
+        if (!rb || (int32_t)(t - t0) < -100 || (int32_t)(t - t0) > 300) /* el propio se registra un frame después */
+            continue;
+        (*ncand)++;
+        uint32_t off = rb_pos_off(rb, p);
+        if (off) {
+            *poff = off;
+            return rb;
+        }
+    }
+    return 0;
+}
+
 static int rb_pos(const Track *k, float out[3])
 {
     uint32_t vt = 0;
@@ -488,7 +527,8 @@ static int rb_pos(const Track *k, float out[3])
 
 static int ent_pos(const Track *k, float out[3])
 {
-    if (!k->ent && rb_pos(k, out))
+    /* corrida 81: el cuerpo de Havok (+0x120) es la posición real (vuela y queda en el piso); va primero */
+    if (rb_pos(k, out))
         return 1;
     uint32_t vt = 0;
     return k->ent && mem_u32(k->ent, &vt) && vt == (uint32_t)g_aimp_exe + AIMP_RVA_VT_COMPOSITE && mem_read(k->ent + k->off, out, 12);
@@ -837,6 +877,10 @@ int throw_install(AimpNet *net)
     int ok2 = hook_install(&g_hk_place, "colocar (FUN_007b5190)", (void *)(g_aimp_exe + AIMP_RVA_THROW_PLACE),
                            AIMP_THROW_PROLOGUE, sizeof AIMP_THROW_PROLOGUE, AIMP_THROW_STEAL, (void *)det_place,
                            (void **)&g_place_orig);
+    if (g_fix && aimp_env_int(L"AIMP_THROW_RB", 1))
+        hook_install(&g_hk_rbctor, "constructor de hkpRigidBody (FUN_00b49ea0)", (void *)(g_aimp_exe + AIMP_RVA_HKP_RB_CTOR),
+                     AIMP_HKP_RB_CTOR_PROLOGUE, sizeof AIMP_HKP_RB_CTOR_PROLOGUE, sizeof AIMP_HKP_RB_CTOR_PROLOGUE, (void *)det_rbctor,
+                     (void **)&g_rbctor_orig);
     if (g_fix && aimp_env_int(L"AIMP_THROW_PM", 0) /* corridas 70-71: las bengalas no pasan por acá */)
         g_pm_on = hook_install(&g_hk_pm, "ProjectileMotion (FUN_0060b6d0)", (void *)(g_aimp_exe + AIMP_RVA_PM_UPDATE),
                                AIMP_PM_UPD_PROLOGUE, sizeof AIMP_PM_UPD_PROLOGUE, sizeof AIMP_PM_UPD_PROLOGUE, (void *)det_pm,
@@ -970,7 +1014,12 @@ static void track_find_ents(Track *arr, const char *who)
         if (!k->rb && k->rb_tries < 4) {
             uint32_t nf = 0, off = 0;
             k->rb_tries++;
-            uint32_t rb = find_rigid(k->obj, st, &off, &nf);
+            uint32_t nc = 0;
+            uint32_t rb = g_rbctor_orig ? rb_from_ring(k->t0, st, &off, &nc) : 0;
+            if (rb)
+                aimp_snprintf(g_rb_path, sizeof g_rb_path, "constructor (%u candidatos)", nc);
+            else
+                rb = find_rigid(k->obj, st, &off, &nf);
             if (rb) {
                 k->rb = rb;
                 k->rboff = off;
@@ -1011,6 +1060,22 @@ static void track_local_frame(void)
     for (int i = 0; i < TRK_MAX; i++)
         if (g_trk_rep[i].on)
             pm_track(&g_trk_rep[i], "réplica"); /* solo para el log: comparar con el del otro */
+    /* posición del cuerpo de Havok a los 0,25 s, 1 s y 3 s (verificación, 2026-11-16) */
+    for (int a = 0; a < 2; a++)
+        for (int i = 0; i < TRK_MAX; i++) {
+            Track *k = a ? &g_trk_rep[i] : &g_trk_local[i];
+            static const DWORD at[3] = { 250, 1000, 3000 };
+            DWORD age = ms - k->t0;
+            float v[3];
+            if (!k->on || !k->rb || k->rb_logged >= 3 || age < at[k->rb_logged])
+                continue;
+            k->rb_logged++;
+            if (rb_pos(k, v))
+                log_printf("THROW rb %u (%s): a los %lu ms el cuerpo está en (%.2f, %.2f, %.2f)", k->id, a ? "réplica" : "propio",
+                           (unsigned long)age, (double)v[0], (double)v[1], (double)v[2]);
+            else
+                log_printf("THROW rb %u: a los %lu ms el cuerpo 0x%08x ya no tiene la vtable", k->id, (unsigned long)age, k->rb);
+        }
     for (int i = 0; i < TRK_MAX; i++) {
         Track *k = &g_trk_local[i];
         if (!k->on)
