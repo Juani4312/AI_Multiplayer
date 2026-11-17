@@ -66,3 +66,14 @@ _2026-11-17. Preguntas del usuario: "¿qué pasa si cada uno tiene un save disti
 **En los dos casos:**
 - La munición de reserva sigue siendo compartida. El cargador viaja con el arma.
 - Lo que no es arma (botiquines, bengalas, componentes, llaves) sigue siendo un solo contador para los dos.
+
+**Decisión del usuario (2026-11-17): un híbrido de a) y b), con distancia.**
+
+- Cada arma tiene un **dueño**: el último que la equipó. Al levantarla del mundo, el dueño es el que la agarró.
+- **Cerca** (menos de D metros, mismo nivel): funciona como a). Cualquiera de los dos puede equiparla si el otro no la tiene en la mano, y al equiparla pasa a ser el dueño.
+- **Lejos** (más de D): solo el dueño puede equiparla. Para el otro aparece no disponible en el menú de armas hasta que estén cerca y el dueño no la esté usando.
+- Valores propuestos (a confirmar con el usuario): D = 4 m, con histéresis (se vuelve "cerca" a menos de 4 m y "lejos" a más de 5 m, para que no parpadee en el límite).
+- Casos borde propuestos:
+  - si el dueño está caído (DESIGN_DEATH) o se desconecta, el arma queda libre para el otro sin importar la distancia;
+  - si los dos la equipan en el mismo instante, decide el host.
+- Implementación: estado `{arma: dueño, en_mano}` en el host. Por red, `EQUIP`/`UNEQUIP` y la distancia; la del avatar ya se conoce en cada frame. Bloquear la selección en el menú radial o desequipar enseguida si el juego no deja bloquear.
