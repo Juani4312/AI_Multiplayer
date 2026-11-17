@@ -298,6 +298,7 @@ def main():
     g.add_argument("--host", type=int, help="puerto donde escuchar (el juego hace join)")
     ap.add_argument("--hz", type=float, default=20)
     ap.add_argument("--center", default="40,14.5,-25")
+    ap.add_argument("--radius", type=float, default=3.0, help="radio del círculo (0 = quieto en --center)")
     ap.add_argument("--level", type=int, default=10)
     ap.add_argument("--seconds", type=float, default=0)
     ap.add_argument("--replay", type=float, default=0, help="segundos de retraso para repetir el recorrido del juego")
@@ -419,7 +420,7 @@ def main():
                         s.sendto(pack(seq, a.level, (0.0, 0.0, 0.0), 0.0, 0), peer)
                 else:
                     ang = (now - t0) * 0.5
-                    pos = (cx + 3 * math.cos(ang), cy, cz + 3 * math.sin(ang))
+                    pos = (cx + a.radius * math.cos(ang), cy, cz + a.radius * math.sin(ang))
                     s.sendto(pack(seq, a.level, pos, math.atan2(math.cos(ang), -math.sin(ang))), peer)
                 last_send = now
             if xfer and peer and last is not None:
