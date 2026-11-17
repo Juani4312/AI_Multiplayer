@@ -190,3 +190,4 @@
 - 03:54 (2026-11-17) Corridas 96-97: armas de a una (weapons.c, AIMP_SYNC_WEAPONS) con lectura del arma en mano y eventos verificados; el bloqueo queda para una prueba con persona.
 - 03:54 (2026-11-17) instructions.md 8e: prueba con dos máquinas de agachado, inventario, muerte y armas.
 - 04:01 (2026-11-17) Corridas 98-99: inventario completo del host (evento 9) mandado como host y aplicado como cliente (3 correcciones exactas).
+- 04:08 (2026-11-17) Corrida 100: huella de la partida (session.c, evento 10): misma partida / PARTIDAS DISTINTAS verificado con el peer.

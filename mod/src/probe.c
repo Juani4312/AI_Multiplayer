@@ -19,6 +19,7 @@
 #include "death.h"
 #include "inv.h"
 #include "weapons.h"
+#include "session.h"
 #include "ctrl.h"
 #include <tlhelp32.h>
 
@@ -634,6 +635,7 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
     memsrv_frame(now, g_freq); /* AIMP_MEMSRV_FILE (solo lee) */
     death_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0); /* AIMP_COOP_DOWNED */
     inv_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0, g_cur.level_cur); /* AIMP_TRACE_INV / AIMP_SYNC_INV */
+    session_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0, g_cur.level_cur); /* huella de la partida */
     weapons_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0, g_cur.level_cur); /* AIMP_SYNC_WEAPONS */
     if (status_due) {
         status(&g_cur, now - g_last_status);

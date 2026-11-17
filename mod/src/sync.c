@@ -18,6 +18,7 @@
  * AIMP_TRACE_USE=1 (o AIMP_SYNC_USE=1) además hookea los dos handlers, solo para loguear
  * por dónde pasa cada uso.
  */
+#include "session.h"
 #include "weapons.h"
 #include "death.h"
 #include "inv.h"
@@ -266,8 +267,9 @@ static int try_apply(Pend *q, uint32_t level)
 void sync_frame(AimpNet *net, uint32_t level)
 {
     g_level = level;
-    int pins = pins_sync_enabled(), throws = throw_sync_enabled(), invs = inv_sync_enabled() || death_coop_enabled() || weapons_enabled();
-    if ((!g_on && !pins && !throws && !invs) || !net || !net->mode)
+    int throws = throw_sync_enabled();
+    /* con red siempre se despacha: la huella de la partida (session.c) va siempre; inventario, muerte y armas, si están */
+    if (!net || !net->mode)
         return;
     int64_t now = qpc_now();
     AimpEvt e;
@@ -287,6 +289,10 @@ void sync_frame(AimpNet *net, uint32_t level)
         }
         if (e.kind == AIMP_EVT_COOP) { /* muerte en coop (death.c) */
             death_remote_event(&e);
+            continue;
+        }
+        if (e.kind == AIMP_EVT_SESSION) { /* huella de la partida (session.c) */
+            session_remote_event(&e);
             continue;
         }
         if (e.kind == AIMP_EVT_INV_FULL) { /* inventario completo del host (inv.c) */

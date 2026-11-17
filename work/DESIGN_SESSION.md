@@ -18,7 +18,7 @@ _2026-11-17. Preguntas del usuario: "¿qué pasa si cada uno tiene un save disti
 
 ### Propuesta: la partida la define el host
 
-1. **Al conectar, comparar:** el cliente manda un resumen de su save (nivel, misión, hash del archivo de save actual y de `PROGRESSION.ais`). Si no coincide con el del host, se avisa y no se sincroniza nada.
+1. **Al conectar, comparar** (hecho, 2026-11-17: `mod/src/session.c`, evento 10). La huella es el nivel más la posición y el yaw del jugador al aparecer después de cargar; con el mismo save coinciden al centímetro. Corrida 100: "misma partida" con la huella igual y "PARTIDAS DISTINTAS" con la de otro save. Por ahora solo avisa en el log; idea original: el cliente manda un resumen de su save (nivel, misión, hash del archivo de save actual y de `PROGRESSION.ais`). Si no coincide con el del host, se avisa y no se sincroniza nada.
 2. **Copiar el save del host:**
    - el host manda su save actual por la red (los slots son de 1 a 2 MB; hace falta un canal confiable con fragmentación y confirmación, que el UDP de hoy no tiene);
    - el cliente lo guarda como un slot propio (con backup, como `saves.sh`) y lo carga;
