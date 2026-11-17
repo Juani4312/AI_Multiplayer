@@ -20,10 +20,14 @@ encima del jugador).
 con jugador, manda un AIMP_EVT_THROW (protocolo v2) que sale de la posición del jugador del juego más
 (dx, dy, dz), con esa velocidad. Ej.: --throw "5:Thrown\\flare:0,1.4,1:0,3,8:118.8". Para probar los
 arrojables remotos (y AIMP_THROW_PROBE) sin nadie al teclado.
+--serve-save DIR (con --host: el juego hace join con AIMP_SAVE_SYNC=1): le pasa al juego los .ais de DIR como
+si fueran los saves del host (savesync.c; manda crudos). --fetch-save DIR (con --join: el juego es host): le pide
+al juego sus saves y escribe en DIR los que difieran (prueba la compresión LZ del mod).
 """
 import collections
 import argparse
 import functools
+import os
 import math
 import signal
 import socket
@@ -66,6 +70,227 @@ def pack_throw(eseq, level, pos, vel, name, time_left, tid=0):
                        EVT_THROW, 112, level) + data
 
 
+# ---- copia de saves (mod/src/savesync.h) ----
+XFER, X_REQ, X_MAN, X_WANT, X_DATA, X_ACK, X_DONE = 5, 1, 2, 3, 4, 5, 6
+XHDR = "<IBBBBI"  # XferHdr, 12 bytes
+XENT = "<16sII"   # XferEntry, 24 bytes
+XDATA = "<IBBBBIIIIH"  # XferHdr + chunk, total, blob_len, len (26 bytes) + datos
+CHUNK, WINDOW = 1024, 256
+
+
+def fnv(b):
+    h = 2166136261
+    for x in b:
+        h = ((h ^ x) * 16777619) & 0xFFFFFFFF
+    return h
+
+
+def fnv_fast(b):
+    # FNV-1a en Python puro tarda ~1 s por MB: se cachea por archivo (tamaño + mtime)
+    return fnv(b)
+
+
+def lz_dec(b, raw):
+    out, i = bytearray(), 0
+    while i < len(b):
+        tok = b[i]; i += 1
+        nl = tok >> 4
+        if nl == 15:
+            while True:
+                x = b[i]; i += 1; nl += x
+                if x != 255:
+                    break
+        out += b[i:i + nl]; i += nl
+        if i == len(b):
+            break
+        off = b[i] | b[i + 1] << 8; i += 2
+        ml = tok & 15
+        if ml == 15:
+            while True:
+                x = b[i]; i += 1; ml += x
+                if x != 255:
+                    break
+        ml += 4
+        st = len(out) - off
+        if off >= ml:
+            out += out[st:st + ml]
+        else:
+            pat = bytes(out[st:])
+            out += (pat * (ml // off + 1))[:ml]
+    if len(out) != raw:
+        raise ValueError(f"LZ: {len(out)} bytes en vez de {raw}")
+    return bytes(out)
+
+
+class SaveXfer:
+    """Un extremo de savesync: 'serve' (host) o 'fetch' (cliente)."""
+
+    def __init__(self, role, d, send):
+        self.role, self.dir, self.send = role, d, send
+        self.xid, self.files, self.blob, self.sent_at, self.acked = 0, [], b"", [], []
+        self.state, self.last_req, self.got, self.mask, self.t0 = "off", 0.0, None, 0, 0.0
+        self.sends = self.resends = 0
+        os.makedirs(d, exist_ok=True)
+
+    def hdr(self, op, n=0):
+        return struct.pack(XHDR, MAGIC, VERSION, XFER, op, n, self.xid)
+
+    def local(self):
+        out = []
+        for nm in sorted(os.listdir(self.dir)):
+            if nm.lower().endswith(".ais") and len(nm) < 16:
+                b = open(os.path.join(self.dir, nm), "rb").read()
+                out.append((nm, b))
+        return out
+
+    # host
+    def on_host(self, op, xid, data, now):
+        if op == X_REQ:
+            if not self.blob and not self.xid:
+                self.files = [(nm, len(b), fnv_fast(b), b) for nm, b in self.local()]
+                self.xid = (int(now * 1000) << 4 | 1) & 0xFFFFFFFF
+                print(f"SAVE serve: manifiesto {self.xid:08x} con {len(self.files)} saves de {self.dir}")
+            pkt = self.hdr(X_MAN, len(self.files)) + b"".join(
+                struct.pack(XENT, nm.encode(), sz, h) for nm, sz, h, _ in self.files)
+            self.send(pkt)
+        elif xid != self.xid:
+            return
+        elif op == X_WANT:
+            mask = struct.unpack_from("<I", data, 12)[0]
+            if self.blob or not mask:
+                return
+            parts = []
+            for i, (nm, sz, h, b) in enumerate(self.files):
+                if mask >> i & 1:
+                    parts.append(struct.pack("<BI", 0, len(b)) + b)
+            self.blob = b"".join(parts)
+            n = (len(self.blob) + CHUNK - 1) // CHUNK
+            self.sent_at, self.acked, self.t0 = [0.0] * n, [False] * n, now
+            print(f"SAVE serve: el juego pide {[f[0] for i, f in enumerate(self.files) if mask >> i & 1]}: "
+                  f"{len(self.blob)} bytes, {n} fragmentos")
+        elif op == X_ACK and self.blob:
+            nxt = struct.unpack_from("<I", data, 12)[0]
+            bits = data[16:16 + WINDOW // 8]
+            for c in range(min(nxt, len(self.acked))):
+                self.acked[c] = True
+            for i in range(WINDOW):
+                if i // 8 < len(bits) and bits[i // 8] >> (i % 8) & 1 and nxt + 1 + i < len(self.acked):
+                    self.acked[nxt + 1 + i] = True
+        elif op == X_DONE and self.blob:
+            st, wr = struct.unpack_from("<II", data, 12)
+            print(f"SAVE serve: el juego {'copió' if st == 0 else 'NO copió (código %d)' % st} los saves "
+                  f"(escritos {wr:08x}); {self.sends} envíos, {self.resends} reenvíos, {now - self.t0:.1f} s")
+            self.blob, self.xid = b"", 0
+
+    def tick_host(self, now):
+        if not self.blob:
+            return
+        n, sent, total = len(self.acked), 0, len(self.blob)
+        base = next((c for c in range(n) if not self.acked[c]), n)
+        for c in range(base, min(n, base + WINDOW)):
+            if sent >= 64:
+                break
+            if self.acked[c] or (self.sent_at[c] and now - self.sent_at[c] < 0.25):
+                continue
+            chunk = self.blob[c * CHUNK:(c + 1) * CHUNK]
+            self.send(struct.pack(XDATA, MAGIC, VERSION, XFER, X_DATA, 0, self.xid, c, n, total, len(chunk)) + chunk)
+            if self.sent_at[c]:
+                self.resends += 1
+            self.sent_at[c] = now
+            self.sends += 1
+            sent += 1
+
+    # cliente
+    def on_client(self, op, xid, data, now):
+        if op == X_MAN and self.state == "wait":
+            n = data[7]
+            self.xid = xid
+            self.files = [struct.unpack_from(XENT, data, 12 + 24 * i) for i in range(n)]
+            mine = dict(self.local())
+            self.mask = 0
+            for i, (nm, sz, h) in enumerate(self.files):
+                nm = nm.rstrip(b"\0").decode()
+                b = mine.get(nm)
+                if b is None or len(b) != sz or fnv_fast(b) != h:
+                    self.mask |= 1 << i
+            names = [self.files[i][0].rstrip(b"\0").decode() for i in range(n) if self.mask >> i & 1]
+            print(f"SAVE fetch: manifiesto del juego: {n} saves; distintos: {names or 'ninguno'}")
+            self.state = "xfer" if self.mask else "done"
+            self.last_req = 0.0
+        elif xid != self.xid or self.state != "xfer":
+            return
+        elif op == X_DATA:
+            _, _, _, _, _, _, c, total, blen, ln = struct.unpack_from(XDATA, data)
+            if self.got is None:
+                self.got, self.buf, self.t0 = [False] * total, bytearray(blen), now
+                print(f"SAVE fetch: recibiendo {blen} bytes en {total} fragmentos")
+            self.buf[c * CHUNK:c * CHUNK + ln] = data[26:26 + ln]
+            self.got[c] = True
+            self.ack_due = True
+            if all(self.got):
+                self.ack()
+                self.apply(now)
+
+    def ack(self):
+        nxt = next((c for c, g in enumerate(self.got) if not g), len(self.got))
+        bits = bytearray(WINDOW // 8)
+        for i in range(WINDOW):
+            if nxt + 1 + i < len(self.got) and self.got[nxt + 1 + i]:
+                bits[i // 8] |= 1 << (i % 8)
+        self.send(self.hdr(X_ACK) + struct.pack("<I", nxt) + bytes(bits))
+
+    def apply(self, now):
+        off, status, written = 0, 0, 0
+        for i, (nm, sz, h) in enumerate(self.files):
+            if not self.mask >> i & 1:
+                continue
+            nm = nm.rstrip(b"\0").decode()
+            method, cl = struct.unpack_from("<BI", self.buf, off)
+            raw = bytes(self.buf[off + 5:off + 5 + cl])
+            off += 5 + cl
+            try:
+                b = raw if method == 0 else lz_dec(raw, sz)
+            except Exception as e:
+                print(f"SAVE fetch: {nm}: {e}")
+                status = 3
+                continue
+            if fnv_fast(b) != h:
+                print(f"SAVE fetch: {nm}: hash distinto")
+                status = 4
+                continue
+            open(os.path.join(self.dir, nm), "wb").write(b)
+            written |= 1 << i
+            print(f"SAVE fetch: {nm}: {cl} -> {sz} bytes ({'LZ' if method else 'crudo'}), hash OK")
+        print(f"SAVE fetch: {'listo' if not status else 'con errores'} en {now - self.t0:.1f} s; escritos {written:08x}")
+        for _ in range(3):
+            self.send(self.hdr(X_DONE) + struct.pack("<II", status, written))
+        self.state = "done"
+
+    def tick_client(self, now):
+        if self.state == "off":
+            self.state = "wait"
+            print("SAVE fetch: pidiendo los saves del juego")
+        if self.state == "wait" and now - self.last_req > 1.0:
+            self.send(self.hdr(X_REQ))
+            self.last_req = now
+        if self.state == "xfer":
+            if self.got is None and now - self.last_req > 0.5:
+                self.send(self.hdr(X_WANT) + struct.pack("<I", self.mask))
+                self.last_req = now
+            if self.got is not None and getattr(self, "ack_due", False) and now - getattr(self, "last_ack", 0) > 0.03:
+                self.ack()
+                self.ack_due, self.last_ack = False, now
+
+    def on_packet(self, data, now):
+        if len(data) < 12:
+            return
+        _, _, _, op, _, xid = struct.unpack_from(XHDR, data)
+        (self.on_host if self.role == "serve" else self.on_client)(op, xid, data, now)
+
+    def tick(self, now):
+        (self.tick_host if self.role == "serve" else self.tick_client)(now)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     g = ap.add_mutually_exclusive_group(required=True)
@@ -86,6 +311,8 @@ def main():
     ap.add_argument("--rest", action="append", default=[],
                     help="T:id:dx,dy,dz -> AIMP_EVT_THROW_REST del lanzamiento id (1 = el primer --throw) en la "
                          "posición del jugador del juego + (dx, dy, dz)")
+    ap.add_argument("--serve-save", help="con --host: carpeta con .ais que el peer le pasa al juego (AIMP_SAVE_SYNC=1)")
+    ap.add_argument("--fetch-save", help="con --join: carpeta donde el peer copia los saves del juego host")
     a = ap.parse_args()
     # SIGTERM (y SIGINT, que en segundo plano viene ignorado) terminan ordenado: BYE + resumen.
     def stop(*_):
@@ -104,6 +331,10 @@ def main():
         ip, port = a.join.rsplit(":", 1)
         peer = (ip, int(port))
         print(f"mandando a {peer}")
+    xfer = None
+    if a.serve_save or a.fetch_save:
+        xfer = SaveXfer("serve" if a.serve_save else "fetch", a.serve_save or a.fetch_save,
+                        lambda pkt: peer and s.sendto(pkt, peer))
     seq, t0, last_print, last_send = 0, time.monotonic(), 0.0, 0.0
     got, lost, last_seq, last = 0, 0, None, None
     hist = collections.deque()  # (t, pos, yaw, nivel) del jugador del juego, para --replay
@@ -135,10 +366,14 @@ def main():
             now = time.monotonic()
             while True:
                 try:
-                    data, addr = s.recvfrom(256)
+                    data, addr = s.recvfrom(2048)
                 except BlockingIOError:
                     break
                 except ConnectionResetError:
+                    continue
+                if len(data) >= 12 and data[5] == XFER and xfer:
+                    if struct.unpack_from("<I", data)[0] == MAGIC and addr == peer:
+                        xfer.on_packet(data, now)
                     continue
                 if len(data) < SIZE:
                     continue
@@ -187,6 +422,8 @@ def main():
                     pos = (cx + 3 * math.cos(ang), cy, cz + 3 * math.sin(ang))
                     s.sendto(pack(seq, a.level, pos, math.atan2(math.cos(ang), -math.sin(ang))), peer)
                 last_send = now
+            if xfer and peer and last is not None:
+                xfer.tick(now)
             for th in throws:
                 if th[5] or t_player is None or not peer or now - t_player < th[0]:
                     continue
