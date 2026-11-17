@@ -57,6 +57,7 @@ add_library(aimp_winmm SHARED
   src/session.c
   src/savesync.c
   src/ui.c
+  src/diff.c
   src/log.c
   src/mem.c
   src/fmt.c

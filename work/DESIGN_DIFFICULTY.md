@@ -67,6 +67,32 @@ Los nombres de los campos están en `AI.exe`: el cargador tiene una tabla nombre
 - **Desangrado y revivir en persona: a futuro.** Idea: el caído queda forzado agachado y con el stick escalado (el mod ya intercepta el mando), con el efecto de vida baja del juego; un temporizador; el compañero lo revive gastando un botiquín a menos de 2 m (`inv.c` ve el consumo).
 - **Varios aliens: a futuro** (complejo).
 
+## Investigación (2026-11-17, estático y corridas 123–124)
+
+- **Cargador:** `FUN_006f8b00`, método virtual (vtable `0x12F1300`), `ret 0xC`. Parsea un `DifficultySetting` y escribe en la estructura del tercer argumento. Recorrí su código (`push <nombre>` → `atof` → `fstp [reg+off]`) y salió el layout completo:
+  - **bloque del Alien** (en la estructura): `+0x00` decrease_sweep_duration, `+0x04` increase_sweep_duration, `+0x08..+0x14` near_target_exclusion_radius (primer acecho mín/máx, siguientes mín/máx), `+0x18..+0x24` near_objective_exclusion_radius (ídem), `+0x28` menace_gauge_decrease_time, `+0x2C` menace_cool_down_time, `+0x30` meance_deemed_time, `+0x34` max_menaces, `+0x38` menace_gauge_seconds_to_fill, `+0x3C/+0x40` sweep_box, `+0x44/+0x48` Vent_Attract_Time min/máx, `+0x4C..+0x64` backstage_area_sweep (role_timeout, ambush_timeout, min/max_distance, min/max_idle_time, killtrap_time);
+  - **por plantilla de NPC:** vector en `+0x68..+0x70` de punteros a bloques de 0x40, con el índice por nombre (`FUN_006d8d90` sobre `[g_root+0x98]`): `+0x00` max_hearing_distance, `+0x04/+0x08` weapon_sound (sola/combinada), `+0x0C/+0x10` movement_sound, `+0x14/+0x18` flash_light, `+0x1C/+0x20` visual, `+0x24` damage_dealt_scalar, `+0x28` damage_received_scalar, `+0x2C/+0x30` attack_pace (por NPC/máx), `+0x34` shooting_in_cover, `+0x38` time_between_shots, `+0x3C` suspicious_item_loop. Los valores por defecto son 0 para los modificadores y 1,0 para los factores.
+- **Runtime (corrida 123):** el juego carga **las 5 dificultades al arrancar** (0,47 s, antes del menú), cada una en su estructura. El objeto que las maneja (el `this` del cargador) tiene en `+0x08` un arreglo de 5 punteros, en `+0x0C` la cantidad y en `+0x24..+0x2C` el valor 3 (¿índice activo?).
+- **Los modificadores del Alien son sumas, no factores** (se suman a los valores base de `ALIENCONFIGS`):
+
+| campo | arreglo[0] | [1] | [2] | [3] | [4] |
+|-------|-----|-----|-----|-----|-----|
+| radio de acecho mín/máx (m) | +10/+10 | +5/+5 | 0/0 | **−5/0** | +12/+15 |
+| menace decrease / cool down (s) | +6 | +3 | 0 | **−3** | +9 |
+| menace deemed time (s) | −10 | −5 | 0 | 0 | −15 |
+| max_menaces | −2 | −1 | 0 | **+1** | −3 |
+| seconds_to_fill | −1,5 | −0,75 | 0 | 0 | −1,5 |
+| Vent_Attract min/máx (s) | +20/+60 | +10/+20 | 0/0 | **−10/−20** | +30/+80 |
+| backstage role_timeout (s) | +40 | +20 | 0 | 0 | +60 |
+| backstage min/max distance | 0/0 | 0/0 | 0/0 | **−5/−10** | 0/+10 |
+
+  Si el índice es Novice, Easy, Medium, Hard, Nightmare: Medium es la base, Hard acerca al Alien y lo hace volver más seguido, y **Nightmare tiene el bloque del Alien más suave que Novice**. Puede ser que en Nightmare la dificultad venga de otro lado: los sentidos, el `Template_Name HARD` que se ve en `IRON.BML`, o detectores y HUD. Hay que confirmar el orden cambiando la dificultad en el menú y viendo el índice.
+- **Cómo implementar la dificultad del mod sobre la del juego:**
+  - en el hook del cargador, guardar los 5 punteros (cada carga parte de los archivos: no hay acumulación);
+  - según la dificultad del mod (que manda el host), **sumar deltas propios a las 5 estructuras**. Así la dificultad elegida en el juego sigue mandando como base, y "Normal" del mod suma 0;
+  - deltas del lado difícil: radio de acecho −5/−10 m más, menace −3/−6 s más, max_menaces +1/+2, Vent_Attract −10/−20 s más, backstage distance −5/−10, y los sentidos del ALIEN (`+0x00..+0x20` de su plantilla) en positivo;
+  - se pueden cambiar en caliente (al conectar el cliente), porque el juego lee las estructuras mientras corre. A confirmar con un efecto visible: con el radio de acecho muy negativo, el Alien del save `alien` se acerca antes.
+
 ## Orden sugerido
 
 1. Ubicar las estructuras de dificultad cargadas (tabla nombre → campo) y probar un multiplicador sobre un parámetro del Alien en el save `alien`. Es el primer resultado visible.
