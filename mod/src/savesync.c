@@ -51,6 +51,7 @@ struct SaveSync {
     uint32_t notify_seq, notify_in;
     int notify_left;
     int backed_up; /* el backup se hace en la primera copia de la sesión (la que tiene los saves propios) */
+    int first_result; /* para el menú: 0 sin terminar, 1 copió, 2 ya iguales, 3 error */
     /* caché de hashes por (nombre, tamaño, fecha): no se vuelven a leer los saves que no cambiaron */
     struct {
         char name[XFER_NAME];
@@ -621,6 +622,8 @@ static void ckpt_tick(SaveSync *s, int64_t now)
 
 static void client_finish(SaveSync *s, uint32_t status)
 {
+    if (!s->first_result)
+        s->first_result = status ? 3 : s->written ? 1 : 2;
     s->done_status = status;
     s->done_left = 3;
     s->state = status ? ST_ERR : ST_DONE;
@@ -978,6 +981,27 @@ SaveSync *savesync_new(AimpNet *net, const SaveStore *st, int want, const wchar_
 }
 
 int savesync_state(const SaveSync *s) { return s->state; }
+
+int savesync_ui(void)
+{
+    const SaveSync *s = &g_game;
+    const AimpNet *n = s->net;
+    if (!g_game_on || !n || !n->mode)
+        return SSUI_NONE;
+    if (n->mode == 1)
+        return n->have_remote ? SSUI_HOST_CONNECTED : SSUI_HOST_WAITING;
+    if (!n->have_remote)
+        return SSUI_CLI_WAITING;
+    if (!s->want)
+        return SSUI_CLI_CONNECTED;
+    if (s->first_result == 1)
+        return SSUI_CLI_COPIED;
+    if (s->first_result == 2)
+        return SSUI_CLI_SAME;
+    if (s->first_result == 3)
+        return SSUI_CLI_ERROR;
+    return SSUI_CLI_COPYING;
+}
 uint32_t savesync_written_mask(const SaveSync *s) { return s->written; }
 void savesync_test_drop(SaveSync *s, int every) { s->drop_every = every; }
 uint32_t savesync_ckpt_writes(const SaveSync *s) { return s->ckpt_writes; }

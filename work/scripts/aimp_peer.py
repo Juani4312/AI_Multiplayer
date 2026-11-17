@@ -155,6 +155,8 @@ class SaveXfer:
     # host
     def on_host(self, op, xid, data, now):
         if op == X_REQ:
+            if now < getattr(self, "ready_at", 0.0):
+                return  # --serve-delay: todavía no contesta
             if not self.blob and not self.xid:
                 self.files = [(nm, len(b), fnv_fast(b), b) for nm, b in self.local()]
                 self.xid = (int(now * 1000) << 4 | 1) & 0xFFFFFFFF
@@ -340,6 +342,7 @@ def main():
                          "posición del jugador del juego + (dx, dy, dz)")
     ap.add_argument("--serve-save", help="con --host: carpeta con .ais que el peer le pasa al juego (AIMP_SAVE_SYNC=1)")
     ap.add_argument("--fetch-save", help="con --join: carpeta donde el peer copia los saves del juego host")
+    ap.add_argument("--serve-delay", type=float, default=0.0, help="con --serve-save: segundos antes de contestar el pedido")
     ap.add_argument("--serve-after", action="append", default=[],
                     help="T:DIR (con --serve-save): T segundos después del jugador, sirve DIR y avisa que guardó")
     a = ap.parse_args()
@@ -364,6 +367,7 @@ def main():
     if a.serve_save or a.fetch_save:
         xfer = SaveXfer("serve" if a.serve_save else "fetch", a.serve_save or a.fetch_save,
                         lambda pkt: peer and s.sendto(pkt, peer))
+        xfer.ready_at = time.monotonic() + a.serve_delay
     seq, t0, last_print, last_send = 0, time.monotonic(), 0.0, 0.0
     got, lost, last_seq, last = 0, 0, None, None
     hist = collections.deque()  # (t, pos, yaw, nivel) del jugador del juego, para --replay

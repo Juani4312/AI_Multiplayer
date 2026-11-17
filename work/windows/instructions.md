@@ -302,12 +302,13 @@ Pasos:
 
 Reportar: los tiempos de la copia (líneas `SAVESYNC` con su hora) y si "Continue" cargó el mismo lugar que el host.
 
-### 8g. Segunda prueba de a dos: load y game over (2026-11-17, DLL `a7cd254e…`)
+### 8g. Segunda prueba de a dos: load y game over (2026-11-17, DLL `fb157b7a…`)
 
 Arreglos después de la primera prueba conjunta (8e/8f):
 - **Agachado:** al pararse caminando, el avatar quedaba agachado. Ahora siempre recibe la animación de parado.
 - **Windows:** el mod no reconocía funciones cuyo código tiene direcciones absolutas, porque Windows carga el juego en otra dirección (ASLR). Así fallaba "guardar el arma" (`FUN_007c3980 … no coincide`). Ahora el mod lo tiene en cuenta: esa línea no tendría que aparecer más.
 - **Saves:** el host avisa "guardé" solo si cambió el contenido. Antes avisaba unas 17 veces en 23 minutos sin cambios.
+- **Mensajes en el menú:** en Play Game, la línea de abajo muestra el estado del coop ("esperando al host… no entres todavía", "partida del host copiada. Ya podés entrar"). "Continue Game" dice "esperá al host", "esperá, copiando" o "partida del host". No hace falta mirar el log para saber cuándo entrar.
 - **Conductos:** entrar a un conducto ya no se replica. Antes el avatar del otro "entraba" y la escotilla quedaba ocupada: en la laptop no aparecía la "E".
 - **Armas de a una: se deja de usar.** Los dos tienen todas las armas y la munición de reserva es compartida (inventario compartido). Instalar **sin** `AIMP_SYNC_WEAPONS`.
 

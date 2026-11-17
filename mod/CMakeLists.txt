@@ -56,6 +56,7 @@ add_library(aimp_winmm SHARED
   src/weapons.c
   src/session.c
   src/savesync.c
+  src/ui.c
   src/log.c
   src/mem.c
   src/fmt.c
