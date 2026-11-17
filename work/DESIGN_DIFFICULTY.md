@@ -93,6 +93,16 @@ Los nombres de los campos están en `AI.exe`: el cargador tiene una tabla nombre
   - deltas del lado difícil: radio de acecho −5/−10 m más, menace −3/−6 s más, max_menaces +1/+2, Vent_Attract −10/−20 s más, backstage distance −5/−10, y los sentidos del ALIEN (`+0x00..+0x20` de su plantilla) en positivo;
   - se pueden cambiar en caliente (al conectar el cliente), porque el juego lee las estructuras mientras corre. A confirmar con un efecto visible: con el radio de acecho muy negativo, el Alien del save `alien` se acerca antes.
 
+### Corrida 125 (save `alien`, misión 6)
+
+- **Índice activo:** el objeto de la dificultad tiene en `+0x24..+0x2C` el índice activo. Vale **2** en el menú y **3** después de cargar la partida: **la dificultad viene del save**. Como el cliente carga la partida del host, los dos quedan con la misma base.
+- **Orden del arreglo** (deducido de los valores, que forman una escalera): `[0]` Easy (+10), `[1]` Medium (+5), `[2]` **Hard = base (0)**, `[3]` Nightmare (−5, +1 amenaza), `[4]` Novice (+12/+15). Novice al final cuadra con que se agregó en un parche. La partida vieja del usuario (`safezone`/`alien`) está en **Nightmare** (índice 3). Sin confirmar en el menú: el menú de opciones de juego dentro de la partida no tiene selector de dificultad (tiene esquema de control, sensibilidad, invertir ejes, asistencia de puntería y vibración, con sliders y selectores: sirve de modelo para DESIGN_CONFIG_MENU).
+- **Prueba de efecto** (`memsrv W`, nuevo):
+  - con la estructura activa endurecida (radios de acecho −30 m, menace −10 s, max_menaces +3, conductos −120/−240 s, role_timeout −200, distancias de backstage −20/−30) y recargando el checkpoint, el Alien quedó estacionado justo encima del jugador **a los ~42 s** y no se movió más;
+  - con los valores originales, en la misma sesión, recorrió los conductos 154 s **sin estacionarse**; en la corrida 118 se estacionó a los ~74 s;
+  - es evidencia de que el juego usa esos valores, pero no es concluyente: al principio de la misión 6 el script retiene al Alien en los conductos. Para ver el efecto en la caza hace falta avanzar hasta que baje (alguien jugando).
+- `memsrv`: `W <addr> <hex>` (solo con `AIMP_MEMSRV_TEST=1`).
+
 ## Orden sugerido
 
 1. Ubicar las estructuras de dificultad cargadas (tabla nombre → campo) y probar un multiplicador sobre un parámetro del Alien en el save `alien`. Es el primer resultado visible.
