@@ -157,6 +157,9 @@ static int64_t g_crouch_chk;
  * pose (AIMP_GHOST_CROUCH_SET / _ANIM: texto o 0x<hash>) y el títere lo sigue moviendo en esa pose. Al pararse,
  * MOVE_TOWARDS de nuevo. AIMP_GHOST_CROUCH_DROP_CM baja el modelo mientras el otro está agachado (con cualquier modo). */
 static AnimReq g_pose;
+/* el otro está caído (death.c): pose AIMP_GHOST_DOWNED_ANIM (cower_low_idle) aunque esté parado */
+static int g_remote_downed;
+static uint32_t g_downed_anim;
 static int g_pose_ok, g_pose_on, g_pose_logged, g_crouch_drop_cm, g_pose_tick = 1;
 static uint32_t g_pose_n, g_pose_list[8];
 static int g_pose_nlist, g_pose_idx;
@@ -318,6 +321,15 @@ static uint32_t env_hash(const wchar_t *name, const char *def, char *txt, size_t
     return anim_hash(txt);
 }
 
+void ghost_set_remote_downed(int on)
+{
+    if (on == g_remote_downed)
+        return;
+    g_remote_downed = on;
+    g_pose_on = 0; /* se vuelve a dar la pose (la de caído o la de agachado) */
+    log_printf("GHOST: el otro jugador %s", on ? "quedó caído: el avatar pasa a la pose de caído" : "revivió");
+}
+
 static void pose_config(void)
 {
     char ts[96], ta[96];
@@ -360,6 +372,10 @@ static void pose_config(void)
     g_pose.no_foot_ik = (f & 64) != 0;
     g_pose.start_instantly = (f & 128) != 0;
     g_pose_tick = aimp_env_int(L"AIMP_GHOST_CROUCH_TICK", 1);
+    {
+        char td[64];
+        g_downed_anim = env_hash(L"AIMP_GHOST_DOWNED_ANIM", "cower_low_idle", td, sizeof td);
+    }
     g_pose_ok = anim_ready() && g_pose.anim;
     log_printf("AIMP_GHOST_CROUCH=4 (pose): set \"%s\" 0x%08x, animación \"%s\" 0x%08x, x%d, flags %d, bajar %d cm%s", ts, g_pose.set, ta,
                g_pose.anim, g_pose.play_count, f, g_crouch_drop_cm, g_pose_ok ? "" : " (NO disponible: falta PLAY_ANIMATION o la animación)");
@@ -1157,7 +1173,7 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             g_target[11] = s_p[2] + g_rm_v[2] * lk;
             float lt[3] = { g_target[3], g_target[7], g_target[11] };
             if (g_crouch_mode == 4 && g_pose_ok) {
-                if (g_rm_crouch) {
+                if (g_rm_crouch || g_remote_downed) {
                     uint32_t ex = 0, pe = 0, xt = 0xFFFFFFFFu;
                     mem_u32(ctrl + CMDCTRL_EXEC, &ex);
                     mem_u32(ctrl + CMDCTRL_CURRENT, &pe);
@@ -1182,7 +1198,10 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                         if (!g_pose_on && g_pose_nlist > 1) {
                             g_pose.anim = g_pose_list[g_pose_idx % g_pose_nlist];
                             g_pose_idx++;
-                        }
+                        } else if (!g_pose_on)
+                            g_pose.anim = g_pose_nlist ? g_pose_list[0] : g_pose.anim;
+                        if (g_remote_downed && g_downed_anim)
+                            g_pose.anim = g_downed_anim;
                         log_printf("GHOST: títere: el otro se agachó; PLAY_ANIMATION de la pose 0x%08x (%u)%s", g_pose.anim, g_pose_n + 1,
                                    g_pose_on ? " (la anterior ya no estaba)" : "");
                         g_allow_cmd = 1;

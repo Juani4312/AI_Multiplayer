@@ -18,6 +18,7 @@
  * AIMP_TRACE_USE=1 (o AIMP_SYNC_USE=1) además hookea los dos handlers, solo para loguear
  * por dónde pasa cada uso.
  */
+#include "death.h"
 #include "inv.h"
 #include "sync.h"
 #include "game.h"
@@ -107,6 +108,8 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_use
             log_printf("SYNC uso local %ld: this 0x%08x (vtable rva 0x%x, vf[1] rva 0x%x), desde rva 0x%x | objetivo %s, personaje %s%s, flag %08x",
                        (long)n, (unsigned)(uintptr_t)self, rva(vt), rva(vf1), rva((uint32_t)(uintptr_t)__builtin_return_address(0)),
                        t, c, mine ? " (jugador local)" : "", rd32(p + 16));
+        if (mine && aimp_memcmp(t, "1e38b898", 8) == 0)
+            death_on_save_terminal(); /* terminal de guardado: revive al compañero caído (death.c) */
         if (mine && g_on && g_net && g_net->mode && skipped(t)) {
             log_printf("SYNC   no se manda: el objetivo empieza con un prefijo de AIMP_SYNC_USE_SKIP (acción del jugador, no del mundo)");
         } else if (mine && g_on && g_net && g_net->mode) {
@@ -262,7 +265,7 @@ static int try_apply(Pend *q, uint32_t level)
 void sync_frame(AimpNet *net, uint32_t level)
 {
     g_level = level;
-    int pins = pins_sync_enabled(), throws = throw_sync_enabled(), invs = inv_sync_enabled();
+    int pins = pins_sync_enabled(), throws = throw_sync_enabled(), invs = inv_sync_enabled() || death_coop_enabled();
     if ((!g_on && !pins && !throws && !invs) || !net || !net->mode)
         return;
     int64_t now = qpc_now();
@@ -275,6 +278,10 @@ void sync_frame(AimpNet *net, uint32_t level)
         if (e.kind == AIMP_EVT_THROW) { /* objetos arrojados y colocados (throw.c, hallazgo 17) */
             if (throws)
                 throw_remote_event(&e, level);
+            continue;
+        }
+        if (e.kind == AIMP_EVT_COOP) { /* muerte en coop (death.c) */
+            death_remote_event(&e);
             continue;
         }
         if (e.kind == AIMP_EVT_INV) { /* inventario compartido (inv.c) */
