@@ -181,3 +181,4 @@
 - 02:10 (2026-11-17) Lector de memoria por archivo (memsrv), esqueleto por personaje (avatar mujer preferido), muerte: FUN_007d0c10, game over del engine (disparador sin ubicar), modo caído con Character+0x4253 (corrida 92 OK). DESIGN_DEATH.md. dist 5473f92e.
 - 02:15 (2026-11-17) Cierre a pedido del usuario ("desactiva el mod así juego"): todo commiteado, mod desinstalado (revert).
 - 02:30 (2026-11-17) DESIGN_SESSION.md: preguntas del usuario sobre saves distintos (hoy solo se compara el nivel) e inventario compartido.
+- 02:45 (2026-11-17) Armas de a una confirmadas (4/5 m, libre si el dueño cae o se desconecta, decide el host). Empieza el trabajo de inventario (local, ws 10).
