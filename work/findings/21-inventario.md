@@ -44,6 +44,14 @@ Holdable: 33 pipe_bomb (3), 34 molotov_cocktail (3), 35 emp_mine (3), 36 smoke_b
   - corrida 93: bengalas 2 → 4 → 3, botiquín 1 → 2 → 0 (slot vaciado), combustible 200 → 190 y noisemaker 0 → 2 → 0 (ítem nuevo), sin eco;
   - corrida 94: sin eventos espurios al cargar, escopeta recortada al máximo (1 → 1), munición 9 mm 5 → 10 y molotov nuevo 0 → 1.
 
+## Inventario completo del host (corridas 98–99)
+
+- `AIMP_EVT_INV_FULL` (9, `InvFull`): el host manda su inventario entero, en partes de 12 ítems, cuando se conecta el otro y después de cada carga (pasados los 3 s de asentamiento).
+- El cliente junta las partes. Con la última, primero manda sus cambios locales pendientes y después fija cada cantidad a la del host, y saca lo que el host no tiene. Todo con las mismas funciones del juego y sin eco.
+- Corrida 98 (host): 17 ítems en 2 partes al conectarse el peer.
+- Corrida 99 (cliente, con el peer de host mandando un inventario modificado): scrap 25 → 35, bengalas 2 → 6, pipe 1 → 0; 3 correcciones exactas.
+- Así, aunque arranquen con inventarios distintos, quedan iguales al del host.
+
 ## Preguntas abiertas
 
 1. La munición cargada en el arma (instancia en el slot `+4`) no está en el slot. La reserva es la que se comparte; el cargador viaja con el arma (DESIGN_SESSION).

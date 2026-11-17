@@ -27,4 +27,21 @@ typedef struct {
 } InvEvt; /* 108 bytes */
 #pragma pack(pop)
 
+/* Payload de AIMP_EVT_INV_FULL (2026-11-17): el inventario completo del host, en partes de hasta 12 ítems. El cliente
+ * fija sus cantidades a las del host (y saca lo que el host no tiene) al recibir la última parte. Se manda al conectarse
+ * el otro y después de cada carga. */
+#define INV_FULL_MAX 12
+#pragma pack(push, 1)
+typedef struct {
+    uint16_t part, nparts;
+    uint32_t serial; /* para juntar las partes de un mismo envío */
+    uint32_t n;
+    struct {
+        uint32_t guid;
+        int32_t count;
+    } d[INV_FULL_MAX];
+} InvFull; /* 108 bytes */
+#pragma pack(pop)
+void inv_full_event(const AimpEvt *e);
+
 #endif
