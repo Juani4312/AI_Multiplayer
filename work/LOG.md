@@ -189,3 +189,4 @@
 - 03:43 (2026-11-17) Corrida 95 (safezone): muerte en coop por red verificada con el peer, incluido el game over cuando caen los dos.
 - 03:54 (2026-11-17) Corridas 96-97: armas de a una (weapons.c, AIMP_SYNC_WEAPONS) con lectura del arma en mano y eventos verificados; el bloqueo queda para una prueba con persona.
 - 03:54 (2026-11-17) instructions.md 8e: prueba con dos máquinas de agachado, inventario, muerte y armas.
+- 04:01 (2026-11-17) Corridas 98-99: inventario completo del host (evento 9) mandado como host y aplicado como cliente (3 correcciones exactas).

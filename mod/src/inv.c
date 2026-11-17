@@ -47,6 +47,13 @@ static int g_nbase, g_have_base;
 static uint32_t g_player, g_level;
 static int64_t g_last, g_settle_until;
 static uint32_t g_changes, g_sent, g_applied;
+/* inventario completo: host -> cliente */
+static int g_full_due, g_had_remote;
+static uint32_t g_full_serial;
+static Item g_full[MAX_ITEMS];
+static int g_nfull;
+static uint32_t g_full_rx_serial;
+static uint16_t g_full_rx_parts;
 
 int inv_sync_enabled(void) { return g_sync; }
 
@@ -197,6 +204,32 @@ static void detect(void)
     }
 }
 
+/* Host: manda el inventario completo, en partes. */
+static void send_full(void)
+{
+    Item cur[MAX_ITEMS];
+    int n = scan(cur, NULL);
+    if (n < 0)
+        return;
+    g_full_due = 0;
+    g_full_serial++;
+    int nparts = n ? (n + INV_FULL_MAX - 1) / INV_FULL_MAX : 1;
+    for (int p = 0; p < nparts; p++) {
+        InvFull f;
+        aimp_memset(&f, 0, sizeof f);
+        f.part = (uint16_t)p;
+        f.nparts = (uint16_t)nparts;
+        f.serial = g_full_serial;
+        for (int i = p * INV_FULL_MAX; i < n && f.n < INV_FULL_MAX; i++) {
+            f.d[f.n].guid = cur[i].guid;
+            f.d[f.n].count = cur[i].count;
+            f.n++;
+        }
+        net_event(g_net, AIMP_EVT_INV_FULL, g_level, &f, sizeof f);
+    }
+    log_printf("INV: inventario completo mandado al cliente (%d ítems, %d partes, envío %u)", n, nparts, g_full_serial);
+}
+
 void inv_frame(int64_t now, int64_t freq, uint32_t player, uint32_t level)
 {
     if (!g_trace && !g_sync)
@@ -210,7 +243,11 @@ void inv_frame(int64_t now, int64_t freq, uint32_t player, uint32_t level)
         /* corrida 93: las armas entran al inventario ~0,3 s después de que aparece el jugador; durante 3 s la lectura
          * solo actualiza la base (no manda nada) */
         g_settle_until = now + freq * aimp_env_int(L"AIMP_INV_SETTLE_MS", 3000) / 1000;
+        g_full_due = 1; /* después de una carga, el host manda todo */
     }
+    if (g_net && g_net->have_remote && !g_had_remote)
+        g_full_due = 1; /* se conectó el otro */
+    g_had_remote = g_net && g_net->have_remote;
     if (!player || now - g_last < freq / 10)
         return;
     g_last = now;
@@ -225,6 +262,8 @@ void inv_frame(int64_t now, int64_t freq, uint32_t player, uint32_t level)
         return;
     }
     detect();
+    if (g_full_due && g_sync && g_net && g_net->mode == 1 && g_net->have_remote)
+        send_full();
 }
 
 static void apply_one(uint32_t guid, int32_t delta)
@@ -303,4 +342,53 @@ void inv_install(AimpNet *net)
         g_sync = 0;
     }
     log_printf("INV: inventario %s", g_sync ? "compartido (AIMP_SYNC_INV)" : "solo traza (AIMP_TRACE_INV)");
+}
+
+/* Cliente: junta las partes y, con la última, fija las cantidades a las del host. */
+void inv_full_event(const AimpEvt *e)
+{
+    InvFull f;
+    if (!g_sync || e->size < sizeof f)
+        return;
+    aimp_memcpy(&f, e->data, sizeof f);
+    if (f.n > INV_FULL_MAX || f.nparts == 0 || f.part >= f.nparts)
+        return;
+    if (f.serial != g_full_rx_serial || f.part == 0) {
+        g_full_rx_serial = f.serial;
+        g_full_rx_parts = 0;
+        g_nfull = 0;
+    }
+    for (uint32_t i = 0; i < f.n && g_nfull < MAX_ITEMS; i++) {
+        g_full[g_nfull].guid = f.d[i].guid;
+        g_full[g_nfull].count = f.d[i].count;
+        g_nfull++;
+    }
+    g_full_rx_parts++;
+    if (g_full_rx_parts < f.nparts)
+        return;
+    if (g_player)
+        detect(); /* cambios locales pendientes primero */
+    Item cur[MAX_ITEMS];
+    int n = scan(cur, NULL), fixes = 0;
+    if (n < 0)
+        return;
+    for (int i = 0; i < g_nfull; i++) {
+        int32_t d = g_full[i].count - count_of(cur, n, g_full[i].guid);
+        if (d) {
+            apply_one(g_full[i].guid, d);
+            fixes++;
+        }
+    }
+    for (int i = 0; i < n; i++) {
+        if (count_of(g_full, g_nfull, cur[i].guid) == 0 && cur[i].count > 0) {
+            int found = 0;
+            for (int k = 0; k < g_nfull; k++)
+                found |= g_full[k].guid == cur[i].guid;
+            if (!found) {
+                apply_one(cur[i].guid, -cur[i].count);
+                fixes++;
+            }
+        }
+    }
+    log_printf("INV: inventario completo del host recibido (%d ítems): %d correcciones", g_nfull, fixes);
 }

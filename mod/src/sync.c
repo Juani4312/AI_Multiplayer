@@ -289,6 +289,10 @@ void sync_frame(AimpNet *net, uint32_t level)
             death_remote_event(&e);
             continue;
         }
+        if (e.kind == AIMP_EVT_INV_FULL) { /* inventario completo del host (inv.c) */
+            inv_full_event(&e);
+            continue;
+        }
         if (e.kind == AIMP_EVT_INV) { /* inventario compartido (inv.c) */
             inv_remote_event(&e);
             continue;
