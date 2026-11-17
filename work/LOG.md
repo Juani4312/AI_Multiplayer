@@ -182,3 +182,4 @@
 - 02:15 (2026-11-17) Cierre a pedido del usuario ("desactiva el mod así juego"): todo commiteado, mod desinstalado (revert).
 - 02:30 (2026-11-17) DESIGN_SESSION.md: preguntas del usuario sobre saves distintos (hoy solo se compara el nivel) e inventario compartido.
 - 02:45 (2026-11-17) Armas de a una confirmadas (4/5 m, libre si el dueño cae o se desconecta, decide el host). Empieza el trabajo de inventario (local, ws 10).
+- 03:15 (2026-11-17) El usuario está en una run sin morir. Las corridas 90-92 mataron al jugador sobre su save (antes de que jugara); no quedó grabado en los slots. Su partida actual se guardó en saves/run-sin-morir-2026-11-17.tar.gz. Regla: pruebas de muerte solo sobre safezone.
