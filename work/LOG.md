@@ -184,10 +184,11 @@
 - 02:45 (2026-11-17) Armas de a una confirmadas (4/5 m, libre si el dueño cae o se desconecta, decide el host). Empieza el trabajo de inventario (local, ws 10).
 - 03:15 (2026-11-17) El usuario está en una run sin morir. Las corridas 90-92 mataron al jugador sobre su save (antes de que jugara); no quedó grabado en los slots. Su partida actual se guardó en saves/run-sin-morir-2026-11-17.tar.gz. Regla: pruebas de muerte solo sobre safezone.
 - 03:25 (2026-11-17) mode.sh (juego/prueba): la partida del usuario va a saves/current.tar.gz y las pruebas cargan safezone. CLAUDE.md, PROGRESS, saves/README y memoria al día.
-- 03:55 (2026-11-17) Corridas 93-94: inventario compartido (inv.c, AIMP_SYNC_INV, hallazgo 21) verificado en una máquina con el peer.
+- 03:33 (2026-11-17) Corridas 93-94: inventario compartido (inv.c, AIMP_SYNC_INV, hallazgo 21) verificado en una máquina con el peer.
 - 03:39 (2026-11-17) Muerte en coop por red (escrito, sin probar): AIMP_EVT_COOP 7 (caído/revivido/revivir), los dos caídos -> game over, terminal de guardado (1e38b898) revive al compañero junto al que guarda, avatar del caído en cower_low_idle. Armas de a una trabado en local: el mando virtual no saca armas en la zona segura.
 - 03:43 (2026-11-17) Corrida 95 (safezone): muerte en coop por red verificada con el peer, incluido el game over cuando caen los dos.
 - 03:54 (2026-11-17) Corridas 96-97: armas de a una (weapons.c, AIMP_SYNC_WEAPONS) con lectura del arma en mano y eventos verificados; el bloqueo queda para una prueba con persona.
 - 03:54 (2026-11-17) instructions.md 8e: prueba con dos máquinas de agachado, inventario, muerte y armas.
 - 04:01 (2026-11-17) Corridas 98-99: inventario completo del host (evento 9) mandado como host y aplicado como cliente (3 correcciones exactas).
 - 04:08 (2026-11-17) Corrida 100: huella de la partida (session.c, evento 10): misma partida / PARTIDAS DISTINTAS verificado con el peer.
+- 04:12 (2026-11-17) Corrida 101: avatar del compañero caído visto acurrucado (captura). Cierre: mode.sh play (partida del usuario restaurada e idéntica a saves/current, mod desinstalado), README/PROGRESS/NOTES al día.

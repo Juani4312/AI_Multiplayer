@@ -3,17 +3,20 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-17, 02:15, cierre de sesión. **Mod desinstalado** (el usuario va a jugar sin el mod; para probar: `runtime_setup.sh install --cfg ...`). Hecho hoy (corridas 83–92):
-- **Avatar agachado** con una pose del juego (`PLAY_ANIMATION` set `HUMAN`, `idle_crouch`; hallazgo 20). Por defecto `AIMP_GHOST_CROUCH=4`. Verificado en una máquina con capturas.
-- **Avatar mujer:** `pick_npc` prefiere una civil con esqueleto `FEMALE` (`Character+0x600 → +0x1C → +0x60`). Falta una zona con mujeres para verlo.
-- **Muerte en coop:** `AIMP_COOP_DOWNED=1` (experimental) deja al jugador caído (salud 1, invencible) en vez de morir, sin game over (corrida 92). Diseño y pendientes en `work/DESIGN_DEATH.md`.
-- Herramientas: lector de memoria (`AIMP_MEMSRV_FILE` + `work/scripts/memsrv.py`, `KILL` de prueba con `AIMP_MEMSRV_TEST=1`), traza de animaciones (`AIMP_TRACE_ANIM`) y de UI (`AIMP_TRACE_UI`).
+_Última actualización: 2026-11-17, 04:20, cierre del trabajo autónomo. **Modo juego:** la partida del usuario quedó restaurada (`saves/current.tar.gz`) y el mod desinstalado. Hecho hoy (corridas 83–101):
+- avatar agachado (pose, hallazgo 20) y avatar mujer por esqueleto;
+- lector de memoria (`memsrv`);
+- muerte en coop: caído, red, revivir en la terminal y game over si caen los dos (`work/DESIGN_DEATH.md`);
+- inventario compartido, con el inventario completo del host al conectar (hallazgo 21);
+- armas de a una (`weapons.c`);
+- huella de la partida (`session.c`).
+
+Todo verificado en una máquina con `aimp_peer.py`, salvo el bloqueo de armas (el mando virtual no saca armas).
 
 **Siguiente:**
-- prueba con dos máquinas (`work/windows/instructions.md` 8d, DLL de `mod/dist`, ahora `5473f92e`), que también muestra el agachado nuevo;
-- muerte en coop: evento de red, revivir en la terminal de guardado, qué hace el caído (DESIGN_DEATH.md);
-- una partida con el Alien (remate y Alien compartido);
-- partida común (comparar y copiar el save del host) e inventario compartido: `work/DESIGN_SESSION.md`._ Antes: 2026-11-16, cierre (corridas 65–82). Limitaciones conocidas y contingencias para el futuro: `work/CONTINGENCIAS.md`.
+- la prueba con dos máquinas de todo eso (`work/windows/instructions.md` 8e, DLL de `mod/dist`), con un save de prueba en las dos (nunca `current`);
+- después, revivir también en checkpoints u objetivos, decidir qué hace el caído (fantasma o espectador), copiar el save del host por red y el Alien (hace falta un save con el Alien)._
+
 **Partida real del usuario (run sin morir):** nunca se prueba sobre ella. `work/scripts/mode.sh test [save]` guarda `saves/current.tar.gz`, carga el save de prueba e instala el mod; `mode.sh play` la restaura y desinstala el mod. Al cerrar una sesión, `mode.sh play`.
 Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safezone` = la partida de las corridas 20–82 (sin enemigos).
 
