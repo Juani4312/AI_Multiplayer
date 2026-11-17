@@ -151,6 +151,7 @@ int main(void)
     SetEnvironmentVariableW(L"AIMP_NET_PEER", L"127.0.0.1:47895");
     CHECK(net_init(&cli, f.QuadPart), "cliente abierto");
     SetEnvironmentVariableW(L"AIMP_SYNC_USE", L"1");
+    SetEnvironmentVariableW(L"AIMP_COOP_SAVE_RULE", L"1"); /* guardado exigente: el cliente no guarda */
     CHECK(sync_install(&cli) == 1, "sync_install");
 
     printf("[uso local: sale por la red]\n");
@@ -192,6 +193,31 @@ int main(void)
     CHECK(got && e.kind == AIMP_EVT_USE && e.size == 20 && e.level == 16 && memcmp(e.data, use_local, 20) == 0,
           "evento de uso con el payload intacto y el nivel 16");
 
+    printf("[guardado exigente: en coop la terminal de guardado del cliente no se abre]\n");
+    {
+        static const uint8_t use_save[20] = { 0x1e, 0x38, 0xb8, 0x98, 0x87, 0x22, 0xc9, 0x4d, /* terminal de guardado */
+                                              0x2f, 0xf7, 0x22, 0xb2, 0x09, 0x9d, 0x5b, 0x9b, 0x00, 0x7c, 0x58, 0x01 };
+        unsigned before = g_uses;
+        memcpy(payload, use_save, 20);
+        ((UseFn)(void *)(img + AIMP_RVA_USE_PRODUCER))(g_use_this, NULL, payload, 0);
+        CHECK(g_uses == before + 1, "sin el host conectado todavía, la terminal se usa normal");
+        AimpPkt hs;
+        memset(&hs, 0, sizeof hs);
+        hs.flags = AIMP_FLAG_PLAYER;
+        hs.level = 16;
+        QueryPerformanceCounter(&now);
+        net_poll(&cli, now.QuadPart); /* el primer poll descarta lo viejo (net.c) */
+        net_send(&host, now.QuadPart, &hs);
+        Sleep(20);
+        net_poll(&cli, now.QuadPart);
+        before = g_uses;
+        __asm__ volatile("mov %%esp, %0" : "=r"(esp0));
+        ((UseFn)(void *)(img + AIMP_RVA_USE_PRODUCER))(g_use_this, NULL, payload, 0);
+        __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
+        CHECK(cli.have_remote && g_uses == before && esp0 == esp1,
+              "con el host conectado, el cliente no abre la terminal (el original no corre) y el stack queda balanceado");
+    }
+
     printf("[uso remoto: se aplica encolando un A 0x26 con el jugador local]\n");
     put32(img, AIMP_RVA_USE_TYPE_A, 0x26); /* el registro de RPCs ya corrió */
     AimpEvt in;
@@ -212,7 +238,7 @@ int main(void)
     CHECK(memcmp(g_enq_data, use_local, 8) == 0 && memcmp(g_enq_data + 8, "\x2f\xf7\x22\xb2\x09\x9d\x5b\x9b", 8) == 0 &&
               memcmp(g_enq_data + 16, use_local + 16, 4) == 0,
           "objetivo y flag del otro, personaje = jugador local");
-    CHECK(g_uses == 3, "aplicar no vuelve a pasar por el productor (no hay eco)");
+    CHECK(g_uses == 4, "aplicar no vuelve a pasar por el productor (no hay eco)"); /* 3 de arriba + la terminal sin host */
     in.level = 9;
     in.seq = 8;
     cli.in[cli.in_tail] = in;

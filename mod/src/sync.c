@@ -92,6 +92,38 @@ static uint32_t local_player(void)
     return pl;
 }
 
+static int g_save_rule, g_save_near_cm = 600;
+static float sqrt_f(float x)
+{
+    float r = x > 1.0f ? x : 1.0f;
+    for (int i = 0; i < 24 && x > 0.0f; i++)
+        r = 0.5f * (r + x / r);
+    return x > 0.0f ? r : 0.0f;
+}
+static char g_save_why[96];
+
+/* NULL si se puede guardar; si no, el motivo. */
+static const char *save_blocked(uint32_t pl)
+{
+    if (!g_save_rule || !g_net || !g_net->mode || !g_net->have_remote)
+        return NULL;
+    if (g_net->mode == 2)
+        return "en coop guarda el host";
+    const AimpPkt *r = &g_net->remote;
+    if (!(r->flags & AIMP_FLAG_PLAYER) || r->level != g_level || death_remote_is_downed())
+        return NULL; /* el otro no está en el nivel, o está caído: no cuenta */
+    float me[3];
+    if (!pl || !mem_read(pl + CHR_POS, me, sizeof me))
+        return NULL;
+    float dx = me[0] - r->pos[0], dy = me[1] - r->pos[1], dz = me[2] - r->pos[2];
+    float d2 = dx * dx + dy * dy + dz * dz, lim = (float)g_save_near_cm / 100.0f;
+    if (d2 <= lim * lim)
+        return NULL;
+    aimp_snprintf(g_save_why, sizeof g_save_why, "el compañero está lejos (más de %.1f m; hace falta menos de %.1f)",
+                  (double)sqrt_f(d2), (double)lim);
+    return g_save_why;
+}
+
 __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_use(void *self, void *edx, void *payload,
                                                                                uint32_t flag)
 {
@@ -110,8 +142,17 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_use
             log_printf("SYNC uso local %ld: this 0x%08x (vtable rva 0x%x, vf[1] rva 0x%x), desde rva 0x%x | objetivo %s, personaje %s%s, flag %08x",
                        (long)n, (unsigned)(uintptr_t)self, rva(vt), rva(vf1), rva((uint32_t)(uintptr_t)__builtin_return_address(0)),
                        t, c, mine ? " (jugador local)" : "", rd32(p + 16));
-        if (mine && aimp_memcmp(t, "1e38b898", 8) == 0)
+        if (mine && aimp_memcmp(t, "1e38b898", 8) == 0) {
+            /* Guardado exigente (DESIGN_DIFFICULTY, decisión del usuario 2026-11-17): con AIMP_COOP_SAVE_RULE=1 guarda
+             * solo el host (la partida canónica es la suya: savesync pisaría el guardado del cliente) y solo si el
+             * compañero vivo está a menos de AIMP_COOP_SAVE_NEAR_CM. Bloquear = no llamar al productor del uso. */
+            const char *why = save_blocked(pl);
+            if (why) {
+                log_printf("SYNC   terminal de guardado bloqueada: %s", why);
+                return;
+            }
             death_on_save_terminal(); /* terminal de guardado: revive al compañero caído (death.c) */
+        }
         if (mine && g_on && g_net && g_net->mode && skipped(t)) {
             log_printf("SYNC   no se manda: el objetivo empieza con un prefijo de AIMP_SYNC_USE_SKIP (acción del jugador, no del mundo)");
         } else if (mine && g_on && g_net && g_net->mode) {
@@ -167,6 +208,8 @@ int sync_install(AimpNet *net)
     /* Corrida 11: con el jugador local como personaje, un botón remoto lo teletransporta al botón.
      * Con el avatar (el NPC que ya está donde está el otro), el que se mueve es el avatar. */
     g_actor = aimp_env_int(L"AIMP_SYNC_USE_ACTOR", 1);
+    g_save_rule = aimp_env_int(L"AIMP_COOP_SAVE_RULE", 0);
+    g_save_near_cm = aimp_env_int(L"AIMP_COOP_SAVE_NEAR_CM", 600);
     wchar_t wskip[128];
     if (aimp_env_str(L"AIMP_SYNC_USE_SKIP", wskip, 128))
         aimp_utf8(g_skip, sizeof g_skip, wskip);
