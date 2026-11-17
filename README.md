@@ -94,7 +94,7 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 
 ## Último trabajo y siguiente paso
 
-**2026-11-17, 03:00–04:20 (trabajo autónomo, corridas 93–101, locales con el peer simulado):**
+**2026-11-17, 03:00–04:15 (trabajo autónomo, corridas 93–101, locales con el peer simulado):**
 - **Partida del usuario protegida:** es una run sin morir. `work/scripts/mode.sh test` guarda su partida en `saves/current.tar.gz` y carga un save de prueba (`safezone`); `mode.sh play` la restaura y desinstala el mod.
 - **Inventario compartido** (`AIMP_SYNC_INV=1`, hallazgo 21): lo que uno levanta, gasta o fabrica le pasa también al otro. Al conectarse y después de cada carga, el host manda su inventario completo y el cliente se iguala.
 - **Muerte en coop por red** (`AIMP_COOP_DOWNED=1`, `work/DESIGN_DEATH.md`):
