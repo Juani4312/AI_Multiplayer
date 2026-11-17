@@ -43,6 +43,14 @@ struct SaveSync {
     uint32_t written;
     int done_left;
     uint32_t done_status;
+    /* guardar juntos */
+    int poll_ms, settle_ms;
+    int64_t last_poll, changed_at;
+    uint32_t stamp_sig;
+    int have_sig, change_pending, nsaves;
+    uint32_t notify_seq, notify_in;
+    int notify_left;
+    int backed_up; /* el backup se hace en la primera copia de la sesión (la que tiene los saves propios) */
 };
 
 static SaveSync g_game;
@@ -507,6 +515,7 @@ static void client_apply(SaveSync *s)
 {
     uint8_t *raw[XFER_MAX_FILES] = { 0 };
     uint32_t off = 0, status = 0;
+    s->written = 0; /* los de esta copia */
     for (int i = 0; i < s->nfiles && !status; i++) {
         if (!(s->mask & (1u << i)))
             continue;
@@ -533,7 +542,9 @@ static void client_apply(SaveSync *s)
         }
         off += 5 + cl;
     }
-    if (!status) {
+    if (!status && s->backed_up) {
+        log_printf("SAVESYNC: backup: ya se hizo en esta sesión (los saves propios de antes de conectar)");
+    } else if (!status) {
         wchar_t dir[MAX_PATH];
         backup_path(s, dir, MAX_PATH);
         int nb = 0;
@@ -557,31 +568,53 @@ static void client_apply(SaveSync *s)
         }
         if (!status) {
             char d8[MAX_PATH * 3];
+            s->backed_up = 1;
             log_printf("SAVESYNC: backup de %d saves propios en %s", nb, aimp_utf8(d8, sizeof d8, dir));
-            for (int i = 0; i < s->nfiles; i++) {
-                if (!(s->mask & (1u << i)))
-                    continue;
-                XferEntry *e = &s->files[i];
-                if (s->st.write(s->st.ctx, e->name, raw[i], (int32_t)e->size)) {
-                    s->written |= 1u << i;
-                } else {
-                    log_printf("SAVESYNC: FileWrite de %s falló", e->name);
-                    status = 6;
-                }
+        }
+    }
+    if (!status) {
+        for (int i = 0; i < s->nfiles; i++) {
+            if (!(s->mask & (1u << i)))
+                continue;
+            XferEntry *e = &s->files[i];
+            if (s->st.write(s->st.ctx, e->name, raw[i], (int32_t)e->size)) {
+                s->written |= 1u << i;
+            } else {
+                log_printf("SAVESYNC: FileWrite de %s falló", e->name);
+                status = 6;
             }
         }
     }
     for (int i = 0; i < XFER_MAX_FILES; i++)
         xfree(raw[i]);
+    if (s->written) { /* las fechas nuevas son nuestras: la próxima consulta toma la base de nuevo */
+        s->have_sig = 0;
+        s->change_pending = 0;
+        s->last_poll = 0;
+    }
     if (status)
         log_printf("SAVESYNC: la copia del save del host FALLÓ (código %u)", status);
     else
-        log_printf("SAVESYNC: save del host copiado (%08x). Ahora \"Continue\" carga la partida del host", s->written);
+        log_printf("SAVESYNC: save del host copiado (%08x). %s", s->written,
+                   s->level ? "Para jugarlo: menú principal y \"Continue\" (el game over recarga la copia en memoria del juego)"
+                            : "Ahora \"Continue\" carga la partida del host");
     client_finish(s, status);
 }
 
 static void client_rx(SaveSync *s, const XferHdr *h, const uint8_t *p, int len, int64_t now)
 {
+    if (h->op == XFER_NOTIFY) {
+        if (h->xid == s->notify_in)
+            return; /* repetido */
+        s->notify_in = h->xid;
+        if (s->state == ST_WAIT || s->state == ST_XFER)
+            return; /* ya hay una en curso: trae lo último igual */
+        log_printf("SAVESYNC: el host guardó (aviso %u): se copia su save nuevo%s", h->xid, s->level ? " (dentro del nivel)" : "");
+        s->state = ST_WAIT;
+        s->last_req = 0;
+        s->xid = 0;
+        return;
+    }
     if (h->op == XFER_MANIFEST && s->state == ST_WAIT) {
         if (h->n > XFER_MAX_FILES || len < (int)(sizeof *h + h->n * sizeof(XferEntry)))
             return;
@@ -666,14 +699,78 @@ static void rx(void *ctx, const uint8_t *p, int len, int64_t now)
         client_rx(s, h, p, len, now);
 }
 
+/* Firma de las fechas de los .ais: cambia cuando el juego guarda. */
+static void poll_stamps(SaveSync *s, int64_t now)
+{
+    if (!s->st.stamp || now - s->last_poll < ms_ticks(s, s->poll_ms))
+        return;
+    s->last_poll = now;
+    uint32_t h = 2166136261u;
+    int c = s->st.count(s->st.ctx), n = 0;
+    for (int i = 0; i < c && i < 64; i++) {
+        char nm[64];
+        int32_t sz = 0;
+        if (!s->st.entry(s->st.ctx, i, nm, sizeof nm, &sz) || !is_save_name(nm))
+            continue;
+        int64_t t = s->st.stamp(s->st.ctx, nm);
+        h = (h ^ savesync_fnv(nm, aimp_strlen(nm))) * 16777619u;
+        h = (h ^ savesync_fnv(&t, sizeof t)) * 16777619u;
+        h = (h ^ (uint32_t)sz) * 16777619u;
+        n++;
+    }
+    if (!s->have_sig) {
+        s->have_sig = 1;
+        s->stamp_sig = h;
+        s->nsaves = n;
+        return;
+    }
+    if (h != s->stamp_sig) {
+        s->stamp_sig = h;
+        s->changed_at = now;
+        if (!s->change_pending)
+            log_printf("SAVESYNC: %s: cambiaron los saves (%d)", s->net->mode == 1 ? "host" : "cliente", n);
+        s->change_pending = 1;
+    }
+}
+
 void savesync_tick(SaveSync *s, int64_t now, int64_t freq, uint32_t level)
 {
     s->freq = freq;
     s->level = level;
     AimpNet *n = s->net;
-    if (!n || !n->mode || !n->have_peer)
+    if (!n || !n->mode)
+        return;
+    poll_stamps(s, now);
+    if (n->mode != 1 && s->change_pending && now - s->changed_at >= ms_ticks(s, s->settle_ms)) {
+        /* el juego del cliente reescribió sus saves (al cargar un nivel, al morir, al guardar; corrida 106): con
+         * AIMP_SAVE_SYNC=1 los archivos siguen al host, así que se vuelve a sincronizar */
+        s->change_pending = 0;
+        if (s->want && n->have_peer && (s->state == ST_DONE || s->state == ST_ERR)) {
+            log_printf("SAVESYNC: el juego reescribió los saves propios: se vuelven a igualar a los del host");
+            s->state = ST_WAIT;
+            s->last_req = 0;
+            s->xid = 0;
+        }
+    }
+    if (!n->have_peer)
         return;
     if (n->mode == 1) {
+        if (s->change_pending && now - s->changed_at >= ms_ticks(s, s->settle_ms)) {
+            s->change_pending = 0;
+            /* único también si el host reinicia el juego (el cliente descarta el aviso que ya vio) */
+            s->notify_seq = (GetTickCount() << 4) | 2u;
+            if (s->notify_seq == s->notify_in)
+                s->notify_seq += 16;
+            s->notify_left = 3;
+            s->xid = 0; /* el próximo REQ arma un manifiesto nuevo */
+            log_printf("SAVESYNC host: guardé: aviso %u al cliente (guardar juntos)", s->notify_seq);
+        }
+        if (s->notify_left > 0 && !s->blob) {
+            uint8_t b[sizeof(XferHdr)];
+            hdr((XferHdr *)b, XFER_NOTIFY, s->notify_seq, 0);
+            net_send_raw(n, b, sizeof b);
+            s->notify_left--;
+        }
         host_send(s, now);
         return;
     }
@@ -733,6 +830,8 @@ SaveSync *savesync_new(AimpNet *net, const SaveStore *st, int want, const wchar_
     LARGE_INTEGER f;
     QueryPerformanceFrequency(&f);
     s->freq = f.QuadPart;
+    s->poll_ms = 2000;
+    s->settle_ms = 3000;
     net->xfer_rx = rx;
     net->xfer_ctx = s;
     return s;
@@ -741,6 +840,11 @@ SaveSync *savesync_new(AimpNet *net, const SaveStore *st, int want, const wchar_
 int savesync_state(const SaveSync *s) { return s->state; }
 uint32_t savesync_written_mask(const SaveSync *s) { return s->written; }
 void savesync_test_drop(SaveSync *s, int every) { s->drop_every = every; }
+void savesync_test_poll(SaveSync *s, int poll_ms, int settle_ms)
+{
+    s->poll_ms = poll_ms;
+    s->settle_ms = settle_ms;
+}
 
 /* ---- Steam (ISteamRemoteStorage v012, thiscall) ---- */
 typedef void *(__cdecl *SteamRsFn)(void);
@@ -748,8 +852,10 @@ typedef uint8_t(__attribute__((thiscall)) * RsWriteFn)(void *, const char *, con
 typedef int32_t(__attribute__((thiscall)) * RsReadFn)(void *, const char *, void *, int32_t);
 typedef int32_t(__attribute__((thiscall)) * RsCountFn)(void *);
 typedef const char *(__attribute__((thiscall)) * RsNameFn)(void *, int, int32_t *);
+typedef int64_t(__attribute__((thiscall)) * RsStampFn)(void *, const char *);
 #define RS_WRITE 0
 #define RS_READ 1
+#define RS_STAMP 13 /* GetFileTimestamp (v012: entre GetFileSize 12 y GetSyncPlatforms 14) */
 #define RS_COUNT 15
 #define RS_NAME 16
 
@@ -789,15 +895,23 @@ static int st_write(void *ctx, const char *name, const void *buf, int32_t n)
     return rs && ((RsWriteFn)rs_fn(RS_WRITE))(rs, name, buf, n) != 0;
 }
 
+static int64_t st_stamp(void *ctx, const char *name)
+{
+    void *rs = rs_iface();
+    return rs ? ((RsStampFn)rs_fn(RS_STAMP))(rs, name) : 0;
+}
+
 void savesync_install(AimpNet *net)
 {
     if (!net || !net->mode)
         return;
-    SaveStore st = { NULL, st_count, st_entry, st_read, st_write };
+    SaveStore st = { NULL, st_count, st_entry, st_read, st_write, st_stamp };
     int want = net->mode == 2 && aimp_env_int(L"AIMP_SAVE_SYNC", 0);
     g_game.net = net;
     g_game.st = st;
     g_game.want = want;
+    g_game.poll_ms = 2000;
+    g_game.settle_ms = 3000;
     net->xfer_rx = rx;
     net->xfer_ctx = &g_game;
     g_game_on = 1;
@@ -814,7 +928,9 @@ void savesync_frame(int64_t now, int64_t freq, uint32_t level)
     if (!g_game.freq) {
         /* la interfaz recién existe con Steam inicializado: el primer frame, una prueba de lectura */
         int c = st_count(NULL);
-        log_printf("SAVESYNC: Steam Cloud: %d archivos (%s)", c, rs_iface() ? "interfaz OK" : "sin interfaz");
+        int64_t t = rs_iface() ? st_stamp(NULL, "PROGRESSION.ais") : 0;
+        log_printf("SAVESYNC: Steam Cloud: %d archivos (%s); fecha de PROGRESSION.ais %lld", c, rs_iface() ? "interfaz OK" : "sin interfaz",
+                   (long long)t);
     }
     savesync_tick(&g_game, now, freq, level);
 }

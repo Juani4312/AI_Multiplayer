@@ -19,7 +19,15 @@
  *      %LOCALAPPDATA%\AI_Multiplayer\save_backup\<fecha>\ y escribe los del host (FileWrite); avisa (DONE).
  * Después, en el cliente, "Continue" carga la partida del host.
  *
- * El host siempre sirve (solo lee). El cliente solo escribe con AIMP_SAVE_SYNC=1 y en el menú (nivel 0). */
+ * Guardar juntos (DESIGN_SESSION punto 3): el host mira cada 2 s las fechas de sus .ais (GetFileTimestamp, vt+0x34);
+ * cuando cambian y quedan quietas 3 s (guardó en una terminal o pasó un checkpoint), avisa (NOTIFY) y el cliente vuelve
+ * a sincronizar, ahora también dentro del nivel. El cliente también vuelve a sincronizar cuando su propio juego
+ * reescribe los saves (lo hace al cargar un nivel y al morir). Corrida 106: el game over ("Load Current Save") NO lee
+ * el archivo: recarga una copia en memoria (trabajador FUN_00a644f0, buffer en obj+0x298); la copia del host se carga
+ * saliendo al menú principal y con "Continue".
+ *
+ * El host siempre sirve (solo lee). El cliente solo escribe con AIMP_SAVE_SYNC=1: al conectar, en el menú (nivel 0);
+ * después, cuando el host avisa que guardó. */
 
 #define XFER_REQ 1
 #define XFER_MANIFEST 2
@@ -27,6 +35,7 @@
 #define XFER_DATA 4
 #define XFER_ACK 5
 #define XFER_DONE 6
+#define XFER_NOTIFY 7 /* host -> cliente: "mis saves cambiaron" (guardar juntos); xid = número de aviso */
 
 #define XFER_MAX_FILES 32
 #define XFER_NAME 16
@@ -66,6 +75,8 @@ typedef struct {
     int32_t (*read)(void *ctx, const char *name, void *buf, int32_t cap);
     /* 1 si se escribió */
     int (*write)(void *ctx, const char *name, const void *buf, int32_t n);
+    /* fecha de modificación (cualquier unidad; solo se compara). NULL: sin "guardar juntos" */
+    int64_t (*stamp)(void *ctx, const char *name);
 } SaveStore;
 
 typedef struct SaveSync SaveSync;
@@ -82,6 +93,8 @@ int savesync_state(const SaveSync *s);
 uint32_t savesync_written_mask(const SaveSync *s);
 /* Tests: descartar 1 de cada n paquetes de datos salientes (0 = ninguno). */
 void savesync_test_drop(SaveSync *s, int every);
+/* Tests: intervalo de consulta de las fechas y tiempo de asentamiento (ms). */
+void savesync_test_poll(SaveSync *s, int poll_ms, int settle_ms);
 
 uint32_t savesync_fnv(const void *p, size_t n);
 /* Compresión del canal (LZ voraz, formato de bloque de LZ4). 0 si no entra en cap o no achica. */

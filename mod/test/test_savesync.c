@@ -30,7 +30,9 @@ typedef struct {
     char name[32];
     uint8_t *data;
     int32_t size;
+    int64_t stamp;
 } MemFile;
+static int64_t g_clock = 1000;
 typedef struct {
     MemFile f[16];
     int n;
@@ -76,8 +78,14 @@ static int m_write(void *ctx, const char *name, const void *buf, int32_t n)
     f->data = malloc((size_t)n);
     memcpy(f->data, buf, (size_t)n);
     f->size = n;
+    f->stamp = ++g_clock;
     m->writes++;
     return 1;
+}
+static int64_t m_stamp(void *ctx, const char *name)
+{
+    MemFile *f = find(ctx, name);
+    return f ? f->stamp : 0;
 }
 static void put(MemStore *m, const char *name, int32_t size, uint32_t seed, int32_t used)
 {
@@ -249,7 +257,7 @@ int main(void)
     {
         AimpNet h, c;
         open_pair(&h, &c, f.QuadPart, L"47881", L"127.0.0.1:47881");
-        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write }, stc = { &cs, m_count, m_entry, m_read, m_write };
+        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp };
         SaveSync *sh = savesync_new(&h, &sth, 0, NULL), *sc = savesync_new(&c, &stc, 1, bdir);
         savesync_test_drop(sh, 7);
         int ms = run(&h, &c, sh, sc, f.QuadPart, 0);
@@ -302,7 +310,7 @@ int main(void)
     {
         AimpNet h, c;
         open_pair(&h, &c, f.QuadPart, L"47882", L"127.0.0.1:47882");
-        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write }, stc = { &cs, m_count, m_entry, m_read, m_write };
+        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp };
         cs.writes = 0;
         SaveSync *sh = savesync_new(&h, &sth, 0, NULL), *sc = savesync_new(&c, &stc, 1, bdir);
         int ms = run(&h, &c, sh, sc, f.QuadPart, 0);
@@ -316,7 +324,7 @@ int main(void)
     {
         AimpNet h, c;
         open_pair(&h, &c, f.QuadPart, L"47883", L"127.0.0.1:47883");
-        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write }, stc = { &cs, m_count, m_entry, m_read, m_write };
+        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp };
         SaveSync *sh = savesync_new(&h, &sth, 0, NULL), *sc = savesync_new(&c, &stc, 1, bdir);
         LARGE_INTEGER now;
         AimpPkt st;
@@ -332,6 +340,75 @@ int main(void)
             Sleep(2);
         }
         CHECK(savesync_state(sc) == 0, "en el nivel 10 el cliente espera (estado %d)", savesync_state(sc));
+        net_close(&c);
+        net_close(&h);
+    }
+    printf("[guardar juntos: el host guarda y el cliente, dentro del nivel, se copia el save nuevo]\n");
+    {
+        AimpNet h, c;
+        open_pair(&h, &c, f.QuadPart, L"47884", L"127.0.0.1:47884");
+        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp };
+        SaveSync *sh = savesync_new(&h, &sth, 0, NULL), *sc = savesync_new(&c, &stc, 1, bdir);
+        savesync_test_poll(sh, 50, 150);
+        savesync_test_poll(sc, 50, 150);
+        int ms = run(&h, &c, sh, sc, f.QuadPart, 0);
+        CHECK(savesync_state(sc) == 3 && savesync_written_mask(sc) == 0, "al conectar, ya iguales (%d ms)", ms);
+        put(&hs, "CHSV00.ais", 2 * 1024 * 1024, 77, 950000); /* el host guarda */
+        LARGE_INTEGER t0, now;
+        QueryPerformanceCounter(&t0);
+        AimpPkt st;
+        memset(&st, 0, sizeof st);
+        int done = 0;
+        for (;;) {
+            QueryPerformanceCounter(&now);
+            net_poll(&c, now.QuadPart);
+            net_poll(&h, now.QuadPart);
+            net_send(&c, now.QuadPart, &st);
+            net_send(&h, now.QuadPart, &st);
+            savesync_tick(sh, now.QuadPart, f.QuadPart, 10);
+            savesync_tick(sc, now.QuadPart, f.QuadPart, 10); /* el cliente está jugando */
+            if (same(&hs, &cs, "CHSV00.ais") && savesync_state(sc) == 3) {
+                done = 1;
+                break;
+            }
+            if ((now.QuadPart - t0.QuadPart) * 1000 / f.QuadPart > 10000)
+                break;
+            Sleep(2);
+        }
+        CHECK(done && savesync_written_mask(sc) == 1, "el cliente copió el CHSV00 nuevo dentro del nivel en %d ms (máscara %08x)",
+              (int)((now.QuadPart - t0.QuadPart) * 1000 / f.QuadPart), savesync_written_mask(sc));
+        /* el juego del cliente reescribe su CHSV00 (como al morir): el mod lo vuelve a igualar al del host */
+        put(&cs, "CHSV00.ais", 2 * 1024 * 1024, 55, 940000);
+        QueryPerformanceCounter(&t0);
+        done = 0;
+        int writes0 = cs.writes;
+        for (;;) {
+            QueryPerformanceCounter(&now);
+            net_poll(&c, now.QuadPart);
+            net_poll(&h, now.QuadPart);
+            net_send(&c, now.QuadPart, &st);
+            net_send(&h, now.QuadPart, &st);
+            savesync_tick(sh, now.QuadPart, f.QuadPart, 10);
+            savesync_tick(sc, now.QuadPart, f.QuadPart, 10);
+            if (same(&hs, &cs, "CHSV00.ais") && savesync_state(sc) == 3) {
+                done = 1;
+                break;
+            }
+            if ((now.QuadPart - t0.QuadPart) * 1000 / f.QuadPart > 10000)
+                break;
+            Sleep(2);
+        }
+        /* y no entra en un bucle: con todo igual, no vuelve a escribir */
+        for (int i = 0; i < 300; i++) {
+            QueryPerformanceCounter(&now);
+            net_poll(&c, now.QuadPart);
+            net_poll(&h, now.QuadPart);
+            savesync_tick(sh, now.QuadPart, f.QuadPart, 10);
+            savesync_tick(sc, now.QuadPart, f.QuadPart, 10);
+            Sleep(2);
+        }
+        CHECK(done && cs.writes == writes0 + 1, "el juego del cliente pisó su CHSV00 y el mod lo volvió a igualar al del host, sin bucle (escrituras %d)",
+              cs.writes - writes0);
         net_close(&c);
         net_close(&h);
     }
