@@ -8,6 +8,7 @@
  *   H <hex>           nombre de un hash en la tabla de textos del juego ("H 0x<hash> <texto>" o "?")
  *   LOADF <hex> <ruta> (solo con AIMP_MEMSRV_TEST=1) copia el archivo a esa dirección si el rango es escribible
  *   LOADN <hex> <largo> <ruta>  ídem, solo los primeros <largo> bytes
+ *   TP <x> <y> <z> <yaw>  (solo con AIMP_MEMSRV_TEST=1) teletransporta al jugador 0 (FUN_007c6330)
  *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
  *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
  *   KILL <hex>        (solo con AIMP_MEMSRV_TEST=1) mata al personaje como lo hace el juego: FUN_007d0c10 thiscall(chr,
@@ -109,6 +110,31 @@ static int is_char(uint32_t chr)
                 return 1;
     return 0;
 }
+
+/* número con decimales y signo ("-91.17") */
+static float numf(const char **pp)
+{
+    const char *p = *pp;
+    while (*p == ' ' || *p == '\t')
+        p++;
+    int neg = 0;
+    if (*p == '-') {
+        neg = 1;
+        p++;
+    }
+    float v = 0.0f, sc = 1.0f;
+    for (; *p >= '0' && *p <= '9'; p++)
+        v = v * 10.0f + (float)(*p - '0');
+    if (*p == '.')
+        for (p++; *p >= '0' && *p <= '9'; p++) {
+            sc *= 0.1f;
+            v += (float)(*p - '0') * sc;
+        }
+    *pp = p;
+    return neg ? -v : v;
+}
+
+typedef void(__attribute__((fastcall)) * TpFn)(void *chr, void *edx, const float *pos, float yaw, uint32_t p3);
 
 /* V/F (2026-11-17): búsqueda en la memoria escribible del proceso (páginas comprometidas, sin guarda), alineada a 4.
  * Lectura directa: VirtualQuery dice que la página es legible. Hasta 32 resultados. */
@@ -237,6 +263,31 @@ static void run(char *txt)
             put(line);
             if (ok)
                 log_printf("MEMSRV: LOADF 0x%08x: %u bytes", a, (unsigned)got);
+        } else if (p[0] == 'T' && p[1] == 'P' && p[2] == ' ') {
+            /* TP <x> <y> <z> <yaw>: (solo AIMP_MEMSRV_TEST=1) teletransporta al jugador 0 con FUN_007c6330 (la del
+             * avatar y de revivir). Para ir a donde el otro usó algo (prueba de a dos, 2026-11-17). */
+            q = p + 3;
+            static float pos[4] __attribute__((aligned(16)));
+            pos[0] = numf(&q);
+            pos[1] = numf(&q);
+            pos[2] = numf(&q);
+            float yaw = numf(&q);
+            uint32_t pl = 0, root = 0, cm = 0, arr = 0, n = 0;
+            if (mem_u32(g_aimp_exe + AIMP_RVA_G_ROOT, &root) && root && mem_u32(root + ROOT_CHARMGR, &cm) && cm &&
+                mem_u32(cm + CM_NPLAYERS, &n) && n && mem_u32(cm + CM_PLAYERS, &arr) && arr)
+                mem_u32(arr, &pl);
+            uint8_t pr[sizeof AIMP_CHR_TELEPORT_PROLOGUE];
+            uintptr_t f = g_aimp_exe + AIMP_RVA_CHR_TELEPORT;
+            int ok = g_test && pl && mem_read(f, pr, sizeof pr) && aimp_code_cmp(pr, AIMP_CHR_TELEPORT_PROLOGUE, sizeof pr) == 0 &&
+                     mem_f32(pl + CHR_POS + 12, &pos[3]);
+            aimp_snprintf(line, sizeof line, "TP 0x%08x (%.2f, %.2f, %.2f) yaw %.3f %s\n", pl, (double)pos[0], (double)pos[1],
+                          (double)pos[2], (double)yaw, ok ? "ok" : "NO (AIMP_MEMSRV_TEST, jugador o prólogo)");
+            put(line);
+            if (ok) {
+                log_printf("MEMSRV: TP del jugador 0x%08x a (%.2f, %.2f, %.2f) yaw %.3f", pl, (double)pos[0], (double)pos[1], (double)pos[2],
+                           (double)yaw);
+                ((TpFn)(void *)f)((void *)pl, NULL, pos, yaw, 0);
+            }
         } else if (p[0] == 'V' && p[1] == ' ') {
             uint32_t v = (uint32_t)g_aimp_exe + num(&q);
             scan((const uint8_t *)&v, 4, 'V');
