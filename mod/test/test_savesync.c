@@ -104,6 +104,19 @@ static void put(MemStore *m, const char *name, int32_t size, uint32_t seed, int3
     free(b);
     m->writes = 0;
 }
+/* un CHSV con encabezado de save: "IAAC", tiempo en +0x10, nivel en +0x20 */
+static void put_save(MemStore *m, const char *name, uint32_t seed, uint32_t t, const char *level)
+{
+    put(m, name, 2 * 1024 * 1024, seed, 900000);
+    MemFile *f = find(m, name);
+    memcpy(f->data, "IAAC\x12\0\0\0", 8);
+    memcpy(f->data + 0x10, &t, 4);
+    memset(f->data + 0x20, 0, 0x40);
+    memcpy(f->data + 0x20, level, strlen(level));
+}
+static uint8_t g_ckpt[SAVE_CKPT_SIZE];
+static uint8_t *m_ckpt(void *ctx) { return g_ckpt; }
+
 static int same(MemStore *a, MemStore *b, const char *name)
 {
     MemFile *x = find(a, name), *y = find(b, name);
@@ -257,7 +270,7 @@ int main(void)
     {
         AimpNet h, c;
         open_pair(&h, &c, f.QuadPart, L"47881", L"127.0.0.1:47881");
-        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp };
+        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp, NULL }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp, NULL };
         SaveSync *sh = savesync_new(&h, &sth, 0, NULL), *sc = savesync_new(&c, &stc, 1, bdir);
         savesync_test_drop(sh, 7);
         int ms = run(&h, &c, sh, sc, f.QuadPart, 0);
@@ -310,7 +323,7 @@ int main(void)
     {
         AimpNet h, c;
         open_pair(&h, &c, f.QuadPart, L"47882", L"127.0.0.1:47882");
-        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp };
+        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp, NULL }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp, NULL };
         cs.writes = 0;
         SaveSync *sh = savesync_new(&h, &sth, 0, NULL), *sc = savesync_new(&c, &stc, 1, bdir);
         int ms = run(&h, &c, sh, sc, f.QuadPart, 0);
@@ -324,7 +337,7 @@ int main(void)
     {
         AimpNet h, c;
         open_pair(&h, &c, f.QuadPart, L"47883", L"127.0.0.1:47883");
-        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp };
+        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp, NULL }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp, NULL };
         SaveSync *sh = savesync_new(&h, &sth, 0, NULL), *sc = savesync_new(&c, &stc, 1, bdir);
         LARGE_INTEGER now;
         AimpPkt st;
@@ -347,7 +360,7 @@ int main(void)
     {
         AimpNet h, c;
         open_pair(&h, &c, f.QuadPart, L"47884", L"127.0.0.1:47884");
-        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp };
+        SaveStore sth = { &hs, m_count, m_entry, m_read, m_write, m_stamp, NULL }, stc = { &cs, m_count, m_entry, m_read, m_write, m_stamp, NULL };
         SaveSync *sh = savesync_new(&h, &sth, 0, NULL), *sc = savesync_new(&c, &stc, 1, bdir);
         savesync_test_poll(sh, 50, 150);
         savesync_test_poll(sc, 50, 150);
@@ -409,6 +422,57 @@ int main(void)
         }
         CHECK(done && cs.writes == writes0 + 1, "el juego del cliente pisó su CHSV00 y el mod lo volvió a igualar al del host, sin bucle (escrituras %d)",
               cs.writes - writes0);
+        net_close(&c);
+        net_close(&h);
+    }
+    printf("[checkpoint en memoria: el game over carga el del host]\n");
+    {
+        MemStore h2 = { 0 }, c2 = { 0 };
+        put_save(&h2, "CHSV00.ais", 31, 100, "Production\\HAB_Airport");
+        put_save(&h2, "CHSV01.ais", 32, 200, "Production\\HAB_Airport"); /* el más nuevo del host */
+        put_save(&c2, "CHSV00.ais", 31, 100, "Production\\HAB_Airport");
+        put_save(&c2, "CHSV01.ais", 33, 150, "Production\\HAB_ShoppingCentre");
+        memcpy(g_ckpt, find(&c2, "CHSV01.ais")->data, SAVE_CKPT_SIZE); /* el juego del cliente cargó su CHSV01 */
+        AimpNet h, c;
+        open_pair(&h, &c, f.QuadPart, L"47885", L"127.0.0.1:47885");
+        SaveStore sth = { &h2, m_count, m_entry, m_read, m_write, m_stamp, NULL },
+                  stc = { &c2, m_count, m_entry, m_read, m_write, m_stamp, m_ckpt };
+        SaveSync *sh = savesync_new(&h, &sth, 0, NULL), *sc = savesync_new(&c, &stc, 1, bdir);
+        run(&h, &c, sh, sc, f.QuadPart, 0); /* en el menú: copia */
+        CHECK(savesync_state(sc) == 3 && savesync_written_mask(sc) == 2, "en el menú copió el CHSV01 del host (máscara %08x)",
+              savesync_written_mask(sc));
+        LARGE_INTEGER now;
+        AimpPkt st;
+        memset(&st, 0, sizeof st);
+        for (int i = 0; i < 100; i++) { /* ya en el nivel */
+            QueryPerformanceCounter(&now);
+            net_poll(&c, now.QuadPart);
+            net_poll(&h, now.QuadPart);
+            savesync_tick(sh, now.QuadPart, f.QuadPart, 10);
+            savesync_tick(sc, now.QuadPart, f.QuadPart, 10);
+            Sleep(5);
+        }
+        CHECK(memcmp(g_ckpt, find(&h2, "CHSV01.ais")->data, SAVE_CKPT_SIZE) == 0 && savesync_ckpt_writes(sc) == 1,
+              "dentro del nivel, el checkpoint en memoria es la primera mitad del CHSV01 del host (pisadas %u)", savesync_ckpt_writes(sc));
+        /* el juego re-serializa su propio checkpoint (al morir) */
+        memcpy(g_ckpt, "IAAC", 4);
+        memset(g_ckpt + 0x100, 0x5A, 0x1000);
+        for (int i = 0; i < 100; i++) {
+            QueryPerformanceCounter(&now);
+            net_poll(&c, now.QuadPart);
+            savesync_tick(sc, now.QuadPart, f.QuadPart, 10);
+            Sleep(5);
+        }
+        CHECK(memcmp(g_ckpt, find(&h2, "CHSV01.ais")->data, SAVE_CKPT_SIZE) == 0 && savesync_ckpt_writes(sc) == 2,
+              "el juego lo cambió y el mod lo volvió a poner (pisadas %u)", savesync_ckpt_writes(sc));
+        /* en el menú no se toca */
+        memset(g_ckpt + 0x100, 0x11, 16);
+        for (int i = 0; i < 80; i++) {
+            QueryPerformanceCounter(&now);
+            savesync_tick(sc, now.QuadPart, f.QuadPart, 0);
+            Sleep(5);
+        }
+        CHECK(g_ckpt[0x100] == 0x11, "en el menú (nivel 0) no se toca");
         net_close(&c);
         net_close(&h);
     }

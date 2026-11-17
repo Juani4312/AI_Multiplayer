@@ -22,9 +22,9 @@
  * Guardar juntos (DESIGN_SESSION punto 3): el host mira cada 2 s las fechas de sus .ais (GetFileTimestamp, vt+0x34);
  * cuando cambian y quedan quietas 3 s (guardó en una terminal o pasó un checkpoint), avisa (NOTIFY) y el cliente vuelve
  * a sincronizar, ahora también dentro del nivel. El cliente también vuelve a sincronizar cuando su propio juego
- * reescribe los saves (lo hace al cargar un nivel y al morir). Corrida 106: el game over ("Load Current Save") NO lee
- * el archivo: recarga una copia en memoria (trabajador FUN_00a644f0, buffer en obj+0x298); la copia del host se carga
- * saliendo al menú principal y con "Continue".
+ * reescribe los saves (lo hace al cargar un nivel y al morir). El game over ("Load Current Save") NO lee el archivo: usa
+ * el checkpoint en memoria (SAVE_CKPT_SIZE, abajo). Dentro del nivel, el cliente mantiene ahí la primera mitad del CHSV
+ * más nuevo del host (AIMP_SAVE_SYNC_MEM=1, por defecto con AIMP_SAVE_SYNC): así el game over carga el del host.
  *
  * El host siempre sirve (solo lee). El cliente solo escribe con AIMP_SAVE_SYNC=1: al conectar, en el menú (nivel 0);
  * después, cuando el host avisa que guardó. */
@@ -77,7 +77,16 @@ typedef struct {
     int (*write)(void *ctx, const char *name, const void *buf, int32_t n);
     /* fecha de modificación (cualquier unidad; solo se compara). NULL: sin "guardar juntos" */
     int64_t (*stamp)(void *ctx, const char *name);
+    /* buffer en memoria del checkpoint actual (SAVE_CKPT_SIZE bytes) o NULL: lo que recarga el game over */
+    uint8_t *(*ckpt)(void *ctx);
 } SaveStore;
+
+/* El checkpoint actual vive en un buffer de 1 MB (corridas 110-113): FUN_009337c0 lo reserva y guarda base y encabezado
+ * en los globales VA 0x174EF80/0x174EF84 (RVA 0x134EF80/84); el lector usa 0x174F794 (inicio) y 0x174F798 (cursor). Al
+ * morir o guardar, el juego lo re-serializa y escribe el archivo desde ahí; "Load Current Save" lo deserializa. Tiene el
+ * primer MB del CHSV. Con la primera mitad del CHSV de Airport ahí, el game over cargó HAB_Airport (corrida 113). */
+#define SAVE_CKPT_SIZE 0x100000u
+#define AIMP_RVA_CKPT_BASE 0x0134EF80u
 
 typedef struct SaveSync SaveSync;
 
@@ -91,6 +100,8 @@ void savesync_tick(SaveSync *s, int64_t now, int64_t freq, uint32_t level);
 /* 0 nada, 1 esperando, 2 transfiriendo, 3 listo (copiado o ya igual), 4 error */
 int savesync_state(const SaveSync *s);
 uint32_t savesync_written_mask(const SaveSync *s);
+/* veces que se pisó el checkpoint en memoria con el del host */
+uint32_t savesync_ckpt_writes(const SaveSync *s);
 /* Tests: descartar 1 de cada n paquetes de datos salientes (0 = ninguno). */
 void savesync_test_drop(SaveSync *s, int every);
 /* Tests: intervalo de consulta de las fechas y tiempo de asentamiento (ms). */
