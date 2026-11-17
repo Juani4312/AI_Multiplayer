@@ -260,11 +260,11 @@ Qué mirar (F8 en cada momento):
 
 En el log: `PICKUP recogido` (con `pid` e `ids`) del lado que levantó, y `PICKUP remoto: … acá … (la entidad local con el mismo pid | los ids del otro)` del otro lado. `PINSYNC al cliente`, `PINSYNC aplicado`, `PINSYNC bloqueado`.
 
-### 8e. Agachado, inventario compartido, muerte en coop y armas de a una (2026-11-17, DLL `4a50fbf3…`)
+### 8e. Agachado, inventario compartido, muerte en coop y armas de a una (2026-11-17, DLL `7f9e19c4…`)
 
 Misma instalación que el paso 8, con `git pull` (DLL nueva de `mod/dist`), sumando a `-Extra` (y lo mismo en `papito`): `AIMP_SYNC_INV=1,AIMP_COOP_DOWNED=1,AIMP_SYNC_WEAPONS=1,AIMP_SYNC_USE=1`. El agachado nuevo ya viene activado por defecto.
 
-**Importante: las dos máquinas tienen que cargar la MISMA partida.** Hoy el mod solo compara el nivel. Copiar a la laptop un save de prueba de `saves/` (no la partida real del usuario), como dice `saves/README.md`, "En Windows".
+**Importante: las dos máquinas tienen que cargar la MISMA partida.** El mod ahora lo verifica: en el log tiene que aparecer `SESSION: misma partida`; si dice `SESSION: PARTIDAS DISTINTAS`, cargar el mismo save. Copiar a la laptop un save de prueba de `saves/` (no la partida real del usuario), como dice `saves/README.md`, "En Windows".
 
 Novedades:
 - **Agachado:** cuando el otro se agacha, su avatar adopta una pose agachada (con una mano en el piso) y se desliza en ella mientras avanza.

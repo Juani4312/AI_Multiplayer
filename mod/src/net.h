@@ -26,6 +26,7 @@
 #define AIMP_EVT_COOP 7     /* muerte en coop (death.c): CoopEvt de death.h */
 #define AIMP_EVT_WEAPON 8   /* armas de a una (weapons.c): WeaponEvt de weapons.h */
 #define AIMP_EVT_INV_FULL 9 /* inventario completo del host (inv.c): InvFull de inv.h */
+#define AIMP_EVT_SESSION 10 /* huella de la partida cargada (session.c): SessionEvt de session.h */
 #define AIMP_EVT_DATA 112
 #define AIMP_EVT_QUEUE 16
 #define AIMP_EVT_REPEAT 3
