@@ -5,6 +5,7 @@
 #include "sync.h"
 #include "throw.h"
 #include "ctrl.h"
+#include "anim.h"
 #include "hook.h"
 #include "log.h"
 #include "autopad.h"
@@ -88,6 +89,7 @@ int game_init(void)
                       (void *)detour_mode_run, (void **)&g_run_orig))
         return 0;
     trace_install(); /* opcional: AIMP_TRACE_QUEUES=1 */
+    anim_install(); /* antes de ghost_install: AIMP_GHOST_CROUCH=4 lo usa; AIMP_TRACE_ANIM=1 (traza) */
     ghost_install(); /* opcional: AIMP_TRACE_SPAWN=1 / AIMP_GHOST=1 (fase 4, experimental) */
     sync_install(probe_net()); /* opcional: AIMP_TRACE_USE=1 / AIMP_SYNC_USE=1 (fase 5, experimental) */
     pins_install(probe_net()); /* opcional: AIMP_TRACE_PINS=1 (traza) / AIMP_SYNC_PINS=1 (fase 6) */
