@@ -175,9 +175,33 @@ static void test_fmt(void)
     CHECK(strcmp(e, "1.235e+04|1.00e+300") == 0, "científica: \"%s\"", e);
 }
 
+/* aimp_code_cmp: prólogos con direcciones absolutas reubicadas por ASLR (FUN_007c3980 en la laptop, base 0x620000) */
+static void test_code_cmp(void)
+{
+    printf("[código con ASLR]\n");
+    static const uint8_t exp[13] = { 0x64, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x6A, 0xFF, 0x68, 0xC8, 0xFE, 0x12, 0x01 };
+    uint8_t rel[13];
+    memcpy(rel, exp, sizeof rel);
+    uint32_t v = 0x0112FEC8u + 0x220000u;
+    memcpy(rel + 9, &v, 4);
+    uintptr_t save = g_aimp_exe;
+    g_aimp_exe = 0x00400000;
+    CHECK(aimp_code_cmp(exp, exp, sizeof exp) == 0 && aimp_code_cmp(rel, exp, sizeof exp) != 0, "base 0x400000: igual sí, reubicado no");
+    g_aimp_exe = 0x00620000;
+    CHECK(aimp_code_cmp(rel, exp, sizeof exp) == 0, "base 0x620000: el push reubicado coincide");
+    rel[7] = 0xFE;
+    CHECK(aimp_code_cmp(rel, exp, sizeof exp) != 0, "otro byte distinto: no coincide");
+    rel[7] = 0xFF;
+    v += 4;
+    memcpy(rel + 9, &v, 4);
+    CHECK(aimp_code_cmp(rel, exp, sizeof exp) != 0, "dirección con otro desplazamiento: no coincide");
+    g_aimp_exe = save;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
+    test_code_cmp();
     test_hook();
     test_fmt();
     printf("%s (%d fallas)\n", g_fail ? "TESTS CON FALLAS" : "TODOS LOS TESTS OK", g_fail);

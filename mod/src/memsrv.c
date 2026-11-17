@@ -190,7 +190,7 @@ static void run(char *txt)
             uint8_t pr[sizeof KILL_PROLOGUE];
             uintptr_t f = g_aimp_exe + AIMP_RVA_CHR_KILL;
             uint16_t hp = 0;
-            int ok = g_test && chr && is_char(chr) && mem_read(f, pr, sizeof pr) && aimp_memcmp(pr, KILL_PROLOGUE, sizeof pr) == 0 &&
+            int ok = g_test && chr && is_char(chr) && mem_read(f, pr, sizeof pr) && aimp_code_cmp(pr, KILL_PROLOGUE, sizeof pr) == 0 &&
                      mem_read(chr + 0x33C, &hp, 2);
             aimp_snprintf(line, sizeof line, "KILL 0x%08x salud %u %s\n", chr, hp, ok ? "ok" : "NO (AIMP_MEMSRV_TEST o prólogo)");
             put(line);

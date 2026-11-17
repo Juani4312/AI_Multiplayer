@@ -333,9 +333,9 @@ void inv_install(AimpNet *net)
     if (!g_trace && !g_sync)
         return;
     uint8_t a[sizeof ADD_PROLOGUE], c[sizeof CLEAR_PROLOGUE];
-    if (mem_read(g_aimp_exe + AIMP_RVA_INV_ADD, a, sizeof a) && aimp_memcmp(a, ADD_PROLOGUE, sizeof a) == 0)
+    if (mem_read(g_aimp_exe + AIMP_RVA_INV_ADD, a, sizeof a) && aimp_code_cmp(a, ADD_PROLOGUE, sizeof a) == 0)
         g_add = (AddFn)(void *)(g_aimp_exe + AIMP_RVA_INV_ADD);
-    if (mem_read(g_aimp_exe + AIMP_RVA_INV_CLEAR, c, sizeof c) && aimp_memcmp(c, CLEAR_PROLOGUE, sizeof c) == 0)
+    if (mem_read(g_aimp_exe + AIMP_RVA_INV_CLEAR, c, sizeof c) && aimp_code_cmp(c, CLEAR_PROLOGUE, sizeof c) == 0)
         g_clear = (ClearFn)(void *)(g_aimp_exe + AIMP_RVA_INV_CLEAR);
     if (g_sync && (!g_add || !g_clear)) {
         log_printf("INV: los prólogos de FUN_0079bb20/FUN_0078ddf0 no coinciden: AIMP_SYNC_INV queda apagado");

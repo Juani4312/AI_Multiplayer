@@ -55,6 +55,8 @@ int mem_cstr(uintptr_t addr, char *out, size_t cap);
 /* Escritura que no crashea (WriteProcessMemory). Solo la usa la fase 4 (ghost.c),
  * sobre campos que ya se validaron con una lectura. */
 int mem_write(uintptr_t addr, const void *src, size_t n);
+/* Compara código leído del juego con los bytes esperados, aceptando direcciones absolutas reubicadas (ASLR). 0 = igual. */
+int aimp_code_cmp(const void *actual, const void *expected, size_t n);
 
 /* Estado global. */
 extern HMODULE g_aimp_self;      /* nuestra DLL */

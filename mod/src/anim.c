@@ -116,17 +116,17 @@ int anim_install(void)
 {
     uint8_t c[sizeof PLAY_PROLOGUE], s[sizeof STRDB_PROLOGUE];
     uintptr_t pp = g_aimp_exe + AIMP_RVA_CMD_PLAY_ANIM, ps = g_aimp_exe + AIMP_RVA_STRING_DB;
-    if (mem_read(ps, s, sizeof s) && aimp_memcmp(s, STRDB_PROLOGUE, sizeof s) == 0)
+    if (mem_read(ps, s, sizeof s) && aimp_code_cmp(s, STRDB_PROLOGUE, sizeof s) == 0)
         g_str = (StrFn)(void *)ps;
     {
         uint8_t t[sizeof TICK_PROLOGUE];
         uintptr_t pt = g_aimp_exe + AIMP_RVA_CTRL_TICK;
-        if (mem_read(pt, t, sizeof t) && aimp_memcmp(t, TICK_PROLOGUE, sizeof t) == 0)
+        if (mem_read(pt, t, sizeof t) && aimp_code_cmp(t, TICK_PROLOGUE, sizeof t) == 0)
             g_tick = (TickFn)(void *)pt;
         else
             log_printf("ANIM: el prólogo de FUN_00679150 (tick del controlador) no coincide");
     }
-    if (!mem_read(pp, c, sizeof c) || aimp_memcmp(c, PLAY_PROLOGUE, sizeof c) != 0) {
+    if (!mem_read(pp, c, sizeof c) || aimp_code_cmp(c, PLAY_PROLOGUE, sizeof c) != 0) {
         log_printf("ANIM: el prólogo de FUN_0067e3b0 (PLAY_ANIMATION) no coincide; sin animaciones del mod");
         return 0;
     }

@@ -32,7 +32,7 @@ int hook_install(AimpHook *h, const char *name, void *target, const uint8_t *exp
         log_printf("hook %s: no se puede leer 0x%08x", name, (unsigned)(uintptr_t)target);
         return 0;
     }
-    if (aimp_memcmp(cur, expect, expect_len) != 0) {
+    if (aimp_code_cmp(cur, expect, expect_len) != 0) {
         hex_bytes(hb, sizeof hb, cur, expect_len);
         hex_bytes(he, sizeof he, expect, expect_len);
         log_printf("hook %s: bytes distintos en 0x%08x: hay [%s], se esperaba [%s]. No se instala.",

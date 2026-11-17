@@ -417,7 +417,7 @@ int ghost_install(void)
     g_freq = f.QuadPart ? f.QuadPart : 1;
     uint8_t got[sizeof AIMP_CHR_TELEPORT_PROLOGUE];
     uintptr_t tp = g_aimp_exe + AIMP_RVA_CHR_TELEPORT;
-    if (g_mode && (!mem_read(tp, got, sizeof got) || aimp_memcmp(got, AIMP_CHR_TELEPORT_PROLOGUE, sizeof got) != 0)) {
+    if (g_mode && (!mem_read(tp, got, sizeof got) || aimp_code_cmp(got, AIMP_CHR_TELEPORT_PROLOGUE, sizeof got) != 0)) {
         log_printf("GHOST: el prólogo de FUN_007c6330 (teleport) no coincide; AIMP_GHOST queda apagado");
         g_mode = 0;
     }
@@ -459,15 +459,15 @@ int ghost_install(void)
     if (g_walk) {
         uint8_t a[sizeof AIMP_CMD_MOVE_START_PROLOGUE], b[sizeof AIMP_CMD_MOVE_UPDATE_PROLOGUE];
         uintptr_t ps = g_aimp_exe + AIMP_RVA_CMD_MOVE_START, pu = g_aimp_exe + AIMP_RVA_CMD_MOVE_UPDATE;
-        if (!mem_read(ps, a, sizeof a) || aimp_memcmp(a, AIMP_CMD_MOVE_START_PROLOGUE, sizeof a) != 0 || !mem_read(pu, b, sizeof b) ||
-            aimp_memcmp(b, AIMP_CMD_MOVE_UPDATE_PROLOGUE, sizeof b) != 0) {
+        if (!mem_read(ps, a, sizeof a) || aimp_code_cmp(a, AIMP_CMD_MOVE_START_PROLOGUE, sizeof a) != 0 || !mem_read(pu, b, sizeof b) ||
+            aimp_code_cmp(b, AIMP_CMD_MOVE_UPDATE_PROLOGUE, sizeof b) != 0) {
             log_printf("GHOST: los prólogos de FUN_0067e980/FUN_006797a0 (MOVE_TOWARDS) no coinciden; AIMP_GHOST_WALK queda apagado");
             g_walk = 0;
         } else {
             g_move_start = (MoveCmdFn)(void *)ps;
             uint8_t c[sizeof AIMP_CMD_MOVE_START_PROLOGUE];
             uintptr_t pi = g_aimp_exe + AIMP_RVA_CMD_IDLE;
-            if (mem_read(pi, c, sizeof c) && aimp_memcmp(c, AIMP_CMD_MOVE_START_PROLOGUE, sizeof c) == 0)
+            if (mem_read(pi, c, sizeof c) && aimp_code_cmp(c, AIMP_CMD_MOVE_START_PROLOGUE, sizeof c) == 0)
                 g_idle_cmd = (IdleCmdFn)(void *)pi;
             else
                 log_printf("GHOST: el prólogo de FUN_0067db10 (IDLE) no coincide; el avatar no se agacha");
@@ -483,15 +483,15 @@ int ghost_install(void)
             g_downed_hide = aimp_env_int(L"AIMP_GHOST_DOWNED_HIDE", 0);
             if (g_downed_hide) {
                 uint8_t pr[sizeof NPC_SET_INVISIBLE_PROLOGUE];
-                if (mem_read(g_aimp_exe + AIMP_RVA_NPC_SET_INVISIBLE, pr, sizeof pr) && aimp_memcmp(pr, NPC_SET_INVISIBLE_PROLOGUE, sizeof pr) == 0)
+                if (mem_read(g_aimp_exe + AIMP_RVA_NPC_SET_INVISIBLE, pr, sizeof pr) && aimp_code_cmp(pr, NPC_SET_INVISIBLE_PROLOGUE, sizeof pr) == 0)
                     g_set_invisible = (SetInvisibleFn)(void *)(g_aimp_exe + AIMP_RVA_NPC_SET_INVISIBLE);
                 log_printf("AIMP_GHOST_DOWNED_HIDE=1: el avatar del compañero caído se oculta%s", g_set_invisible ? "" : " (NO: no se reconoce FUN_0078b100)");
             }
             {
                 uint8_t c1[sizeof AIMP_CHR_CROUCH_PROLOGUE], c2[sizeof AIMP_CHR_UNCROUCH_PROLOGUE];
                 uintptr_t p1 = g_aimp_exe + AIMP_RVA_CHR_CROUCH, p2 = g_aimp_exe + AIMP_RVA_CHR_UNCROUCH;
-                if (mem_read(p1, c1, sizeof c1) && aimp_memcmp(c1, AIMP_CHR_CROUCH_PROLOGUE, sizeof c1) == 0 && mem_read(p2, c2, sizeof c2) &&
-                    aimp_memcmp(c2, AIMP_CHR_UNCROUCH_PROLOGUE, sizeof c2) == 0) {
+                if (mem_read(p1, c1, sizeof c1) && aimp_code_cmp(c1, AIMP_CHR_CROUCH_PROLOGUE, sizeof c1) == 0 && mem_read(p2, c2, sizeof c2) &&
+                    aimp_code_cmp(c2, AIMP_CHR_UNCROUCH_PROLOGUE, sizeof c2) == 0) {
                     g_chr_crouch = (ChrFn)(void *)p1;
                     g_chr_uncrouch = (ChrFn)(void *)p2;
                 } else if (g_crouch_mode == 1 || g_crouch_mode == 3) {
