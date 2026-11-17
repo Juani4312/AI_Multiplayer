@@ -94,6 +94,17 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 
 ## Último trabajo y siguiente paso
 
+**2026-11-17, 03:00–04:20 (trabajo autónomo, corridas 93–101, locales con el peer simulado):**
+- **Partida del usuario protegida:** es una run sin morir. `work/scripts/mode.sh test` guarda su partida en `saves/current.tar.gz` y carga un save de prueba (`safezone`); `mode.sh play` la restaura y desinstala el mod.
+- **Inventario compartido** (`AIMP_SYNC_INV=1`, hallazgo 21): lo que uno levanta, gasta o fabrica le pasa también al otro. Al conectarse y después de cada carga, el host manda su inventario completo y el cliente se iguala.
+- **Muerte en coop por red** (`AIMP_COOP_DOWNED=1`, `work/DESIGN_DEATH.md`):
+  - el que cae queda "caído" y el avatar del otro lado se acurruca;
+  - usar una terminal de guardado revive al compañero a tu lado;
+  - si caen los dos, game over normal.
+- **Armas de a una** (`AIMP_SYNC_WEAPONS=1`): cada arma tiene un dueño, con las reglas de distancia acordadas. La lectura del arma en mano y los eventos están verificados; el bloqueo falta probarlo con alguien al mando.
+- **¿Misma partida?** Al conectar, el log dice `SESSION: misma partida` o `SESSION: PARTIDAS DISTINTAS`.
+- Para la próxima prueba con dos máquinas: `work/windows/instructions.md`, sección **8e**. DLL en `mod/dist`.
+
 **2026-11-17, madrugada (corridas 83–92, locales):**
 - **El avatar se ve agachado:** cuando el otro se agacha, el civil recibe una pose agachada del juego (`idle_crouch`, con una mano en el piso) mediante el comando `PLAY_ANIMATION`, y se desliza en esa pose mientras el otro avanza. Los humanos no tienen ciclo de caminar agachado. También andan `cower_low_idle` (acurrucado) y `jb_kn_idlebase01` (arrodillado) (`AIMP_GHOST_CROUCH_ANIM`). Hallazgo 20.
 - **Avatar mujer:** si en la zona hay una civil (esqueleto `FEMALE`), el mod la elige como avatar. Falta verlo en una zona con mujeres: en la sala del transit hay solo hombres.
