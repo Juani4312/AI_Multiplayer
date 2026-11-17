@@ -77,3 +77,16 @@ _2026-11-17. Preguntas del usuario: "¿qué pasa si cada uno tiene un save disti
   - si el dueño está caído (DESIGN_DEATH) o se desconecta, el arma queda libre para el otro sin importar la distancia;
   - si los dos la equipan en el mismo instante, decide el host.
 - Implementación: estado `{arma: dueño, en_mano}` en el host. Por red, `EQUIP`/`UNEQUIP` y la distancia; la del avatar ya se conoce en cada frame. Bloquear la selección en el menú radial o desequipar enseguida si el juego no deja bloquear.
+
+**Implementación (2026-11-17, `mod/src/weapons.c`, `AIMP_SYNC_WEAPONS=1`, evento 8):**
+- **Arma en mano:** `equipo = [Character+0x1100]`. Si `equipo+0x1510 != 0`, la instancia es `equipo[equipo+0x150C]`, la misma que el `slot+4` del inventario: de ahí sale el ShortGuid del arma.
+- **Sacar:**
+  - si el arma no está disponible (el dueño es el otro y está lejos o la tiene en la mano, sin estar caído ni desconectado), el mod la guarda con la función del juego `FUN_007c3980`;
+  - si está disponible, el que la saca pasa a ser el dueño y avisa con `EQUIP`. Al guardarla avisa con `UNEQUIP`.
+- **Al mismo tiempo:** gana el host.
+- **Asentamiento:** 3 s al cargar (corrida 96: el juego tiene la escopeta en la mano ~0,1 s al cargar).
+- **Verificado en una máquina (corridas 96–97):**
+  - la lectura del arma en mano (la escopeta transitoria al cargar se mapeó bien);
+  - los eventos del otro (sacó y guardó la pistola, con el dueño registrado);
+  - que no salen eventos al cargar.
+- **Sin verificar:** el bloqueo, porque con el mando virtual no se puede sacar un arma en `safezone`. Hace falta probarlo con alguien al mando.

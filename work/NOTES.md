@@ -922,3 +922,4 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - Montaje: `aimp_peer.py --join 127.0.0.1:47811 --event "T:6:<hex InvEvt>" --record-events f`.
 - No encontré con el mando virtual el botón de la rueda de ítems para verlo en pantalla (BACK abre el mapa; LB, el detector).
 - **Corrida 95 (muerte en coop por red, una máquina con el peer):** todo el flujo anduvo: avatar caído y revivido, caído local con aviso, revivir con teletransporte junto al que guardó, y caen los dos → game over. Detalle en DESIGN_DEATH.md, "Por red".
+- **Armas de a una (corridas 96–97):** `weapons.c` lee el arma en mano por el equipo (`Character+0x1100`: `+0x150C` índice, `+0x1510` en mano), guarda con `FUN_007c3980` y avisa con `AIMP_EVT_WEAPON` (8). Recepción verificada; el bloqueo local queda sin probar (el mando virtual no saca armas).

@@ -18,6 +18,7 @@
  * AIMP_TRACE_USE=1 (o AIMP_SYNC_USE=1) además hookea los dos handlers, solo para loguear
  * por dónde pasa cada uso.
  */
+#include "weapons.h"
 #include "death.h"
 #include "inv.h"
 #include "sync.h"
@@ -265,7 +266,7 @@ static int try_apply(Pend *q, uint32_t level)
 void sync_frame(AimpNet *net, uint32_t level)
 {
     g_level = level;
-    int pins = pins_sync_enabled(), throws = throw_sync_enabled(), invs = inv_sync_enabled() || death_coop_enabled();
+    int pins = pins_sync_enabled(), throws = throw_sync_enabled(), invs = inv_sync_enabled() || death_coop_enabled() || weapons_enabled();
     if ((!g_on && !pins && !throws && !invs) || !net || !net->mode)
         return;
     int64_t now = qpc_now();
@@ -278,6 +279,10 @@ void sync_frame(AimpNet *net, uint32_t level)
         if (e.kind == AIMP_EVT_THROW) { /* objetos arrojados y colocados (throw.c, hallazgo 17) */
             if (throws)
                 throw_remote_event(&e, level);
+            continue;
+        }
+        if (e.kind == AIMP_EVT_WEAPON) { /* armas de a una (weapons.c) */
+            weapons_remote_event(&e);
             continue;
         }
         if (e.kind == AIMP_EVT_COOP) { /* muerte en coop (death.c) */
