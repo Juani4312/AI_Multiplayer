@@ -52,3 +52,17 @@ _2026-11-17. Preguntas del usuario: "¿qué pasa si cada uno tiene un save disti
 - Lo más largo es ubicar el inventario y sus funciones: estático más el lector de memoria (`memsrv`), comparando la memoria antes y después de levantar algo.
 - La red ya existe; el canal de eventos se repite 3 veces y descarta duplicados, y alcanza para deltas chicos.
 - Para el estado completo conviene el canal confiable del punto 1.2, que sirve para las dos cosas.
+
+### Armas de a uno (idea del usuario, 2026-11-17)
+
+"Que cada arma la pueda tener uno solo a la vez: un solo lanzallamas, accesible por los dos pero no al mismo tiempo."
+
+**Opciones:**
+- **a) La tiene el que la saca (recomendada):** las armas están en el inventario de los dos. Cuando uno la equipa, en la máquina del otro se le saca del inventario (o se la desequipa si la tenía en la mano) y no la puede elegir en el menú radial. Cuando el primero cambia de arma, vuelve a estar disponible para los dos.
+  - Hace falta saber qué arma tiene equipada cada uno (el equipo del personaje está en `Character+0x1100`, hallazgo 19) y mandarlo por red.
+  - Si los dos la sacan en el mismo instante, decide el host.
+- **b) Pasársela:** el arma está en un solo inventario y el dueño se la da al otro con una acción explícita, cerca, o con un "usar" sobre el avatar. Es más realista, pero lleva más trabajo de interfaz.
+
+**En los dos casos:**
+- La munición de reserva sigue siendo compartida. El cargador viaja con el arma.
+- Lo que no es arma (botiquines, bengalas, componentes, llaves) sigue siendo un solo contador para los dos.
