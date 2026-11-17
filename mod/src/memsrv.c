@@ -9,6 +9,7 @@
  *   LOADF <hex> <ruta> (solo con AIMP_MEMSRV_TEST=1) copia el archivo a esa dirección si el rango es escribible
  *   LOADN <hex> <largo> <ruta>  ídem, solo los primeros <largo> bytes
  *   TP <x> <y> <z> <yaw>  (solo con AIMP_MEMSRV_TEST=1) teletransporta al jugador 0 (FUN_007c6330)
+ *   W <hex> <hexbytes> (solo con AIMP_MEMSRV_TEST=1) escribe hasta 256 bytes en memoria escribible
  *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
  *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
  *   KILL <hex>        (solo con AIMP_MEMSRV_TEST=1) mata al personaje como lo hace el juego: FUN_007d0c10 thiscall(chr,
@@ -288,6 +289,24 @@ static void run(char *txt)
                            (double)yaw);
                 ((TpFn)(void *)f)((void *)pl, NULL, pos, yaw, 0);
             }
+        } else if (p[0] == 'W' && p[1] == ' ') {
+            /* W <hex> <hexbytes>: (solo AIMP_MEMSRV_TEST=1) escribe hasta 256 bytes en memoria escribible. Para probar
+             * valores de la dificultad (DESIGN_DIFFICULTY). */
+            uint32_t a = num(&q);
+            while (*q == ' ')
+                q++;
+            uint8_t buf[256];
+            uint32_t n = 0;
+            while (n < sizeof buf && hexbyte(&q, &buf[n]))
+                n++;
+            MEMORY_BASIC_INFORMATION mi;
+            int ok = g_test && n && VirtualQuery((void *)(uintptr_t)a, &mi, sizeof mi) && mi.State == MEM_COMMIT &&
+                     !(mi.Protect & PAGE_GUARD) && ((mi.Protect & 0xFF) == PAGE_READWRITE || (mi.Protect & 0xFF) == PAGE_EXECUTE_READWRITE) &&
+                     (uintptr_t)a + n <= (uintptr_t)mi.BaseAddress + mi.RegionSize && mem_write(a, buf, n);
+            aimp_snprintf(line, sizeof line, "W 0x%08x %u %s\n", a, n, ok ? "ok" : "NO");
+            put(line);
+            if (ok)
+                log_printf("MEMSRV: W 0x%08x (%u bytes)", a, n);
         } else if (p[0] == 'V' && p[1] == ' ') {
             uint32_t v = (uint32_t)g_aimp_exe + num(&q);
             scan((const uint8_t *)&v, 4, 'V');
