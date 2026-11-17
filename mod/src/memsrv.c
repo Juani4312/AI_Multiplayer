@@ -6,6 +6,9 @@
  *   C                 personajes: "P <i> 0x<chr>" (jugadores) y "N <i> 0x<chr>" (NPCs)
  *   R <hex> <len>     "R 0x<addr> <len> <hex...>" o "... ERR" (len hasta 0x10000, en hex o decimal)
  *   H <hex>           nombre de un hash en la tabla de textos del juego ("H 0x<hash> <texto>" o "?")
+ *   LOADF <hex> <ruta> (solo con AIMP_MEMSRV_TEST=1) copia el archivo a esa dirección si el rango es escribible
+ *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
+ *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
  *   KILL <hex>        (solo con AIMP_MEMSRV_TEST=1) mata al personaje como lo hace el juego: FUN_007d0c10 thiscall(chr,
  *                     atacante = 0), ret 4; daño igual a su salud (Character+0x33C). La llama ACT_PLAYER_DEATH (FUN_00668120).
  * La primera línea de la respuesta es "# <seq>": el número de pedido (sube en cada lectura del archivo).
@@ -106,6 +109,51 @@ static int is_char(uint32_t chr)
     return 0;
 }
 
+/* V/F (2026-11-17): búsqueda en la memoria escribible del proceso (páginas comprometidas, sin guarda), alineada a 4.
+ * Lectura directa: VirtualQuery dice que la página es legible. Hasta 32 resultados. */
+static int hexbyte(const char **q, uint8_t *out)
+{
+    int v = 0;
+    for (int k = 0; k < 2; k++) {
+        char c = **q;
+        int d = c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
+        if (d < 0)
+            return 0;
+        v = v * 16 + d;
+        (*q)++;
+    }
+    *out = (uint8_t)v;
+    return 1;
+}
+
+static void scan(const uint8_t *pat, uint32_t n, char tag)
+{
+    char line[96];
+    uint32_t hits = 0;
+    MEMORY_BASIC_INFORMATION mi;
+    for (uintptr_t a = 0x10000; a < 0x7FFF0000u && hits < 32;) {
+        if (!VirtualQuery((void *)a, &mi, sizeof mi))
+            break;
+        uintptr_t end = (uintptr_t)mi.BaseAddress + mi.RegionSize;
+        DWORD pr = mi.Protect & 0xFF;
+        if (mi.State == MEM_COMMIT && !(mi.Protect & PAGE_GUARD) &&
+            (pr == PAGE_READWRITE || pr == PAGE_EXECUTE_READWRITE || pr == PAGE_WRITECOPY)) {
+            const uint8_t *b = (const uint8_t *)mi.BaseAddress;
+            for (size_t i = 0; i + n <= mi.RegionSize && hits < 32; i += 4)
+                if (b[i] == pat[0] && aimp_memcmp(b + i, pat, n) == 0) {
+                    aimp_snprintf(line, sizeof line, "%c 0x%08x\n", tag, (unsigned)(uintptr_t)(b + i));
+                    put(line);
+                    hits++;
+                }
+        }
+        if (end <= a)
+            break;
+        a = end;
+    }
+    aimp_snprintf(line, sizeof line, "%c fin %u\n", tag, hits);
+    put(line);
+}
+
 static void run(char *txt)
 {
     char line[96];
@@ -149,6 +197,53 @@ static void run(char *txt)
                 log_printf("MEMSRV: KILL 0x%08x (salud %u)", chr, hp);
                 ((KillFn)(void *)f)((void *)chr, NULL, 0);
             }
+        } else if (p[0] == 'L' && p[1] == 'O' && p[2] == 'A' && p[3] == 'D' && p[4] == 'F') {
+            /* LOADF <hex> <ruta>: (solo AIMP_MEMSRV_TEST=1) copia el archivo a esa dirección, si todo el rango es memoria
+             * escribible. Para el experimento de la copia en memoria del save (corrida 110). */
+            q = p + 5;
+            uint32_t a = num(&q);
+            while (*q == ' ')
+                q++;
+            wchar_t wp[MAX_PATH];
+            int k = 0;
+            for (; q[k] && k < MAX_PATH - 1; k++)
+                wp[k] = (wchar_t)(uint8_t)q[k];
+            wp[k] = 0;
+            int ok = 0;
+            DWORD got = 0, sz = 0;
+            HANDLE fh = g_test ? CreateFileW(wp, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL) : INVALID_HANDLE_VALUE;
+            if (fh != INVALID_HANDLE_VALUE) {
+                sz = GetFileSize(fh, NULL);
+                MEMORY_BASIC_INFORMATION mi;
+                int writable = sz > 0 && sz < 64u * 1024 * 1024;
+                for (uintptr_t x = a; writable && x < a + sz;) {
+                    if (!VirtualQuery((void *)x, &mi, sizeof mi) || mi.State != MEM_COMMIT || (mi.Protect & PAGE_GUARD) ||
+                        ((mi.Protect & 0xFF) != PAGE_READWRITE && (mi.Protect & 0xFF) != PAGE_EXECUTE_READWRITE))
+                        writable = 0;
+                    else
+                        x = (uintptr_t)mi.BaseAddress + mi.RegionSize;
+                }
+                if (writable && ReadFile(fh, (void *)(uintptr_t)a, sz, &got, NULL) && got == sz)
+                    ok = 1;
+                CloseHandle(fh);
+            }
+            aimp_snprintf(line, sizeof line, "LOADF 0x%08x %u %s\n", a, (unsigned)got, ok ? "ok" : "NO");
+            put(line);
+            if (ok)
+                log_printf("MEMSRV: LOADF 0x%08x: %u bytes", a, (unsigned)got);
+        } else if (p[0] == 'V' && p[1] == ' ') {
+            uint32_t v = (uint32_t)g_aimp_exe + num(&q);
+            scan((const uint8_t *)&v, 4, 'V');
+        } else if (p[0] == 'F' && p[1] == ' ') {
+            uint8_t pat[64];
+            uint32_t n = 0;
+            q = p + 2;
+            while (n < sizeof pat && hexbyte(&q, &pat[n]))
+                n++;
+            if (n >= 4)
+                scan(pat, n, 'F');
+            else
+                put("F ERR (al menos 4 bytes en hex)\n");
         } else if (p[0] == 'H') {
             uint32_t h = num(&q);
             const char *s = anim_name(h);

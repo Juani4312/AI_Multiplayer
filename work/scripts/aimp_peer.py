@@ -211,17 +211,31 @@ class SaveXfer:
 
     # cliente
     def on_client(self, op, xid, data, now):
+        if op == X_NOTIFY:
+            if xid != getattr(self, "notify_in", None):
+                self.notify_in = xid
+                print(f"SAVE fetch: el juego guardó (aviso {xid}): se vuelven a pedir los saves")
+                if self.state in ("done", "off"):
+                    self.state, self.xid, self.got, self.last_req = "wait", 0, None, 0.0
+            return
         if op == X_MAN and self.state == "wait":
             n = data[7]
             self.xid = xid
             self.files = [struct.unpack_from(XENT, data, 12 + 24 * i) for i in range(n)]
-            mine = dict(self.local())
             self.mask = 0
+            cache = getattr(self, "hcache", {})
             for i, (nm, sz, h) in enumerate(self.files):
                 nm = nm.rstrip(b"\0").decode()
-                b = mine.get(nm)
-                if b is None or len(b) != sz or fnv_fast(b) != h:
+                fp = os.path.join(self.dir, nm)
+                if not os.path.exists(fp) or os.path.getsize(fp) != sz:
                     self.mask |= 1 << i
+                    continue
+                key = (os.stat(fp).st_mtime_ns, sz)
+                if cache.get(nm, (None,))[0:2] != key:  # FNV en Python es lento: hash por (mtime, tamaño)
+                    cache[nm] = key + (fnv(open(fp, "rb").read()),)
+                if cache[nm][2] != h:
+                    self.mask |= 1 << i
+            self.hcache = cache
             names = [self.files[i][0].rstrip(b"\0").decode() for i in range(n) if self.mask >> i & 1]
             print(f"SAVE fetch: manifiesto del juego: {n} saves; distintos: {names or 'ninguno'}")
             self.state = "xfer" if self.mask else "done"
@@ -267,7 +281,10 @@ class SaveXfer:
                 print(f"SAVE fetch: {nm}: hash distinto")
                 status = 4
                 continue
-            open(os.path.join(self.dir, nm), "wb").write(b)
+            fp = os.path.join(self.dir, nm)
+            open(fp, "wb").write(b)
+            self.hcache = getattr(self, "hcache", {})
+            self.hcache[nm] = (os.stat(fp).st_mtime_ns, sz, h)
             written |= 1 << i
             print(f"SAVE fetch: {nm}: {cl} -> {sz} bytes ({'LZ' if method else 'crudo'}), hash OK")
         print(f"SAVE fetch: {'listo' if not status else 'con errores'} en {now - self.t0:.1f} s; escritos {written:08x}")
