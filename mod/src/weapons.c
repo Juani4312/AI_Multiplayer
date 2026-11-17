@@ -212,7 +212,7 @@ void weapons_install(AimpNet *net)
     if (!g_on)
         return;
     uint8_t p[sizeof HOLSTER_PROLOGUE];
-    if (mem_read(g_aimp_exe + AIMP_RVA_HOLSTER, p, sizeof p) && aimp_memcmp(p, HOLSTER_PROLOGUE, sizeof p) == 0)
+    if (mem_read(g_aimp_exe + AIMP_RVA_HOLSTER, p, sizeof p) && aimp_code_cmp(p, HOLSTER_PROLOGUE, sizeof p) == 0)
         g_holster = (HolsterFn)(void *)(g_aimp_exe + AIMP_RVA_HOLSTER);
     else
         log_printf("WEAPONS: el prólogo de FUN_007c3980 (guardar el arma) no coincide: no se puede bloquear");

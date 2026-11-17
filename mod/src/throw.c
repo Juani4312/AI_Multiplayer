@@ -654,9 +654,9 @@ static void pickup_install(void)
         return;
     uint8_t a[sizeof AIMP_PICKUP_APPLY_PROLOGUE], b[sizeof AIMP_ENT_IDS_PROLOGUE];
     uintptr_t pa = g_aimp_exe + AIMP_RVA_PICKUP_APPLY, pi = g_aimp_exe + AIMP_RVA_ENT_IDS;
-    if (mem_read(pi, b, sizeof b) && !aimp_memcmp(b, AIMP_ENT_IDS_PROLOGUE, sizeof b))
+    if (mem_read(pi, b, sizeof b) && !aimp_code_cmp(b, AIMP_ENT_IDS_PROLOGUE, sizeof b))
         g_ids = (IdsFn)(void *)pi;
-    if (mem_read(pa, a, sizeof a) && !aimp_memcmp(a, AIMP_PICKUP_APPLY_PROLOGUE, sizeof a))
+    if (mem_read(pa, a, sizeof a) && !aimp_code_cmp(a, AIMP_PICKUP_APPLY_PROLOGUE, sizeof a))
         g_pick_apply = (PickupApplyFn)(void *)pa;
     else if (g_pick_sync) {
         log_printf("PICKUP: el prólogo de FUN_00795ee0 no coincide; no se aplican los del otro");
@@ -858,8 +858,8 @@ int throw_install(AimpNet *net)
         uint8_t pr[sizeof AIMP_ENT_IDS_PROLOGUE];
         uintptr_t pi = g_aimp_exe + AIMP_RVA_ENT_IDS, pr2 = g_aimp_exe + AIMP_RVA_THROW_RELEASE;
         uint8_t rp[sizeof AIMP_THROW_PROLOGUE];
-        if (mem_read(pi, pr, sizeof pr) && !aimp_memcmp(pr, AIMP_ENT_IDS_PROLOGUE, sizeof pr) && mem_read(pr2, rp, sizeof rp) &&
-            !aimp_memcmp(rp, AIMP_THROW_PROLOGUE, sizeof rp)) {
+        if (mem_read(pi, pr, sizeof pr) && !aimp_code_cmp(pr, AIMP_ENT_IDS_PROLOGUE, sizeof pr) && mem_read(pr2, rp, sizeof rp) &&
+            !aimp_code_cmp(rp, AIMP_THROW_PROLOGUE, sizeof rp)) {
             g_ids = (IdsFn)(void *)pi;
             g_release = (ReleaseFn)(void *)pr2;
         } else {

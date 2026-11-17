@@ -238,9 +238,9 @@ void death_install(AimpNet *net)
     g_downed_mode = g_downed_cfg = aimp_env_int(L"AIMP_COOP_DOWNED", 0);
     {
         uint8_t t[sizeof AIMP_CHR_TELEPORT_PROLOGUE], k[sizeof KILL_PROLOGUE];
-        if (mem_read(g_aimp_exe + AIMP_RVA_CHR_TELEPORT, t, sizeof t) && aimp_memcmp(t, AIMP_CHR_TELEPORT_PROLOGUE, sizeof t) == 0)
+        if (mem_read(g_aimp_exe + AIMP_RVA_CHR_TELEPORT, t, sizeof t) && aimp_code_cmp(t, AIMP_CHR_TELEPORT_PROLOGUE, sizeof t) == 0)
             g_tp = (TeleportFn)(void *)(g_aimp_exe + AIMP_RVA_CHR_TELEPORT);
-        if (mem_read(g_aimp_exe + AIMP_RVA_CHR_KILL, k, sizeof k) && aimp_memcmp(k, KILL_PROLOGUE, sizeof k) == 0)
+        if (mem_read(g_aimp_exe + AIMP_RVA_CHR_KILL, k, sizeof k) && aimp_code_cmp(k, KILL_PROLOGUE, sizeof k) == 0)
             g_kill = (KillFn)(void *)(g_aimp_exe + AIMP_RVA_CHR_KILL);
     }
     if (aimp_env_str(L"AIMP_COOP_REVIVE_FILE", g_revive_file, MAX_PATH)) {

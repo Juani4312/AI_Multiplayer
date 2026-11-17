@@ -61,7 +61,7 @@ static int check_build(void)
     uint32_t rva_curl = curl ? (uint32_t)((uintptr_t)curl - base) : 0;
     uint8_t pro[sizeof AIMP_MODEMGR_RUN_PROLOGUE];
     int pro_ok = mem_read(base + AIMP_RVA_MODEMGR_RUN, pro, sizeof pro) &&
-                 aimp_memcmp(pro, AIMP_MODEMGR_RUN_PROLOGUE, sizeof pro) == 0;
+                 aimp_code_cmp(pro, AIMP_MODEMGR_RUN_PROLOGUE, sizeof pro) == 0;
 
     int ok_tds = tds == AIMP_EXPECT_TIMESTAMP, ok_soi = soi == AIMP_EXPECT_SIZEOFIMAGE;
     int ok_ovr = rva_ovr == AIMP_RVA_OVR_INITIALIZE, ok_curl = rva_curl == AIMP_RVA_CURL_EASY_INIT;
