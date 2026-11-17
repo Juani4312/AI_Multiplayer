@@ -19,10 +19,12 @@ _2026-11-17. Preguntas del usuario: "¿qué pasa si cada uno tiene un save disti
 ### Propuesta: la partida la define el host
 
 1. **Al conectar, comparar** (hecho, 2026-11-17: `mod/src/session.c`, evento 10). La huella es el nivel más la posición y el yaw del jugador al aparecer después de cargar; con el mismo save coinciden al centímetro. Corrida 100: "misma partida" con la huella igual y "PARTIDAS DISTINTAS" con la de otro save. Por ahora solo avisa en el log; idea original: el cliente manda un resumen de su save (nivel, misión, hash del archivo de save actual y de `PROGRESSION.ais`). Si no coincide con el del host, se avisa y no se sincroniza nada.
-2. **Copiar el save del host:**
-   - el host manda su save actual por la red (los slots son de 1 a 2 MB; hace falta un canal confiable con fragmentación y confirmación, que el UDP de hoy no tiene);
-   - el cliente lo guarda como un slot propio (con backup, como `saves.sh`) y lo carga;
-   - plan B: hacerlo a mano con `saves.sh` o una carpeta compartida.
+2. **Copiar el save del host:** escrito y con tests (2026-11-17 tarde, `mod/src/savesync.c`; falta probarlo en el juego):
+   - el cliente, con `AIMP_SAVE_SYNC=1` y en el menú principal, pide la lista de saves del host (nombre, tamaño y hash) y trae solo los distintos, por un canal confiable nuevo (fragmentos de 1 KB con ventana y reenvío, compresión LZ propia: 24 MB de saves → 3,5 MB);
+   - lee y escribe con la misma API que el juego (`ISteamRemoteStorage`), así que anda con Steam Cloud y con Steam sin conexión;
+   - antes de escribir guarda un backup de sus archivos en `%LOCALAPPDATA%\AI_Multiplayer\save_backup\<fecha>\`;
+   - después, "Continue" en el cliente carga la partida del host;
+   - plan B, si no anda: a mano con `saves.sh` o una carpeta compartida.
 3. **Guardar juntos:** cuando el host guarda en una terminal, el cliente guarda también (o recibe el save del host). Así un game over de los dos recarga el mismo punto en las dos máquinas.
 4. **Ojo con Steam Cloud:** con una sola cuenta, la laptop offline no sincroniza, y por eso arrancó en otra misión. Con el amigo (otra cuenta) los saves son de cada uno: la copia del punto 2 es necesaria igual.
 

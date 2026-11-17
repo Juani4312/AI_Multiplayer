@@ -195,3 +195,7 @@
 - 04:14 (2026-11-17) Revivir también al pasar un checkpoint (Checkpoint.finished_saving vía pins.c; escrito, sin probar). dist actualizada. Sigue en modo juego.
 - 04:15 (2026-11-17) Estático: NPC_SetInvisible = FUN_0078b100 (oculta el modelo; sirve para esconder el avatar del caído). Anotado en DESIGN_DEATH.
 - 04:16 (2026-11-17) Estático: IGNORE_PLAYER = valor 0 de ALERTNESS_STATE (NPCs humanos). Fin del trabajo autónomo: todo commiteado, modo juego (partida del usuario restaurada, mod desinstalado).
+- 14:06 (2026-11-17) Sesión nueva, local. Estático: el juego guarda con ISteamRemoteStorage v012 (thiscall; FileRead vt+4, GetFileCount vt+0x3C). Encabezado de los .ais (nivel y título; en safezone CHSV00 = HAB_Airport).
+- 14:20 (2026-11-17) savesync.c: copia del save del host por un canal confiable nuevo (AIMP_PKT_XFER), manifiesto con hash, backup. El LZNT1 de Wine no comprime: LZ propio (24 MB -> 3,5 MB). test_savesync OK con pérdidas. aimp_peer.py --serve-save/--fetch-save.
+- 14:24 (2026-11-17) Corrida 102 no se pudo lanzar: el clasificador de permisos denegó abrir el juego. Vuelta a modo juego (mode.sh play; current sin cambios).
+- 14:40 (2026-11-17) AIMP_GHOST_DOWNED_HIDE=1: avatar del caído oculto con NPC_SetInvisible (FUN_0078b100). Suite completa OK. Docs al día; dist sin cambios (3f54f468).

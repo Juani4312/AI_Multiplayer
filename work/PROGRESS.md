@@ -3,19 +3,20 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-17, 04:15, cierre del trabajo autónomo. **Modo juego:** la partida del usuario quedó restaurada (`saves/current.tar.gz`) y el mod desinstalado. Hecho hoy (corridas 83–101):
-- avatar agachado (pose, hallazgo 20) y avatar mujer por esqueleto;
-- lector de memoria (`memsrv`);
-- muerte en coop: caído, red, revivir en la terminal y game over si caen los dos (`work/DESIGN_DEATH.md`);
-- inventario compartido, con el inventario completo del host al conectar (hallazgo 21);
-- armas de a una (`weapons.c`);
-- huella de la partida (`session.c`).
+_Última actualización: 2026-11-17, 14:45 (sesión local). **Modo juego:** la partida del usuario está cargada y el mod desinstalado.
 
-Todo verificado en una máquina con `aimp_peer.py`, salvo el bloqueo de armas (el mando virtual no saca armas).
+Hecho en esta sesión (sin abrir el juego: el permiso para lanzarlo fue denegado):
+- **copia del save del host** (`mod/src/savesync.c`, `AIMP_SAVE_SYNC=1` en el cliente): canal confiable `AIMP_PKT_XFER`, manifiesto con hash, compresión LZ propia (el LZNT1 de Wine no comprime), backup antes de escribir, lectura y escritura con `ISteamRemoteStorage` como el juego. Tests en wine OK (`test_savesync`);
+- `aimp_peer.py --serve-save / --fetch-save`;
+- avatar del caído oculto (`AIMP_GHOST_DOWNED_HIDE=1`, `NPC_SetInvisible`).
+
+Antes (corridas 83–101): avatar agachado, avatar mujer, `memsrv`, muerte en coop, inventario compartido, armas de a una, huella de la partida; todo verificado en una máquina con el peer, salvo el bloqueo de armas.
 
 **Siguiente:**
-- la prueba con dos máquinas de todo eso (`work/windows/instructions.md` 8e, DLL de `mod/dist`), con un save de prueba en las dos (nunca `current`);
-- después, revivir también en checkpoints u objetivos, decidir qué hace el caído (fantasma o espectador), copiar el save del host por red y el Alien (hace falta un save con el Alien)._
+- **corridas 102–103 (locales, necesitan permiso para abrir el juego):** la copia del save en los dos sentidos; montaje y resultado esperado en `work/NOTES.md` ("Copia del save del host"). Si pasan, actualizar `mod/dist` y sumar a la prueba de a dos;
+- probar `AIMP_GHOST_DOWNED_HIDE` con el peer (evento "caído" con `--event`);
+- la prueba con dos máquinas (`work/windows/instructions.md` 8e, DLL `3f54f468` de `mod/dist`), con un save de prueba en las dos (nunca `current`);
+- después: revivir en checkpoints u objetivos (escrito el de checkpoint, sin probar), decidir qué hace el caído (fantasma o espectador) y el Alien (hace falta un save con el Alien)._
 
 **Partida real del usuario (run sin morir):** nunca se prueba sobre ella. `work/scripts/mode.sh test [save]` guarda `saves/current.tar.gz`, carga el save de prueba e instala el mod; `mode.sh play` la restaura y desinstala el mod. Al cerrar una sesión, `mode.sh play`.
 Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safezone` = la partida de las corridas 20–82 (sin enemigos).
@@ -70,6 +71,7 @@ Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safez
 | Hallazgo 16 (árbol de composites) | 🟡 `findings/16-arbol-de-composites.md`: hijos en `CompositeInstance+0x2C`, índice pid → entidad, mensaje de `on_entered` (entró/salió en `msg+0x20`). Código y tests listos; **falta runtime** |
 | Hallazgo 20 (PLAY_ANIMATION, agachado del avatar) | ✅ `findings/20-animaciones-play-animation.md`: set `HUMAN`, tick del controlador `FUN_00679150`; `AIMP_GHOST_CROUCH=4` por defecto (corridas 83–89) |
 | Hallazgo 21 (inventario) / inventario compartido | ✅ en una máquina: `findings/21-inventario.md`, `AIMP_SYNC_INV=1` (corridas 93–94). Falta con dos máquinas y "armas de a una" |
+| Copia del save del host | 🟡 `mod/src/savesync.c` (`AIMP_SAVE_SYNC=1` en el cliente): tests OK; falta en el juego (corridas 102–103 en NOTES) |
 | Muerte en coop | 🟡 `work/DESIGN_DEATH.md`: caído con `Character+0x4253` (corrida 92); falta red, revivir y el remate del Alien |
 | Alien compartido | 📝 diseño en `work/DESIGN_ALIEN.md` (percepción `FUN_00730c30`, objetivo en `cerebro+0x10`). Falta una partida con el Alien activo (el usuario) |
 | Ítems compartidos (`AIMP_SYNC_PICKUP`) | 🟡 hook de `pickup_collected` (`FUN_007a2b30`) y aplicación en el otro con `FUN_00795ee0` por pid. Sin probar en el juego (instructions.md 8d) |

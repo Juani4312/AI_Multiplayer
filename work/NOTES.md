@@ -925,3 +925,29 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **Armas de a una (corridas 96–97):** `weapons.c` lee el arma en mano por el equipo (`Character+0x1100`: `+0x150C` índice, `+0x1510` en mano), guarda con `FUN_007c3980` y avisa con `AIMP_EVT_WEAPON` (8). Recepción verificada; el bloqueo local queda sin probar (el mando virtual no saca armas).
 - **Inventario completo del host (corridas 98–99):** `AIMP_EVT_INV_FULL` (9) al conectar y después de cada carga; el cliente fija sus cantidades a las del host. Verificado en los dos sentidos con el peer.
 - **Huella de la partida (corrida 100):** `session.c` (evento 10) compara el nivel y la posición de aparición; avisa "PARTIDAS DISTINTAS" en el log.
+
+## 2026-11-17 (tarde) — Copia del save del host (`savesync.c`) y avatar oculto del caído
+- **Cómo guarda el juego (estático):** importa `SteamRemoteStorage` de `STEAM_API.DLL`, interfaz `STEAMREMOTESTORAGE_INTERFACE_VERSION012`. Llama por la vtable con **thiscall** (`mov ecx, edi; call [edx+…]`, p. ej. `0xa54c62`):
+  - `vt+0x04` `FileRead(nombre, buf, tamaño)` en `FUN_00a54c10` (lee un save en un buffer de 1 MB);
+  - `vt+0x3C` `GetFileCount` y `vt+0x40` `GetFileNameAndSize` en `FUN_00a61860` (lista de archivos al arrancar);
+  - `vt+0x44` `GetQuota(&total, &disponible)`, `vt+0x60` `UGCRead`.
+  - Los índices coinciden con la v012 del SDK (0 `FileWrite`, 1 `FileRead`, 12 `GetFileSize`, 15 `GetFileCount`, 16 `GetFileNameAndSize`, 17 `GetQuota`). `FileWrite` (vt+0) no lo vi llamado en esta revisión; es el índice 0 en todas las versiones.
+  - `"*.ais"` (`0x13e9580`) lo usa `FUN_00a599f0`/`FUN_00a623a0` con `FUN_008628b0` sobre `data/dev` (saves de desarrollo, no los de Steam).
+- **Encabezado de un `.ais`:** `"IAAC"`, versión `0x12`, en `+0x10` un tiempo Unix (el más nuevo es el que carga "Continue"), en `+0x20` el nivel (`Production\HAB_Airport`) y en `+0xA0` el título en UTF-16 (`Save 1 M11 - Spaceflight Terminal`). En `safezone`: `CHSV00` = HAB_Airport, `CHSV01` = HAB_ShoppingCentre (102 s más nuevo, el que carga "Continue").
+- **Tamaños:** los saves son de tamaño fijo con relleno (CHSV 2 MB, MSSV 1 MB, PROGRESSION 10 KB). Todo `safezone` (22 `.ais`): 24 MB, 2,9 MB con zlib.
+- **LZNT1 de Wine no comprime:** `RtlCompressBuffer(COMPRESSION_FORMAT_LZNT1)` en wine 11.22 devuelve 1 MB → 1.049.088 bytes (bloques guardados crudos). `RtlDecompressBuffer` sí anda. Como el usuario hostea con Proton, el mod usa un **compresor LZ propio** (formato de bloque de LZ4, `savesync_lz_compress`): saves reales 24 MB → 3,5 MB (CHSV 2 MB → ~335 KB en 5 ms).
+- **`savesync.c`** (`AIMP_PKT_XFER` = 5, protocolo v2 sin cambios: un par viejo lo cuenta como inválido):
+  1. el cliente (`AIMP_NET=join` + `AIMP_SAVE_SYNC=1`), **solo en el menú principal** (nivel 0), pide el manifiesto;
+  2. el host manda nombre, tamaño y FNV-1a de cada `.ais` (hasta 32);
+  3. el cliente pide los distintos;
+  4. el host los manda comprimidos en fragmentos de 1 KB: ventana de 256, ACK con bitmap de toda la ventana, reenvío a los 250 ms y reenvío rápido de los huecos (40 ms);
+  5. el cliente verifica el hash de todo antes de tocar nada, hace backup de sus archivos en `%LOCALAPPDATA%\AI_Multiplayer\save_backup\<fecha>\` y escribe con `FileWrite`.
+  - El host siempre sirve (solo lee); el cliente solo escribe con `AIMP_SAVE_SYNC=1`.
+- **`net.c`:** buffer de recepción de 1500 bytes (antes 272), `net_send_raw` y el receptor `xfer_rx` (solo del par conocido).
+- **Tests (wine):** `test_savesync` con saves en memoria: manifiesto (viajan solo los distintos), pérdida de 1 de cada 7 fragmentos (1,0 s, 74 reenvíos para 447 fragmentos), backup, segunda conexión sin transferir nada y cliente en un nivel que no pide. Con `AIMP_TEST_SAVE_DIR`, ida y vuelta del LZ sobre los saves reales. Toda la suite OK.
+- **`aimp_peer.py`:** `--serve-save DIR` (el peer hace de host: le pasa al juego los `.ais` de DIR, crudos) y `--fetch-save DIR` (el peer pide los saves al juego host; descomprime el LZ del mod). Verificado Python contra Python y el decodificador de Python contra el compresor del mod (CHSV01 real).
+- **Avatar del caído oculto:** `AIMP_GHOST_DOWNED_HIDE=1` (apagado por defecto) llama a `NPC_SetInvisible` = `FUN_0078b100` thiscall(personaje, bool), `ret 4` (prólogo `53 8B 5C 24 08 56 8B F1 8D 8E F0 03 00 00`) cuando el compañero cae y al revivir. Sin probar en el juego.
+- **Pruebas en el juego preparadas (no corridas: el permiso para lanzar el juego fue denegado en esta sesión):**
+  - **Corrida 102 (juego host):** `mode.sh test safezone --cfg 'AIMP_GHOST=0;AIMP_NET=host;AIMP_AUTOPAD_FILE=…pad.txt'`, y `aimp_peer.py --join 127.0.0.1:47811 --fetch-save <dir vacío>`. En el menú alcanza. Esperado: el peer recibe los 22 `.ais` y quedan iguales (sha256) a los de `userdata/…/remote/`.
+  - **Corrida 103 (juego cliente):** `--cfg 'AIMP_GHOST=0;AIMP_NET=join;AIMP_NET_PEER=127.0.0.1:47811;AIMP_SAVE_SYNC=1;AIMP_AUTOPAD_FILE=…'` y `aimp_peer.py --host 47811 --serve-save <dir>` con `CHSV00` y `CHSV01` = el `CHSV00` de `safezone` (HAB_Airport) más su `PROGRESSION`. Esperado: el mod pide solo `CHSV01`, lo escribe (el archivo en `remote/` cambia) y "Continue" carga **HAB_Airport** (nivel 8) en vez de HAB_ShoppingCentre (10). Si "Continue" sigue cargando el 10, el menú tiene la lista de saves en caché y hay que copiar antes de que se arme (o recargar la lista).
+  - El juego tiene que estar visible (workspace 10 en el HDMI): sin foco va a ~1 frame/s y la transferencia (24 fragmentos por frame) se arrastra.
