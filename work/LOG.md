@@ -184,3 +184,4 @@
 - 02:45 (2026-11-17) Armas de a una confirmadas (4/5 m, libre si el dueño cae o se desconecta, decide el host). Empieza el trabajo de inventario (local, ws 10).
 - 03:15 (2026-11-17) El usuario está en una run sin morir. Las corridas 90-92 mataron al jugador sobre su save (antes de que jugara); no quedó grabado en los slots. Su partida actual se guardó en saves/run-sin-morir-2026-11-17.tar.gz. Regla: pruebas de muerte solo sobre safezone.
 - 03:25 (2026-11-17) mode.sh (juego/prueba): la partida del usuario va a saves/current.tar.gz y las pruebas cargan safezone. CLAUDE.md, PROGRESS, saves/README y memoria al día.
+- 03:55 (2026-11-17) Corridas 93-94: inventario compartido (inv.c, AIMP_SYNC_INV, hallazgo 21) verificado en una máquina con el peer.

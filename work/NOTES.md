@@ -912,3 +912,12 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **Muerte (corridas 90–91):** `FUN_007d0c10` mata (la llama `ACT_PLAYER_DEATH`). La cámara cae y a los ~4 s el juego se pausa con `game_over_menu`. No lo dispara un pin; con un hook en `FUN_0081f8f0` no se vio la apertura. Disparador sin ubicar. Detalle en `work/DESIGN_DEATH.md`.
 - **Caído en vez de muerto (corrida 92):** `Character+0x4253 != 0` hace que `FUN_007caac0` recorte el golpe a salud − 1. `AIMP_COOP_DOWNED=1` lo usa: salud 1, invencible, sin game over, sigue moviéndose. Revivir con `AIMP_COOP_REVIVE_FILE` también funcionó. Falta lo de red, cuándo revivir y probar el remate del Alien.
 - Tropiezo de privacidad: una captura durante el game over agarró parte de otra ventana del usuario (cambió la geometría del juego). Se borró sin mirarla en detalle y sin guardarla.
+
+## 2026-11-17 — Inventario compartido (corridas 93–94, hallazgo 21)
+- `mode.sh` (pedido del usuario): su partida (run sin morir) queda en `saves/current.tar.gz` y las pruebas van sobre `safezone`. Al cerrar, `mode.sh play`.
+- Inventario = `[g_root+0x44]`: 34 slots de 0x14 (`+0` def, `+8` cantidad). Base de ítems = `[g_root+0x40]`, con la lista de las 45 definiciones en `+0x04`. Identidad entre máquinas: ShortGuid del nombre (`def+0x14`).
+- `AIMP_SYNC_INV=1` (`inv.c`, evento 6): compara los slots cada 100 ms y manda deltas; aplica los del otro con `FUN_0079bb20` (sumar) y `FUN_0078ddf0` (vaciar), sin eco.
+- Corrida 93: todo aplicado bien; error: las armas se mandaban como "+1" al cargar. Arreglado con 3 s de asentamiento.
+- Corrida 94: sin eventos espurios.
+- Montaje: `aimp_peer.py --join 127.0.0.1:47811 --event "T:6:<hex InvEvt>" --record-events f`.
+- No encontré con el mando virtual el botón de la rueda de ítems para verlo en pantalla (BACK abre el mapa; LB, el detector).

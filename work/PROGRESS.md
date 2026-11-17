@@ -66,6 +66,7 @@ Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safez
 | Hallazgo 15 (pines de CATHODE) | ✅ `findings/15-pines-de-cathode.md`: despacho `FUN_008be0d0` (`vt+0x394`), identidad estable **pid** (ruta de composites; único y determinista entre procesos), reinyección `FIRE` verificada (se propaga como un disparo natural). Traza `AIMP_TRACE_PINS=1` |
 | Hallazgo 16 (árbol de composites) | 🟡 `findings/16-arbol-de-composites.md`: hijos en `CompositeInstance+0x2C`, índice pid → entidad, mensaje de `on_entered` (entró/salió en `msg+0x20`). Código y tests listos; **falta runtime** |
 | Hallazgo 20 (PLAY_ANIMATION, agachado del avatar) | ✅ `findings/20-animaciones-play-animation.md`: set `HUMAN`, tick del controlador `FUN_00679150`; `AIMP_GHOST_CROUCH=4` por defecto (corridas 83–89) |
+| Hallazgo 21 (inventario) / inventario compartido | ✅ en una máquina: `findings/21-inventario.md`, `AIMP_SYNC_INV=1` (corridas 93–94). Falta con dos máquinas y "armas de a una" |
 | Muerte en coop | 🟡 `work/DESIGN_DEATH.md`: caído con `Character+0x4253` (corrida 92); falta red, revivir y el remate del Alien |
 | Alien compartido | 📝 diseño en `work/DESIGN_ALIEN.md` (percepción `FUN_00730c30`, objetivo en `cerebro+0x10`). Falta una partida con el Alien activo (el usuario) |
 | Ítems compartidos (`AIMP_SYNC_PICKUP`) | 🟡 hook de `pickup_collected` (`FUN_007a2b30`) y aplicación en el otro con `FUN_00795ee0` por pid. Sin probar en el juego (instructions.md 8d) |
