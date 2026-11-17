@@ -35,3 +35,5 @@ Los saves están en `C:\Program Files (x86)\Steam\userdata\<cuenta>\214490\remot
 4. descomprimir ahí el `.tar.gz` (por ejemplo, `tar -xzf safezone.tar.gz -C <carpeta remote>`).
 
 Es la misma cuenta de Steam, así que los saves son compatibles.
+
+- `run-sin-morir-2026-11-17`: la partida real del usuario (run sin morir) al 2026-11-17 03:12, después de jugar esa noche. **No es un save de prueba:** para pruebas que puedan matar o guardar, usar `safezone` y después restaurar este.
