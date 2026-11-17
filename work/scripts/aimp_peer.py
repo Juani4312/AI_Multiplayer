@@ -71,7 +71,7 @@ def pack_throw(eseq, level, pos, vel, name, time_left, tid=0):
 
 
 # ---- copia de saves (mod/src/savesync.h) ----
-XFER, X_REQ, X_MAN, X_WANT, X_DATA, X_ACK, X_DONE = 5, 1, 2, 3, 4, 5, 6
+XFER, X_REQ, X_MAN, X_WANT, X_DATA, X_ACK, X_DONE, X_NOTIFY = 5, 1, 2, 3, 4, 5, 6, 7
 XHDR = "<IBBBBI"  # XferHdr, 12 bytes
 XENT = "<16sII"   # XferEntry, 24 bytes
 XDATA = "<IBBBBIIIIH"  # XferHdr + chunk, total, blob_len, len (26 bytes) + datos
@@ -142,6 +142,15 @@ class SaveXfer:
                 b = open(os.path.join(self.dir, nm), "rb").read()
                 out.append((nm, b))
         return out
+
+    def notify(self, d):
+        """serve: pasa a servir los .ais de d y avisa "guardé" (guardar juntos, XFER_NOTIFY)."""
+        self.dir, self.xid, self.blob = d, 0, b""
+        self.nseq = (int(time.time() * 1000) << 4 | 2) & 0xFFFFFFFF  # único entre corridas (el cliente descarta repetidos)
+        pkt = struct.pack(XHDR, MAGIC, VERSION, XFER, X_NOTIFY, 0, self.nseq)
+        for _ in range(3):
+            self.send(pkt)
+        print(f"SAVE serve: aviso {self.nseq} (guardé): ahora sirvo {d}")
 
     # host
     def on_host(self, op, xid, data, now):
@@ -314,6 +323,8 @@ def main():
                          "posición del jugador del juego + (dx, dy, dz)")
     ap.add_argument("--serve-save", help="con --host: carpeta con .ais que el peer le pasa al juego (AIMP_SAVE_SYNC=1)")
     ap.add_argument("--fetch-save", help="con --join: carpeta donde el peer copia los saves del juego host")
+    ap.add_argument("--serve-after", action="append", default=[],
+                    help="T:DIR (con --serve-save): T segundos después del jugador, sirve DIR y avisa que guardó")
     a = ap.parse_args()
     # SIGTERM (y SIGINT, que en segundo plano viene ignorado) terminan ordenado: BYE + resumen.
     def stop(*_):
@@ -425,6 +436,11 @@ def main():
                 last_send = now
             if xfer and peer and last is not None:
                 xfer.tick(now)
+                for sa in a.serve_after:
+                    t, d = sa.split(":", 1)
+                    if t_player is not None and now - t_player >= float(t) and sa not in getattr(xfer, "done_after", set()):
+                        xfer.done_after = getattr(xfer, "done_after", set()) | {sa}
+                        xfer.notify(d)
             for th in throws:
                 if th[5] or t_player is None or not peer or now - t_player < th[0]:
                     continue
