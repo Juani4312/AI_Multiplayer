@@ -27,9 +27,13 @@ class Mem:
     def req(self, lines):
         last = None
         if os.path.exists(OUT):
-            with open(OUT, "rb") as f:
-                first = f.readline().decode("latin1").strip()
-            last = first
+            # 2026-11-17 (corrida 108): la respuesta de una corrida anterior puede tener el mismo número de pedido
+            # que la primera de esta ("# 1") y parecer que el mod no respondió: se borra antes de pedir
+            try:
+                os.remove(OUT)
+            except OSError:
+                with open(OUT, "rb") as f:
+                    last = f.readline().decode("latin1").strip()
         with open(IN, "w") as f:
             f.write("\n".join(lines) + "\n")
         t0 = time.time()

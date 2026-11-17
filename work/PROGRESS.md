@@ -3,17 +3,17 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-17, 15:15 (sesión local, corridas 102–107; el usuario autorizó lanzar el juego). **Modo prueba mientras se trabaja; al cerrar, `mode.sh play`.**
+_Última actualización: 2026-11-17, 15:30 (sesión local, corridas 102–111; el usuario autorizó lanzar el juego). **Modo juego:** partida del usuario restaurada, mod desinstalado (se cortó en la 111 porque el HDMI pasó a otro workspace).
 
 Hecho en esta sesión:
 - **copia del save del host** (`mod/src/savesync.c`, `AIMP_SAVE_SYNC=1` en el cliente): verificada en los dos sentidos (corridas 102–103);
-- **guardar juntos**: el host avisa cuando guarda; el cliente se iguala también si su juego pisa el save (corridas 106–107). El game over recarga una copia en memoria: después de un game over, el save del host se juega con menú + Continue;
+- **guardar juntos**: el host avisa cuando guarda (verificado con un guardado real del juego, corrida 108); el cliente se iguala también si su juego pisa el save (corridas 106–107). El game over recarga una copia en memoria: después de un game over, el save del host se juega con menú + Continue;
 - avatar del caído oculto (`AIMP_GHOST_DOWNED_HIDE=1`, corrida 104) y se para al revivir (`AIMP_GHOST_STAND_ANIM`, corrida 105);
 - `mod/dist` = `cdf3ed49…`, instrucciones 8f para la laptop.
 
 **Siguiente:**
 - la prueba con dos máquinas: `work/windows/instructions.md` 8e y 8f (DLL `cdf3ed49`), con un save de prueba en `papito` (nunca `current`);
-- opcional: que el game over cargue el save del host (reemplazar la copia en memoria: trabajador `FUN_00a644f0`, buffer en `obj+0x298`; NOTES, corrida 106);
+- **experimento pendiente (corrida 111, necesita el juego visible en el HDMI):** que el game over cargue el save del host reemplazando la copia en memoria de 2 MB (ubicada en la 110 con `memsrv F`; NOTES, "Copia en memoria del save");
 - revivir en checkpoints (escrito, sin probar), decidir qué hace el caído (fantasma u oculto, ya disponible) y el Alien (hace falta un save con el Alien)._
 
 **Partida real del usuario (run sin morir):** nunca se prueba sobre ella. `work/scripts/mode.sh test [save]` guarda `saves/current.tar.gz`, carga el save de prueba e instala el mod; `mode.sh play` la restaura y desinstala el mod. Al cerrar una sesión, `mode.sh play`.
