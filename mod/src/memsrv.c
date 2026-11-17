@@ -10,6 +10,7 @@
  *   LOADN <hex> <largo> <ruta>  ídem, solo los primeros <largo> bytes
  *   TP <x> <y> <z> <yaw>  (solo con AIMP_MEMSRV_TEST=1) teletransporta al jugador 0 (FUN_007c6330)
  *   W <hex> <hexbytes> (solo con AIMP_MEMSRV_TEST=1) escribe hasta 256 bytes en memoria escribible
+ *   SAVE <a1> <a2> <a3> <a4>  (solo con AIMP_MEMSRV_TEST=1) llama al guardado del juego (FUN_007a90b0)
  *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
  *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
  *   KILL <hex>        (solo con AIMP_MEMSRV_TEST=1) mata al personaje como lo hace el juego: FUN_007d0c10 thiscall(chr,
@@ -20,6 +21,7 @@
 #include "anim.h"
 #include "game.h"
 #include "log.h"
+#include "gamesave.h"
 
 #define IN_MAX  (64 * 1024)
 #define OUT_MAX (4 * 1024 * 1024)
@@ -307,6 +309,13 @@ static void run(char *txt)
             put(line);
             if (ok)
                 log_printf("MEMSRV: W 0x%08x (%u bytes)", a, n);
+        } else if (p[0] == 'S' && p[1] == 'A' && p[2] == 'V' && p[3] == 'E' && p[4] == ' ') {
+            /* SAVE <a1> <a2> <a3> <a4>: (solo AIMP_MEMSRV_TEST=1) llama al guardado del juego (gamesave.c) */
+            q = p + 5;
+            uint32_t a1 = num(&q), a2 = num(&q), a3 = num(&q), a4 = num(&q);
+            int ok = g_test && gamesave_now(a1, a2, a3, a4);
+            aimp_snprintf(line, sizeof line, "SAVE %u %u %u %u %s\n", a1, a2, a3, a4, ok ? "ok" : "NO");
+            put(line);
         } else if (p[0] == 'V' && p[1] == ' ') {
             uint32_t v = (uint32_t)g_aimp_exe + num(&q);
             scan((const uint8_t *)&v, 4, 'V');
