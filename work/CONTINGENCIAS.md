@@ -14,6 +14,7 @@ _Última actualización: 2026-11-16._
 - **Para resolverlo:** hace falta un modelo de Amanda en tercera persona con el esqueleto de los humanos del juego. No se usan assets de terceros ni extraídos de otros juegos (regla de no redistribuir assets). Hacer uno propio es un proyecto aparte y no hay garantía de que encaje en el esqueleto ni en las animaciones.
 
 ### 2. El avatar es un civil, con las limitaciones del civil
+- **Actualización 2026-11-17:** agachado resuelto con una pose (`AIMP_GHOST_CROUCH=4`, `idle_crouch`; hallazgo 20). El avatar no camina agachado (no hay ciclo de caminar agachado para los humanos): se desliza en la pose.
 - **Agacharse:** el civil no tiene animación de agachado.
   - Con `FUN_007cae20` el juego marca al personaje como agachado (`Character+0x2AF = 1` y postura efectiva `+0x3E3A = 1`). El usuario ve un leve movimiento de costado y nada más (corridas 65–67 y 69).
   - El comando `IDLE` con las posturas 0 a 5 tampoco lo agacha (corrida 53).
