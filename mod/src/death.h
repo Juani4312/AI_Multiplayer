@@ -17,6 +17,9 @@ int death_coop_enabled(void);
 /* 1 si el otro jugador avisó que está caído. */
 int death_remote_is_downed(void);
 void death_remote_event(const AimpEvt *e);
+/* La entidad Checkpoint de los scripts terminó de guardar (pins.c, cualquier thread): en el próximo frame, si el
+ * compañero está caído, se lo revive como con la terminal de guardado. */
+void death_note_checkpoint(void);
 /* El jugador local usó una terminal de guardado (sync.c). */
 void death_on_save_terminal(void);
 

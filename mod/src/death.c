@@ -53,6 +53,7 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_ui_
 #define CHR_INVINC_B   0x2EA
 
 static int g_downed_mode, g_downed, g_remote_downed, g_revive_pending;
+static volatile LONG g_checkpoint_hit;
 static AimpNet *g_net;
 static float g_revive_pos[4] __attribute__((aligned(16)));
 static float g_revive_yaw;
@@ -118,6 +119,11 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
 {
     if (!g_downed_mode || !player || now - g_last_chk < freq / 10)
         return;
+    if (InterlockedExchange(&g_checkpoint_hit, 0)) {
+        log_printf("DEATH: checkpoint guardado%s", g_remote_downed ? ": se pide revivir al compañero caído" : "");
+        if (g_remote_downed && !g_downed)
+            send(COOP_REVIVE, player);
+    }
     g_last_chk = now;
     if (player != g_last_player) {
         g_last_player = player;
@@ -200,6 +206,8 @@ void death_remote_event(const AimpEvt *e)
         log_printf("DEATH: el compañero usó una terminal de guardado: revivir junto a él");
     }
 }
+
+void death_note_checkpoint(void) { InterlockedExchange(&g_checkpoint_hit, 1); }
 
 void death_on_save_terminal(void)
 {

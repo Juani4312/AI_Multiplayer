@@ -347,3 +347,6 @@ int main(void)
     printf(g_fail ? "test_pins: %d FALLAS\n" : "test_pins: todo OK\n", g_fail);
     return g_fail ? 1 : 0;
 }
+
+/* stub: pins.c avisa los checkpoints a death.c (muerte en coop), que no se enlaza en este test */
+void death_note_checkpoint(void) {}
