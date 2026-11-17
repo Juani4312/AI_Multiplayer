@@ -21,6 +21,7 @@ Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safez
 - Mod: DLL proxy cross-compilada con `i686-w64-mingw32` (CMake). **Proxy elegido (provisorio): `winmm.dll`** (hallazgo 01). Tiene que reexportar todas las exports de la winmm del sistema. Falta verificar KnownDLLs en el Windows del amigo.
 - `AI.exe` tiene ASLR: el mod trabaja siempre con **RVAs**. Para validar la build en runtime: RVA de `ovr_Initialize` = `0xBA83B0`.
 - Compatibilidad con ReShade: deseable, no obligatoria.
+- **Inventario compartido (decisión del usuario, 2026-11-17):** se comparte todo. Lo que uno agarra (balas, armas, ítems de misión) lo reciben los dos, y lo que uno consume se les descuenta a los dos (`work/DESIGN_SESSION.md`).
 - La IA del usuario es vanilla (verificado). **Solo `BSP_LV426_PT01/WORLD/COMMANDS.PAK` está modificado** (comparado con la laptop, que tiene el de Steam; `TECH_COMMS` es el original). Antes de la fase 5 hay que restaurarlo o que el amigo use el mismo (NOTES, "COMMANDS.PAK: solo uno").
 
 ## Herramientas
