@@ -302,6 +302,20 @@ Pasos:
 
 Reportar: los tiempos de la copia (líneas `SAVESYNC` con su hora) y si "Continue" cargó el mismo lugar que el host.
 
+### 8g. Segunda prueba de a dos: load y game over (2026-11-17, DLL `5dde90d1…`)
+
+Arreglos después de la primera prueba conjunta (8e/8f):
+- **Agachado:** al pararse caminando, el avatar quedaba agachado. Ahora siempre recibe la animación de parado.
+- **Windows:** el mod no reconocía funciones cuyo código tiene direcciones absolutas, porque Windows carga el juego en otra dirección (ASLR). Así fallaba "guardar el arma" (`FUN_007c3980 … no coincide`). Ahora el mod lo tiene en cuenta: esa línea no tendría que aparecer más.
+- **Saves:** el host avisa "guardé" solo si cambió el contenido. Antes avisaba unas 17 veces en 23 minutos sin cambios.
+- **Armas de a una: se deja de usar.** Los dos tienen todas las armas y la munición de reserva es compartida (inventario compartido). Instalar **sin** `AIMP_SYNC_WEAPONS`.
+
+Configuración en la laptop (`git pull` y reinstalar):
+```
+powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Net join -Peer 100.126.161.126:47811 -Ghost 3 -Extra AIMP_GHOST_WALK=1,AIMP_SYNC_USE=1,AIMP_SYNC_THROW=1,AIMP_SYNC_PICKUP=1,AIMP_SYNC_PINS=1,AIMP_SYNC_INV=1,AIMP_COOP_DOWNED=1,AIMP_SAVE_SYNC=1
+```
+Qué probar: el paso 5 de la 8f (caen los dos, game over, "Load Current Save" en las dos) y volver a mirar el agachado. En el log de la laptop, buscar `SAVESYNC: checkpoint en memoria`, `DEATH: los dos jugadores están caídos` y `DEATH: carga nueva`.
+
 ## Problemas conocidos
 
 - **No aparece `aimp.log`:** el proxy no cargó. Revisar KnownDLLs, que `winmm.dll` esté al lado de `AI.exe` (no en una subcarpeta) y que el juego haya llegado a arrancar.
