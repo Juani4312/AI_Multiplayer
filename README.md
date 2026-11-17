@@ -94,6 +94,13 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 
 ## Último trabajo y siguiente paso
 
+**2026-11-17, noche (prueba de a dos, corrida 119, y locales 120–122):**
+- **Prueba con dos máquinas:** la copia del save y la partida común andan, y el inventario y la munición se comparten. Arreglado después: el avatar que quedaba agachado, funciones que el mod no reconocía en Windows (ASLR), avisos de guardado vacíos y la escotilla que quedaba ocupada por el avatar. "Armas de a una" se deja de usar: los dos tienen todas las armas y la reserva de munición es común.
+- **Cartel en el menú:** en Play Game y en Continue Game el juego muestra el estado del coop ("esperando al host… no entres todavía", "partida del host copiada. Ya podés entrar").
+- **Pendiente:** las interacciones del mundo (un robot que abre una compuerta se movió solo en una máquina) y una pantalla negra al quedar caído por un enemigo. Próxima prueba: `work/windows/instructions.md` 8g.
+- **A futuro:** menú de configuración del mod con las pantallas de opciones del juego (`work/DESIGN_CONFIG_MENU.md`).
+- `mod/dist/winmm.dll` = `fb157b7a…`.
+
 **2026-11-17, tarde (corridas 102–118, locales con el peer):**
 - **Copia del save del host** (`AIMP_SAVE_SYNC=1` en el que se une; `mod/src/savesync.c`): en la pantalla de título o el menú, el cliente trae del host los saves que tenga distintos, y "Continue" carga la partida del host (verificado: cargó otro nivel). Usa la misma API de Steam Cloud que el juego y comprime con un LZ propio (24 MB de saves → 3,5 MB; los 22 saves llegaron idénticos en 5,9 s). Guarda un backup de los saves propios antes de pisarlos.
 - **Guardar juntos:** cuando el host guarda, el cliente recibe ese save aunque esté jugando. Si su propio juego lo pisa (lo hace al morir), el mod lo repone.
@@ -101,7 +108,7 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 - **Avatar del caído oculto** (`AIMP_GHOST_DOWNED_HIDE=1`, opcional): el avatar del compañero caído desaparece y vuelve al revivir (verificado).
 - **Al revivir o pararse estando quieto, el avatar se para** (`npc_neutral_idle_base`). Antes se quedaba acurrucado.
 - **Save con el Alien** (`saves/alien.tar.gz`, misión 6): el Alien aparece en el censo como "BackstageAlien" y, con el jugador quieto, termina estacionado justo encima de él (por los conductos). Base para el Alien compartido.
-- `mod/dist/winmm.dll` = `f6b9beca…`; para la laptop, `work/windows/instructions.md` 8f (y sirve para la 8e).
+- `mod/dist/winmm.dll` era `f6b9beca…` (8f); la actual está más arriba.
 
 **2026-11-17, 03:00–04:15 (trabajo autónomo, corridas 93–101, locales con el peer simulado):**
 - **Partida del usuario protegida:** es una run sin morir. `work/scripts/mode.sh test` guarda su partida en `saves/current.tar.gz` y carga un save de prueba (`safezone`); `mode.sh play` la restaura y desinstala el mod.
