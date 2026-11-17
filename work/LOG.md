@@ -176,3 +176,5 @@
 - 05:35 (2026-11-16) Corrida 82: no pude equipar ni tirar una bengala con el mando virtual (RT, LT+RT, D-pad izquierda, LB). El lado que tira queda para la prueba de a dos. Juego cerrado, mod pasivo.
 - 03:30 (2026-11-16, reloj del sistema) saves/: safezone.tar.gz (partida actual, sala del transit, sin enemigos) y work/scripts/saves.sh (list/save/load con backup).
 - (2026-11-16) Cierre de sesión a pedido del usuario. Todo documentado (README, PROGRESS, NOTES, CONTINGENCIAS, DESIGN_ALIEN, saves/). Juego cerrado, mod pasivo.
+- 01:05 (2026-11-17) Sesión nueva. Inventario de modelos por nivel (NOTES): cada nivel trae los suyos; hay mujeres civiles en 12 de 21. Planteo con el usuario: avatar mujer si hay (A), agachado visible, muerte sin game over y respawn.
+- 01:45 (2026-11-17) Corridas 83-89: avatar agachado con PLAY_ANIMATION del juego (anim.c, hallazgo 20). Set HUMAN; el tick del controlador (FUN_00679150) hace falta porque el árbol del avatar deja de correr. Poses idle_crouch (por defecto), cower_low_idle y jb_kn_idlebase01 verificadas con capturas.
