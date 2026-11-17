@@ -51,6 +51,13 @@ struct SaveSync {
     uint32_t notify_seq, notify_in;
     int notify_left;
     int backed_up; /* el backup se hace en la primera copia de la sesión (la que tiene los saves propios) */
+    /* checkpoint del host en memoria (ver savesync.h) */
+    int mem_mode;
+    uint8_t *host_ckpt;
+    int have_host_ckpt;
+    char host_ckpt_name[XFER_NAME];
+    int64_t last_ckpt_chk;
+    uint32_t ckpt_writes;
 };
 
 static SaveSync g_game;
@@ -499,6 +506,63 @@ static int write_file(const wchar_t *dir, const char *name, const void *p, uint3
     return ok && w == n;
 }
 
+/* Primera mitad del CHSV más nuevo (tiempo Unix del encabezado, +0x10) de los saves locales, que ya son los del host. */
+static void load_host_ckpt(SaveSync *s)
+{
+    static const char *names[2] = { "CHSV00.ais", "CHSV01.ais" };
+    if (!s->mem_mode || !s->st.ckpt)
+        return;
+    uint8_t *tmp = xalloc(2 * SAVE_CKPT_SIZE);
+    if (!tmp)
+        return;
+    uint32_t best = 0;
+    int bi = -1;
+    for (int i = 0; i < 2; i++) {
+        int32_t r = s->st.read(s->st.ctx, names[i], tmp, (int32_t)(2 * SAVE_CKPT_SIZE));
+        uint32_t t = 0;
+        if (r < (int32_t)SAVE_CKPT_SIZE || aimp_memcmp(tmp, "IAAC", 4) != 0)
+            continue;
+        aimp_memcpy(&t, tmp + 0x10, 4);
+        if (bi < 0 || t > best) {
+            best = t;
+            bi = i;
+            if (!s->host_ckpt)
+                s->host_ckpt = xalloc(SAVE_CKPT_SIZE);
+            if (s->host_ckpt)
+                aimp_memcpy(s->host_ckpt, tmp, SAVE_CKPT_SIZE);
+        }
+    }
+    xfree(tmp);
+    if (bi >= 0 && s->host_ckpt) {
+        s->have_host_ckpt = 1;
+        aimp_memset(s->host_ckpt_name, 0, sizeof s->host_ckpt_name);
+        aimp_memcpy(s->host_ckpt_name, names[bi], aimp_strlen(names[bi]));
+        char lvl[40];
+        aimp_memcpy(lvl, s->host_ckpt + 0x20, sizeof lvl - 1);
+        lvl[sizeof lvl - 1] = 0;
+        log_printf("SAVESYNC: checkpoint del host para el game over: %s (%s, tiempo %u)", s->host_ckpt_name, lvl, best);
+    }
+}
+
+/* Dentro del nivel: si el checkpoint en memoria no es el del host (el juego lo re-serializó al morir o guardar), se pisa. */
+static void ckpt_tick(SaveSync *s, int64_t now)
+{
+    if (!s->mem_mode || !s->have_host_ckpt || !s->st.ckpt || !s->level || now - s->last_ckpt_chk < ms_ticks(s, 250))
+        return;
+    s->last_ckpt_chk = now;
+    uint8_t *p = s->st.ckpt(s->st.ctx);
+    if (!p || aimp_memcmp(p, "IAAC", 4) != 0 || aimp_memcmp(p, s->host_ckpt, SAVE_CKPT_SIZE) == 0)
+        return;
+    char lvl[40];
+    aimp_memcpy(lvl, p + 0x20, sizeof lvl - 1);
+    lvl[sizeof lvl - 1] = 0;
+    aimp_memcpy(p, s->host_ckpt, SAVE_CKPT_SIZE);
+    s->ckpt_writes++;
+    if (s->ckpt_writes <= 20)
+        log_printf("SAVESYNC: checkpoint en memoria (%s) reemplazado por el del host (%s): el game over carga el del host (%u)", lvl,
+                   s->host_ckpt_name, s->ckpt_writes);
+}
+
 static void client_finish(SaveSync *s, uint32_t status)
 {
     s->done_status = status;
@@ -592,11 +656,14 @@ static void client_apply(SaveSync *s)
         s->change_pending = 0;
         s->last_poll = 0;
     }
+    if (!status)
+        load_host_ckpt(s);
     if (status)
         log_printf("SAVESYNC: la copia del save del host FALLÓ (código %u)", status);
     else
         log_printf("SAVESYNC: save del host copiado (%08x). %s", s->written,
-                   s->level ? "Para jugarlo: menú principal y \"Continue\" (el game over recarga la copia en memoria del juego)"
+                   s->level ? (s->mem_mode ? "Si hay game over, carga el checkpoint del host"
+                                           : "Para jugarlo: menú principal y \"Continue\" (el game over recarga la copia en memoria del juego)")
                             : "Ahora \"Continue\" carga la partida del host");
     client_finish(s, status);
 }
@@ -640,6 +707,7 @@ static void client_rx(SaveSync *s, const XferHdr *h, const uint8_t *p, int len, 
         log_printf("SAVESYNC: manifiesto del host: %d saves; distintos:%s", s->nfiles, mask ? list : " ninguno");
         if (!mask) {
             log_printf("SAVESYNC: ya tenés los mismos saves que el host");
+            load_host_ckpt(s);
             client_finish(s, 0);
             return;
         }
@@ -776,6 +844,7 @@ void savesync_tick(SaveSync *s, int64_t now, int64_t freq, uint32_t level)
     }
     if (!s->want)
         return;
+    ckpt_tick(s, now);
     if (s->done_left > 0) {
         uint32_t e[2] = { s->done_status, s->written };
         send_simple(s, XFER_DONE, e, 8);
@@ -832,6 +901,7 @@ SaveSync *savesync_new(AimpNet *net, const SaveStore *st, int want, const wchar_
     s->freq = f.QuadPart;
     s->poll_ms = 2000;
     s->settle_ms = 3000;
+    s->mem_mode = 1;
     net->xfer_rx = rx;
     net->xfer_ctx = s;
     return s;
@@ -840,6 +910,7 @@ SaveSync *savesync_new(AimpNet *net, const SaveStore *st, int want, const wchar_
 int savesync_state(const SaveSync *s) { return s->state; }
 uint32_t savesync_written_mask(const SaveSync *s) { return s->written; }
 void savesync_test_drop(SaveSync *s, int every) { s->drop_every = every; }
+uint32_t savesync_ckpt_writes(const SaveSync *s) { return s->ckpt_writes; }
 void savesync_test_poll(SaveSync *s, int poll_ms, int settle_ms)
 {
     s->poll_ms = poll_ms;
@@ -901,17 +972,35 @@ static int64_t st_stamp(void *ctx, const char *name)
     return rs ? ((RsStampFn)rs_fn(RS_STAMP))(rs, name) : 0;
 }
 
+/* Buffer del checkpoint actual: [exe+RVA 0x134EF80] (base) == [exe+0x134EF84] (encabezado), 1 MB escribible. */
+static uint8_t *st_ckpt(void *ctx)
+{
+    uint32_t base = 0, hdrp = 0;
+    if (!mem_u32(g_aimp_exe + AIMP_RVA_CKPT_BASE, &base) || !mem_u32(g_aimp_exe + AIMP_RVA_CKPT_BASE + 4, &hdrp) || !base ||
+        base != hdrp)
+        return NULL;
+    MEMORY_BASIC_INFORMATION mi;
+    for (uintptr_t x = base; x < (uintptr_t)base + SAVE_CKPT_SIZE;) {
+        if (!VirtualQuery((void *)x, &mi, sizeof mi) || mi.State != MEM_COMMIT || (mi.Protect & PAGE_GUARD) ||
+            (mi.Protect & 0xFF) != PAGE_READWRITE)
+            return NULL;
+        x = (uintptr_t)mi.BaseAddress + mi.RegionSize;
+    }
+    return (uint8_t *)(uintptr_t)base;
+}
+
 void savesync_install(AimpNet *net)
 {
     if (!net || !net->mode)
         return;
-    SaveStore st = { NULL, st_count, st_entry, st_read, st_write, st_stamp };
+    SaveStore st = { NULL, st_count, st_entry, st_read, st_write, st_stamp, st_ckpt };
     int want = net->mode == 2 && aimp_env_int(L"AIMP_SAVE_SYNC", 0);
     g_game.net = net;
     g_game.st = st;
     g_game.want = want;
     g_game.poll_ms = 2000;
     g_game.settle_ms = 3000;
+    g_game.mem_mode = want && aimp_env_int(L"AIMP_SAVE_SYNC_MEM", 1);
     net->xfer_rx = rx;
     net->xfer_ctx = &g_game;
     g_game_on = 1;

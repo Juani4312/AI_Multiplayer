@@ -7,6 +7,7 @@
  *   R <hex> <len>     "R 0x<addr> <len> <hex...>" o "... ERR" (len hasta 0x10000, en hex o decimal)
  *   H <hex>           nombre de un hash en la tabla de textos del juego ("H 0x<hash> <texto>" o "?")
  *   LOADF <hex> <ruta> (solo con AIMP_MEMSRV_TEST=1) copia el archivo a esa dirección si el rango es escribible
+ *   LOADN <hex> <largo> <ruta>  ídem, solo los primeros <largo> bytes
  *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
  *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
  *   KILL <hex>        (solo con AIMP_MEMSRV_TEST=1) mata al personaje como lo hace el juego: FUN_007d0c10 thiscall(chr,
@@ -197,11 +198,14 @@ static void run(char *txt)
                 log_printf("MEMSRV: KILL 0x%08x (salud %u)", chr, hp);
                 ((KillFn)(void *)f)((void *)chr, NULL, 0);
             }
-        } else if (p[0] == 'L' && p[1] == 'O' && p[2] == 'A' && p[3] == 'D' && p[4] == 'F') {
-            /* LOADF <hex> <ruta>: (solo AIMP_MEMSRV_TEST=1) copia el archivo a esa dirección, si todo el rango es memoria
-             * escribible. Para el experimento de la copia en memoria del save (corrida 110). */
+        } else if (p[0] == 'L' && p[1] == 'O' && p[2] == 'A' && p[3] == 'D' && (p[4] == 'F' || p[4] == 'N')) {
+            /* LOADF <hex> <ruta> / LOADN <hex> <largo> <ruta>: (solo AIMP_MEMSRV_TEST=1) copia el archivo (o sus primeros
+             * <largo> bytes) a esa dirección, si todo el rango es memoria escribible. Experimento de la copia en memoria
+             * del save (corridas 110-112). */
+            int limited = p[4] == 'N';
             q = p + 5;
             uint32_t a = num(&q);
+            uint32_t lim = limited ? num(&q) : 0;
             while (*q == ' ')
                 q++;
             wchar_t wp[MAX_PATH];
@@ -214,6 +218,8 @@ static void run(char *txt)
             HANDLE fh = g_test ? CreateFileW(wp, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL) : INVALID_HANDLE_VALUE;
             if (fh != INVALID_HANDLE_VALUE) {
                 sz = GetFileSize(fh, NULL);
+                if (limited && lim < sz)
+                    sz = lim;
                 MEMORY_BASIC_INFORMATION mi;
                 int writable = sz > 0 && sz < 64u * 1024 * 1024;
                 for (uintptr_t x = a; writable && x < a + sz;) {
