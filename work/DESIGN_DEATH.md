@@ -23,6 +23,15 @@ _2026-11-17. Pedido del usuario: "si uno muere, que el otro siga jugando, y que 
 - **Verificado con `KILL`** (la misma función que usa el juego): salud 1 de 1000, sin game over, y el jugador sigue moviéndose.
 - **Revivir:** con `AIMP_COOP_REVIVE_FILE` (por ahora solo para pruebas), salud al máximo y sin invencibilidad. Verificado.
 
+## Por red (corrida 95, una máquina con el peer)
+
+`AIMP_EVT_COOP` (7, `CoopEvt` de `death.h`):
+- **Caído y revivido:** al quedar caído, el mod avisa; el otro pone al avatar en la pose de caído (`AIMP_GHOST_DOWNED_ANIM`, `cower_low_idle`). Al revivir, avisa y el avatar vuelve a la normalidad.
+- **Revivir:** si el vivo usa una terminal de guardado (id que empieza con `1e38b898`, ya detectado en `sync.c`), manda "revivir" con su posición. El caído revive con salud máxima y aparece a 0,8 m del que guardó.
+- **Los dos caídos:** el último en caer saca su flag "no puede morir" y se mata como lo hace el juego (`FUN_007d0c10`), así que hay game over normal. Con el game over de las dos máquinas, los dos recargan su save (DESIGN_SESSION: guardar juntos).
+
+Corrida 95 (`safezone`): caído y revivido del compañero (avatar en pose), `KILL` local → caído y aviso, "revivir" → teletransporte a (−104,20; 20,55; −9,60) con salud 1000, compañero caído más `KILL` local → "los dos caídos" y menú de game over (captura).
+
 ## Lo que falta (propuesta)
 
 1. **Qué hace el caído.** Hoy se mueve libre, invisible para el daño. Opciones:
