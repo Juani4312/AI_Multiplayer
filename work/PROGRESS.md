@@ -22,6 +22,7 @@ Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safez
 - `AI.exe` tiene ASLR: el mod trabaja siempre con **RVAs**. Para validar la build en runtime: RVA de `ovr_Initialize` = `0xBA83B0`.
 - Compatibilidad con ReShade: deseable, no obligatoria.
 - **Inventario compartido (decisión del usuario, 2026-11-17):** se comparte todo. Lo que uno agarra (balas, armas, ítems de misión) lo reciben los dos, y lo que uno consume se les descuenta a los dos (`work/DESIGN_SESSION.md`).
+- **Armas de a una (decisión del usuario, 2026-11-17):** cada arma tiene un dueño, el último que la equipó. Cerca, cualquiera la toma si el otro no la está usando; lejos, solo el dueño (`work/DESIGN_SESSION.md`, "Armas de a uno").
 - La IA del usuario es vanilla (verificado). **Solo `BSP_LV426_PT01/WORLD/COMMANDS.PAK` está modificado** (comparado con la laptop, que tiene el de Steam; `TECH_COMMS` es el original). Antes de la fase 5 hay que restaurarlo o que el amigo use el mismo (NOTES, "COMMANDS.PAK: solo uno").
 
 ## Herramientas
