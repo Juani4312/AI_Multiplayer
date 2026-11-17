@@ -26,6 +26,7 @@ cp "$BUILD/winmm.dll" "$BUILD/test/winmm.dll"
 run test_core test_core.exe || fail=1
 run test_probe test_probe.exe || fail=1
 run test_net test_net.exe || fail=1
+run test_savesync test_savesync.exe || fail=1
 run test_ghost test_ghost.exe || fail=1
 run test_walk test_walk.exe || fail=1
 run test_sync test_sync.exe || fail=1

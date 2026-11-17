@@ -55,6 +55,7 @@ add_library(aimp_winmm SHARED
   src/inv.c
   src/weapons.c
   src/session.c
+  src/savesync.c
   src/log.c
   src/mem.c
   src/fmt.c
@@ -88,10 +89,17 @@ target_compile_options(test_core PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter
 set_target_properties(test_core PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 # test_probe: la sonda (probe.c + log.c) contra una imagen de AI.exe simulada.
-add_executable(test_probe test/test_probe.c src/probe.c src/memsrv.c src/death.c src/inv.c src/weapons.c src/session.c src/anim.c src/trace.c src/pins.c src/autopad.c src/net.c src/ghost.c src/sync.c src/throw.c src/ctrl.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_probe test/test_probe.c src/probe.c src/memsrv.c src/death.c src/inv.c src/weapons.c src/session.c src/savesync.c src/anim.c src/trace.c src/pins.c src/autopad.c src/net.c src/ghost.c src/sync.c src/throw.c src/ctrl.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_probe PRIVATE src)
 target_compile_options(test_probe PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_probe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+# test_savesync: copia del save del host (canal confiable, LZNT1 de ntdll, pérdidas simuladas).
+add_executable(test_savesync test/test_savesync.c src/savesync.c src/net.c src/log.c src/mem.c src/fmt.c src/rt.c)
+target_include_directories(test_savesync PRIVATE src)
+target_link_libraries(test_savesync PRIVATE ws2_32)
+target_compile_options(test_savesync PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
+set_target_properties(test_savesync PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 # test_net: host y cliente del protocolo de la fase 3 en el mismo proceso (UDP por 127.0.0.1).
 add_executable(test_net test/test_net.c src/net.c src/log.c src/mem.c src/fmt.c src/rt.c)

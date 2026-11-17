@@ -16,6 +16,8 @@
 #define AIMP_PKT_STATE 2
 #define AIMP_PKT_BYE 3
 #define AIMP_PKT_EVENT 4    /* evento discreto (fase 5): se manda 3 veces, el receptor descarta repetidos */
+#define AIMP_PKT_XFER 5     /* transferencia confiable de archivos (savesync.c): XferHdr de savesync.h */
+#define AIMP_NET_MAXPKT 1500
 #define AIMP_FLAG_PLAYER 1u /* el emisor tiene jugador en el nivel */
 #define AIMP_EVT_USE 1      /* "usar" del jugador (RPC A 0x26, hallazgo 11): objetivo[8] | personaje[8] | flag[4] */
 #define AIMP_EVT_PIN 2      /* pin de CATHODE decidido por el host (fase 6): pid | pin | tipo | id | flags del mensaje (5 x u32) */
@@ -89,6 +91,9 @@ typedef struct {
     uint32_t in_head, in_tail;              /* anillo: head = próximo a leer */
     uint32_t evt_sent, evt_recv, evt_dup;   /* totales */
     uint32_t evt_logged;                    /* firma de los totales ya logueados */
+    /* transferencias (savesync.c): receptor de los paquetes AIMP_PKT_XFER */
+    void (*xfer_rx)(void *ctx, const uint8_t *p, int len, int64_t now);
+    void *xfer_ctx;
 } AimpNet;
 
 /* Lee la config y abre el socket. Devuelve 0 si la red queda apagada. */
@@ -100,6 +105,8 @@ int net_due(const AimpNet *n, int64_t now);
 void net_send(AimpNet *n, int64_t now, const AimpPkt *local);
 /* Encola un evento para mandar (sale en los próximos AIMP_EVT_REPEAT net_send_events). 0 si no hay par o lugar. */
 int net_event(AimpNet *n, uint16_t kind, uint32_t level, const void *data, uint16_t size);
+/* Manda un paquete armado por el que llama (AIMP_PKT_XFER). 1 si salió. */
+int net_send_raw(AimpNet *n, const void *p, int len);
 /* Por frame: manda una copia de cada evento pendiente. */
 void net_send_events(AimpNet *n);
 /* Saca el próximo evento recibido. 1 si había. */

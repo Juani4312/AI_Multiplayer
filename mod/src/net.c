@@ -161,7 +161,18 @@ int net_init(AimpNet *n, int64_t qpc_freq)
 
 static void handle_packet(AimpNet *n, const AimpPkt *p, int len, uint32_t ip, uint16_t port, int64_t now)
 {
-    if (len < (int)sizeof *p || p->magic != AIMP_NET_MAGIC || p->version != AIMP_NET_VERSION) {
+    if (len < 8 || p->magic != AIMP_NET_MAGIC || p->version != AIMP_NET_VERSION) {
+        n->bad++;
+        return;
+    }
+    if (p->type == AIMP_PKT_XFER) { /* transferencias (savesync.c): solo del par conocido */
+        if (n->have_peer && ip == n->peer_ip && port == n->peer_port && n->xfer_rx)
+            n->xfer_rx(n->xfer_ctx, (const uint8_t *)p, len, now);
+        else
+            n->bad++;
+        return;
+    }
+    if (len < (int)sizeof *p) {
         n->bad++;
         return;
     }
@@ -258,7 +269,7 @@ void net_poll(AimpNet *n, int64_t now)
         union {
             AimpPkt p;
             AimpEvt e;
-            uint8_t raw[2 * sizeof(AimpEvt)]; /* lugar de sobra: paquetes más largos se truncan y cuentan como malos */
+            uint8_t raw[AIMP_NET_MAXPKT]; /* lugar para los de transferencia (savesync.c); más largos se truncan */
         } buf;
         struct sockaddr_in from;
         int fl = sizeof from;
@@ -317,6 +328,15 @@ static void peer_addr(const AimpNet *n, struct sockaddr_in *to)
     to->sin_family = AF_INET;
     to->sin_addr.s_addr = n->peer_ip;
     to->sin_port = n->peer_port;
+}
+
+int net_send_raw(AimpNet *n, const void *p, int len)
+{
+    if (!n->mode || !n->have_peer || len <= 0 || len > AIMP_NET_MAXPKT)
+        return 0;
+    struct sockaddr_in to;
+    peer_addr(n, &to);
+    return W.sendto((SOCKET)n->sock, (const char *)p, len, 0, (struct sockaddr *)&to, sizeof to) == len;
 }
 
 int net_event(AimpNet *n, uint16_t kind, uint32_t level, const void *data, uint16_t size)
