@@ -278,6 +278,30 @@ Qué mirar (F8 en cada momento):
 3. Sacar la pistola en una máquina; en la otra, intentar sacarla: cerca, ¿la toma (y en la primera la sigue teniendo en la mano?); lejos, ¿se guarda sola? En el log: `WEAPONS: saca …`, `WEAPONS: … no está disponible`, `WEAPONS: el otro sacó …`.
 4. Muerte (solo con un save de prueba, nunca con la partida real): dejarse matar por un enemigo en una máquina. ¿Queda caído en vez de game over? ¿El avatar se acurruca en la otra? Usar una terminal de guardado con el vivo, o pasar un checkpoint (con `AIMP_SYNC_PINS=1`): ¿el caído revive a su lado? En el log: `DEATH: el jugador quedó caído`, `DEATH: revivido por el compañero`.
 
+### 8f. Copia del save del host (2026-11-17, DLL `cdf3ed49…`)
+
+La DLL nueva sirve también para la prueba 8e (es compatible). Con `git pull`, instalar `mod/dist/winmm.dll` como siempre.
+
+**Qué hace:** con `AIMP_SAVE_SYNC=1`, la laptop (la que se une) trae los saves del host (`papito`) cuando el juego está en la pantalla de título o en el menú principal. Después, "Continue Game" carga la partida del host: ya no hace falta copiar saves a mano. Antes de escribir, el mod guarda una copia de los saves propios de la laptop en `%LOCALAPPDATA%\AI_Multiplayer\save_backup\<fecha>\`. Además, cuando el host guarda (terminal o checkpoint), la laptop recibe ese save; y si su propio juego lo pisa (al morir), el mod lo repone.
+
+**Configuración:** en la laptop, sumar `AIMP_SAVE_SYNC=1` a `-Extra`. En `papito`, nada nuevo (el host siempre sirve sus saves, solo los lee). `papito` tiene que tener cargado un save de prueba (`work/scripts/mode.sh test`), nunca la partida real.
+
+Pasos:
+1. Abrir el juego en `papito` y llegar al menú. Después, abrir el juego en la laptop **sin tocar nada en la pantalla de título**.
+2. En el log de la laptop, esperar:
+   - `SAVESYNC: pidiendo el save del host`;
+   - `SAVESYNC: manifiesto del host: N saves; distintos: …`;
+   - `SAVESYNC: backup de … saves propios en …`;
+   - `SAVESYNC: save del host copiado`.
+   Por Tailscale, la copia completa (unos 3,5 MB) debería tardar pocos segundos.
+3. En las dos: Play Game → Alien: Isolation → Continue Game. En el log: `SESSION: misma partida`.
+4. Opcional, guardar juntos: el host usa una terminal de guardado. En la laptop: `SAVESYNC: el host guardó (aviso …)` y `save del host copiado`.
+5. Opcional, game over: el game over recarga la partida que tenía en memoria la laptop, no la del host. Para volver a la del host: pausa → Quit to Main Menu → Continue Game.
+
+**Volver a los saves propios de la laptop:** con el juego cerrado, copiar los archivos de la carpeta de `save_backup` a `C:\Program Files (x86)\Steam\userdata\<cuenta>\214490\remote\`.
+
+Reportar: los tiempos de la copia (líneas `SAVESYNC` con su hora) y si "Continue" cargó el mismo lugar que el host.
+
 ## Problemas conocidos
 
 - **No aparece `aimp.log`:** el proxy no cargó. Revisar KnownDLLs, que `winmm.dll` esté al lado de `AI.exe` (no en una subcarpeta) y que el juego haya llegado a arrancar.
