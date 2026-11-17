@@ -313,8 +313,9 @@ Arreglos después de la primera prueba conjunta (8e/8f):
 
 Configuración en la laptop (`git pull` y reinstalar):
 ```
-powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Net join -Peer 100.126.161.126:47811 -Ghost 3 -Extra AIMP_GHOST_WALK=1,AIMP_SYNC_USE=1,AIMP_SYNC_THROW=1,AIMP_SYNC_PICKUP=1,AIMP_SYNC_PINS=1,AIMP_SYNC_INV=1,AIMP_COOP_DOWNED=1,AIMP_SAVE_SYNC=1
+powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Net join -Peer 100.126.161.126:47811 -Ghost 3 -Extra AIMP_GHOST_WALK=1,AIMP_SYNC_USE=1,AIMP_SYNC_THROW=1,AIMP_SYNC_PICKUP=1,AIMP_SYNC_PINS=1,AIMP_TRACE_PINS=1,AIMP_TRACE_PINS_MAX=300000,AIMP_TRACE_USE=1,AIMP_SYNC_INV=1,AIMP_COOP_DOWNED=1,AIMP_SAVE_SYNC=1
 ```
+Para investigar el robot: **apretar F8 justo antes de activarlo** (deja una `MARCA` en el log) y otra vez cuando termine de moverse. Las dos máquinas tienen la traza de pines con tope alto.
 Qué probar: el paso 5 de la 8f (caen los dos, game over, "Load Current Save" en las dos) y volver a mirar el agachado. En el log de la laptop, buscar `SAVESYNC: checkpoint en memoria`, `DEATH: los dos jugadores están caídos` y `DEATH: carga nueva`.
 
 ## Problemas conocidos
