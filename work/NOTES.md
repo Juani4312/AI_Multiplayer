@@ -885,3 +885,13 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
   - bengala 3: quedó en el piso a 1 m.
 - **Cambio:** para detectar dónde se asentó, el que tira usa primero el cuerpo (`ent_pos` → `rb_pos`) y después el composite. No pude tirar una bengala propia con el mando virtual (RT, LT+RT): el ítem equipado no era la bengala. Falta la prueba del lado que tira, con dos máquinas.
 - dist `072c93b7`. Mod en pasivo.
+
+## 2026-11-17 — Modelos de personajes por nivel y animaciones de agachado (estático)
+- **Modelos por nivel** (`strings` de `ENV/PRODUCTION/<NIVEL>/RENDERABLE/MODELS_LEVEL.BIN`): cada nivel trae solo sus modelos; no hay un paquete global de personajes (`ENV/GLOBAL` solo tiene `WORLD`). Personajes con nombre por nivel, por ejemplo: HAB_SHOPPINGCENTRE = MARLOW, RICARDO, SAMUELS, TAYLOR, WAIT (cada uno con su `_GP`), ANDROID y ALIEN; SCI_HUB = RICARDO, SAMUELS, TAYLOR, WAIT; BSP_TORRENS = CONNOR, SAMUELS, TAYLOR, VERLAINE. Ninguno trae una Ripley en tercera persona: solo `RIPLEY_FP`, `RIPLEY_NAKED_FP` y `SPACESUIT_RIPLEY_FP`.
+- **NPCs armados por partes** (`CHARACTERS\NPC\{MALE,FEMALE}\STANDARD\{HEAD,TORSO,LEGS,SHOES,ARMS}\...`): hay partes de mujer en 12 niveles (el shopping: cabezas BECKY_W, CATHERINE y EMMA; HAB_AIRPORT: 8 cabezas). En los niveles de la Torrens, de LV426, del nido, de la plataforma de remolque, de la Solace y del penthouse corporativo no hay partes de mujer.
+- Qué NPC sirve de avatar depende de quién esté vivo en la zona: el censo de la corrida 76 (sala del transit) dio solo tres "Dave" (civil, hombre) y un "Riot Pistol".
+- **Animaciones** (`strings` de `GLOBAL/ANIMATION.PAK`):
+  - Los humanos **no tienen ciclo de caminar agachado**: `HUMAN\BASE\MALE\LOCOMOTION\CROUCH\DEFAULT` solo tiene transiciones (`IDLE_TO_WALK_*`, `WALK_TO_IDLE_*`).
+  - Sí hay poses quietas: `HUMAN\BASE\MALE\UNARMED\COWER\COWER_LOW_INTO`, `COWER_LOW_IDLE`, `COWER_LOW_EXIT` y fidgets (civil acurrucado), `HUMAN\IDLE_CROUCH_1`, cobertura baja `HUMAN\BASE\MALE\COVER\LOW\UNARMED\UNARMED_LOW_{L,R}_IDLE` y arrodillado `IDLES_AND_JOBS\IDLE\KNEEL\JB_KN_*`.
+  - Los civiles las usan desde los árboles `NPC_cover` y `NPC_panic` (referenciados en `NPC_INNOCENT_BEHAVE.XML`; los nodos `ActionIdleInCover`, `ActionMoveToCover` y `ConditionIsInCover` están en `BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML`).
+- Siguiente paso posible: un `PLAY_ANIMATION` con `COWER_LOW_*` para el agachado quieto, y bajar el modelo con el títere para el agachado en movimiento. Falta el layout de los parámetros de `PLAY_ANIMATION`.
