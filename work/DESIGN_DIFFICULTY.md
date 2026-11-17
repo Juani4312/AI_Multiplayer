@@ -56,6 +56,17 @@ Los nombres de los campos están en `AI.exe`: el cargador tiene una tabla nombre
 - Un solo detector de movimiento para los dos (lo tiene uno).
 - Combustible del lanzallamas y munición de reserva más escasos (ya son compartidos).
 
+## Decisiones del usuario (2026-11-17, revisión)
+
+- **Ruido compartido: sí, con histéresis.** Si el Alien está buscando o acechando, va hacia el que hace más ruido. Si ya persigue a uno y lo encontró, no cambia de objetivo por el ruido del otro (si no, "es fácil bailarlo"). Propuesta: queda trabado en su objetivo hasta perderlo de vista X segundos o matarlo. Antes de implementarlo, ver si el árbol del Alien ya tiene ese compromiso (en solitario no cambia de objetivo con cualquier ruido). Requiere que el Alien perciba a los dos: en el host, generar estímulos de ruido en el avatar cuando el otro corre o dispara.
+- **Guardado exigente: sí.** Solo se guarda si todos los vivos están cerca de la terminal (los caídos o muertos no cuentan). La frecuencia de guardado no importa.
+  - Cómo: el mod ya detecta el uso de la terminal (prefijo `1e38b898`, `sync.c`); si el compañero vivo está lejos, no deja pasar el uso (hook del productor `FUN_00795d00`) y cambia el prompt con `ui.c` ("Esperá a tu compañero").
+  - Detalle: la partida canónica es la del host (`savesync`). Si guarda el cliente, el host tiene que guardar en el mismo momento; hace falta disparar un guardado desde el mod (máquina de estados del guardado: `FUN_00a637c0`, `obj+0xC`/`+0x2F4`; NOTES corrida 106).
+- **Alien más perceptivo con multiplicadores: sí.**
+- **La dificultad del mod es independiente de la del juego:** "Normal" del mod no toca nada (se usan los valores de la dificultad elegida en el juego); las otras multiplican esos valores. El mod guarda los valores base la primera vez que los ve y aplica sobre esa copia, así no se acumulan al recargar. A verificar: que la dificultad base esté en el save (así el cliente, que carga la partida del host, queda con la misma base).
+- **Desangrado y revivir en persona: a futuro.** Idea: el caído queda forzado agachado y con el stick escalado (el mod ya intercepta el mando), con el efecto de vida baja del juego; un temporizador; el compañero lo revive gastando un botiquín a menos de 2 m (`inv.c` ve el consumo).
+- **Varios aliens: a futuro** (complejo).
+
 ## Orden sugerido
 
 1. Ubicar las estructuras de dificultad cargadas (tabla nombre → campo) y probar un multiplicador sobre un parámetro del Alien en el save `alien`. Es el primer resultado visible.
