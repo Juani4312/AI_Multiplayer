@@ -18,6 +18,7 @@
  * AIMP_TRACE_USE=1 (o AIMP_SYNC_USE=1) además hookea los dos handlers, solo para loguear
  * por dónde pasa cada uso.
  */
+#include "inv.h"
 #include "sync.h"
 #include "game.h"
 #include "ghost.h"
@@ -261,8 +262,8 @@ static int try_apply(Pend *q, uint32_t level)
 void sync_frame(AimpNet *net, uint32_t level)
 {
     g_level = level;
-    int pins = pins_sync_enabled(), throws = throw_sync_enabled();
-    if ((!g_on && !pins && !throws) || !net || !net->mode)
+    int pins = pins_sync_enabled(), throws = throw_sync_enabled(), invs = inv_sync_enabled();
+    if ((!g_on && !pins && !throws && !invs) || !net || !net->mode)
         return;
     int64_t now = qpc_now();
     AimpEvt e;
@@ -274,6 +275,10 @@ void sync_frame(AimpNet *net, uint32_t level)
         if (e.kind == AIMP_EVT_THROW) { /* objetos arrojados y colocados (throw.c, hallazgo 17) */
             if (throws)
                 throw_remote_event(&e, level);
+            continue;
+        }
+        if (e.kind == AIMP_EVT_INV) { /* inventario compartido (inv.c) */
+            inv_remote_event(&e);
             continue;
         }
         if (e.kind == AIMP_EVT_PICKUP) { /* ítem recogido por el otro (throw.c) */
