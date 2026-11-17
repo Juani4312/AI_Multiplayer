@@ -157,6 +157,10 @@ static int64_t g_crouch_chk;
  * pose (AIMP_GHOST_CROUCH_SET / _ANIM: texto o 0x<hash>) y el títere lo sigue moviendo en esa pose. Al pararse,
  * MOVE_TOWARDS de nuevo. AIMP_GHOST_CROUCH_DROP_CM baja el modelo mientras el otro está agachado (con cualquier modo). */
 static AnimReq g_pose;
+/* AIMP_GHOST_STAND_ANIM (corrida 104): al dejar la pose estando quieto, un MOVE_TOWARDS de 0 m no lo para (queda en la
+ * última pose). Se le da un PLAY_ANIMATION de parado (npc_neutral_idle_base, set HUMAN) y después vuelve la caminata. */
+static AnimReq g_stand;
+static int g_stand_ok;
 /* el otro está caído (death.c): pose AIMP_GHOST_DOWNED_ANIM (cower_low_idle) aunque esté parado */
 static int g_remote_downed;
 /* AIMP_GHOST_DOWNED_HIDE=1 (2026-11-17, DESIGN_DEATH "qué hace el caído", opción fantasma): el avatar del caído se
@@ -335,7 +339,10 @@ void ghost_set_remote_downed(int on)
     if (on == g_remote_downed)
         return;
     g_remote_downed = on;
-    g_pose_on = 0; /* se vuelve a dar la pose (la de caído o la de agachado) */
+    /* al caer, se vuelve a dar la pose (la de caído). Al revivir NO: con g_pose_on en 1 el títere pasa por "se paró
+     * (deja la pose)" y se para (corrida 104: con 0 se quedaba acurrucado si el otro estaba quieto). */
+    if (on)
+        g_pose_on = 0;
     log_printf("GHOST: el otro jugador %s", on ? "quedó caído: el avatar pasa a la pose de caído" : "revivió");
 }
 
@@ -384,6 +391,14 @@ static void pose_config(void)
     {
         char td[64];
         g_downed_anim = env_hash(L"AIMP_GHOST_DOWNED_ANIM", "cower_low_idle", td, sizeof td);
+    }
+    {
+        char tsd[64];
+        g_stand = g_pose;
+        g_stand.crouched_anim = 0;
+        g_stand.anim = env_hash(L"AIMP_GHOST_STAND_ANIM", "npc_neutral_idle_base", tsd, sizeof tsd);
+        g_stand_ok = anim_ready() && g_stand.anim;
+        log_printf("AIMP_GHOST_STAND_ANIM: al pararse, \"%s\" 0x%08x%s", tsd, g_stand.anim, g_stand_ok ? "" : " (apagado)");
     }
     g_pose_ok = anim_ready() && g_pose.anim;
     log_printf("AIMP_GHOST_CROUCH=4 (pose): set \"%s\" 0x%08x, animación \"%s\" 0x%08x, x%d, flags %d, bajar %d cm%s", ts, g_pose.set, ta,
@@ -1234,6 +1249,18 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                 }
                 if (g_pose_on) {
                     g_pose_on = 0;
+                    if (g_stand_ok && g_rm_speed < 0.3f) {
+                        /* quieto: animación de parado; la caminata vuelve sola en 1 s ("el comando no era el nuestro")
+                         * o antes si el otro arranca (cambio de paso) */
+                        log_printf("GHOST: títere: se paró quieto: PLAY_ANIMATION de parado 0x%08x", g_stand.anim);
+                        g_allow_cmd = 1;
+                        anim_play(ctrl, g_cmd_a, g_cmd_b, &g_stand);
+                        g_allow_cmd = 0;
+                        if (g_pose_tick)
+                            anim_ctrl_tick(ctrl);
+                        g_last_restart = now;
+                        break;
+                    }
                     g_last_restart = 0;
                     walk_start(ctrl, lt, now, "títere: se paró (deja la pose)");
                     if (g_pose_tick)

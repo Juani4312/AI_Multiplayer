@@ -199,3 +199,5 @@
 - 14:20 (2026-11-17) savesync.c: copia del save del host por un canal confiable nuevo (AIMP_PKT_XFER), manifiesto con hash, backup. El LZNT1 de Wine no comprime: LZ propio (24 MB -> 3,5 MB). test_savesync OK con pérdidas. aimp_peer.py --serve-save/--fetch-save.
 - 14:24 (2026-11-17) Corrida 102 no se pudo lanzar: el clasificador de permisos denegó abrir el juego. Vuelta a modo juego (mode.sh play; current sin cambios).
 - 14:40 (2026-11-17) AIMP_GHOST_DOWNED_HIDE=1: avatar del caído oculto con NPC_SetInvisible (FUN_0078b100). Suite completa OK. Docs al día; dist sin cambios (3f54f468).
+- 14:30 (2026-11-17) El usuario autorizó lanzar el juego. Corrida 102: el juego host le pasa al peer los 22 saves (idénticos byte a byte, 5,9 s). Corrida 103: el juego cliente copia el checkpoint de Airport en el título y "Continue" carga HAB_Airport.
+- 14:50 (2026-11-17) Corrida 104: AIMP_GHOST_DOWNED_HIDE oculta y vuelve a mostrar el avatar (peer quieto adelante, --radius 0). Bug visto: al revivir quedaba acurrucado. Arreglo: AIMP_GHOST_STAND_ANIM (npc_neutral_idle_base). Corrida 105: se para al revivir.
