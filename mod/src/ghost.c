@@ -159,6 +159,15 @@ static int64_t g_crouch_chk;
 static AnimReq g_pose;
 /* el otro está caído (death.c): pose AIMP_GHOST_DOWNED_ANIM (cower_low_idle) aunque esté parado */
 static int g_remote_downed;
+/* AIMP_GHOST_DOWNED_HIDE=1 (2026-11-17, DESIGN_DEATH "qué hace el caído", opción fantasma): el avatar del caído se
+ * oculta con NPC_SetInvisible = FUN_0078b100 thiscall(personaje, bool), ret 4: pone Character+0x2D9 y oculta el modelo
+ * (componente +0x3F0, FUN_00691b00) y el equipo (FUN_00782870). Visual: los sentidos de la IA no cambian. */
+#define AIMP_RVA_NPC_SET_INVISIBLE 0x0038B100u
+static const uint8_t NPC_SET_INVISIBLE_PROLOGUE[14] = { 0x53, 0x8B, 0x5C, 0x24, 0x08, 0x56, 0x8B, 0xF1, 0x8D, 0x8E, 0xF0, 0x03, 0x00, 0x00 };
+typedef void(__attribute__((fastcall)) * SetInvisibleFn)(void *chr, void *edx, uint32_t on);
+static SetInvisibleFn g_set_invisible;
+static int g_downed_hide, g_hidden;
+static uint32_t g_hidden_chr;
 static uint32_t g_downed_anim;
 static int g_pose_ok, g_pose_on, g_pose_logged, g_crouch_drop_cm, g_pose_tick = 1;
 static uint32_t g_pose_n, g_pose_list[8];
@@ -456,6 +465,13 @@ int ghost_install(void)
             g_crouch_drop_cm = aimp_env_int(L"AIMP_GHOST_CROUCH_DROP_CM", 0);
             if (g_crouch_mode == 4)
                 pose_config();
+            g_downed_hide = aimp_env_int(L"AIMP_GHOST_DOWNED_HIDE", 0);
+            if (g_downed_hide) {
+                uint8_t pr[sizeof NPC_SET_INVISIBLE_PROLOGUE];
+                if (mem_read(g_aimp_exe + AIMP_RVA_NPC_SET_INVISIBLE, pr, sizeof pr) && aimp_memcmp(pr, NPC_SET_INVISIBLE_PROLOGUE, sizeof pr) == 0)
+                    g_set_invisible = (SetInvisibleFn)(void *)(g_aimp_exe + AIMP_RVA_NPC_SET_INVISIBLE);
+                log_printf("AIMP_GHOST_DOWNED_HIDE=1: el avatar del compañero caído se oculta%s", g_set_invisible ? "" : " (NO: no se reconoce FUN_0078b100)");
+            }
             {
                 uint8_t c1[sizeof AIMP_CHR_CROUCH_PROLOGUE], c2[sizeof AIMP_CHR_UNCROUCH_PROLOGUE];
                 uintptr_t p1 = g_aimp_exe + AIMP_RVA_CHR_CROUCH, p2 = g_aimp_exe + AIMP_RVA_CHR_UNCROUCH;
@@ -1743,6 +1759,14 @@ void ghost_frame(int64_t now, const AimpNet *net, uint32_t level)
         g_player = local;
         g_chr = 0;
         g_state = G_WAIT_PLAYER;
+    }
+    if (g_set_invisible && g_chr && (g_hidden != g_remote_downed || g_hidden_chr != g_chr)) {
+        g_set_invisible((void *)g_chr, NULL, (uint32_t)g_remote_downed);
+        uint8_t f = 0;
+        mem_u8(g_chr + 0x2D9, &f);
+        log_printf("GHOST: avatar 0x%08x %s (NPC_SetInvisible, +0x2D9 = %u)", g_chr, g_remote_downed ? "oculto: el otro está caído" : "visible", f);
+        g_hidden = g_remote_downed;
+        g_hidden_chr = g_chr;
     }
     switch (g_state) {
     case G_WAIT_PLAYER:
