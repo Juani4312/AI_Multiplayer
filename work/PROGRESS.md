@@ -21,6 +21,7 @@ Hecho en esta sesión:
 - la prueba con dos máquinas: `work/windows/instructions.md` 8e y 8f (DLL `f6b9beca`), con un save de prueba en `papito` (nunca `current`);
 - interacciones del mundo (robot, compuertas): identificar la entidad del robot con la traza de pines y las marcas F8 de la prueba 8g, y sincronizar su estado;
 - muerte con pantalla negra al quedar caído por un enemigo (prueba 8g: qué lo mató);
+- **a futuro (idea del usuario):** dificultad del coop (Alien más agresivo con los parámetros de dificultad del juego escalados en memoria, menos pickups, reglas de caída y revivir, el Alien que caza a los dos): `work/DESIGN_DIFFICULTY.md`;
 - **a futuro (idea del usuario):** menú de configuración del mod reusando las pantallas de opciones del juego (sus selectores y sliders): dificultad, qué se comparte. Plan en `work/DESIGN_CONFIG_MENU.md` (primero, ver el protocolo de `GenericCallback*`);
 - revivir en checkpoints (escrito, sin probar: hace falta caminar hasta uno), decidir qué hace el caído (oculto ya disponible);
 - Alien compartido con el save `alien`: ¿se puede llevar su objetivo (`cerebro+0x10`) al avatar? (hace falta un avatar: en ese save no hay civiles; con `--replay` el peer podría dar la posición, pero el títere necesita un NPC humano).
