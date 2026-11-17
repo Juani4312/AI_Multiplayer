@@ -201,3 +201,5 @@
 - 14:40 (2026-11-17) AIMP_GHOST_DOWNED_HIDE=1: avatar del caído oculto con NPC_SetInvisible (FUN_0078b100). Suite completa OK. Docs al día; dist sin cambios (3f54f468).
 - 14:30 (2026-11-17) El usuario autorizó lanzar el juego. Corrida 102: el juego host le pasa al peer los 22 saves (idénticos byte a byte, 5,9 s). Corrida 103: el juego cliente copia el checkpoint de Airport en el título y "Continue" carga HAB_Airport.
 - 14:50 (2026-11-17) Corrida 104: AIMP_GHOST_DOWNED_HIDE oculta y vuelve a mostrar el avatar (peer quieto adelante, --radius 0). Bug visto: al revivir quedaba acurrucado. Arreglo: AIMP_GHOST_STAND_ANIM (npc_neutral_idle_base). Corrida 105: se para al revivir.
+- 15:00 (2026-11-17) Guardar juntos (XFER_NOTIFY por fechas de Steam). Corrida 106: el game over recarga una copia en memoria, no el archivo; el juego reescribe su save al morir. Arreglo: el cliente se vuelve a igualar cuando su juego reescribe los saves.
+- 15:10 (2026-11-17) Corrida 107: flujo completo OK: copia dentro del nivel, el juego la pisa al morir, el mod la repone; salir al menú y Continue carga el save del host (HAB_Airport).
