@@ -3,19 +3,16 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-16, cierre de sesión. Hecho hoy (corridas 65–82):
-- paso FAST_WALK del títere;
-- agachado descartado (apagado por defecto);
-- pines de la fase 6 por red en una máquina;
-- ítems compartidos escritos (`AIMP_SYNC_PICKUP`);
-- arrojables con el cuerpo de Havok (`+0x120`, por su constructor);
-- humano armado como avatar;
-- diseño del Alien;
-- `CONTINGENCIAS.md` y saves de prueba (`saves/`).
+_Última actualización: 2026-11-17, 02:15, cierre de sesión. **Mod desinstalado** (el usuario va a jugar sin el mod; para probar: `runtime_setup.sh install --cfg ...`). Hecho hoy (corridas 83–92):
+- **Avatar agachado** con una pose del juego (`PLAY_ANIMATION` set `HUMAN`, `idle_crouch`; hallazgo 20). Por defecto `AIMP_GHOST_CROUCH=4`. Verificado en una máquina con capturas.
+- **Avatar mujer:** `pick_npc` prefiere una civil con esqueleto `FEMALE` (`Character+0x600 → +0x1C → +0x60`). Falta una zona con mujeres para verlo.
+- **Muerte en coop:** `AIMP_COOP_DOWNED=1` (experimental) deja al jugador caído (salud 1, invencible) en vez de morir, sin game over (corrida 92). Diseño y pendientes en `work/DESIGN_DEATH.md`.
+- Herramientas: lector de memoria (`AIMP_MEMSRV_FILE` + `work/scripts/memsrv.py`, `KILL` de prueba con `AIMP_MEMSRV_TEST=1`), traza de animaciones (`AIMP_TRACE_ANIM`) y de UI (`AIMP_TRACE_UI`).
 
-**Siguiente:** la prueba con dos máquinas de `work/windows/instructions.md` 8d (DLL `072c93b7`) y una partida con el Alien activo. Mod en pasivo._ Antes: 2026-11-16, 02:00: agachado del NPC (banderas del juego OK, el civil no se agacha), paso FAST_WALK, camino fijo del arrojable (no siempre sirve); corridas 65–68; prueba conjunta en `work/windows/instructions.md` 8c. Antes: 2026-11-15, 05:20, cierre de sesión; se sigue con la prueba con dos máquinas (ver README, "Último trabajo y siguiente paso") (corridas 23–34 automáticas con el mando virtual: el avatar camina y corre con `MOVE_TOWARDS` en el controlador de scripts, también por red contra `aimp_peer.py --replay`, y quieto mira hacia donde mira el otro; mod instalado en pasivo). Antes: 2026-11-15, 03:00 (corrida 20)_
-
-Limitaciones conocidas y contingencias para el futuro: `work/CONTINGENCIAS.md`.
+**Siguiente:**
+- prueba con dos máquinas (`work/windows/instructions.md` 8d, DLL de `mod/dist`, ahora `5473f92e`), que también muestra el agachado nuevo;
+- muerte en coop: evento de red, revivir en la terminal de guardado, qué hace el caído (DESIGN_DEATH.md);
+- una partida con el Alien (remate y Alien compartido)._ Antes: 2026-11-16, cierre (corridas 65–82). Limitaciones conocidas y contingencias para el futuro: `work/CONTINGENCIAS.md`.
 Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safezone` = la partida de las corridas 20–82 (sin enemigos).
 
 ## Decisiones vigentes
@@ -64,6 +61,8 @@ Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safez
 | Hallazgo 14 (armas, arrojables e ítems) | 🟡 `findings/14-armas-e-items.md`: disparar no genera un RPC, pero sus efectos sí (daño 0x18, agresión 0x0C). Bengala, nada. **Levantar un ítem es un "usar" (0x26) y ya se replica** (falta probarlo con dos máquinas) |
 | Hallazgo 15 (pines de CATHODE) | ✅ `findings/15-pines-de-cathode.md`: despacho `FUN_008be0d0` (`vt+0x394`), identidad estable **pid** (ruta de composites; único y determinista entre procesos), reinyección `FIRE` verificada (se propaga como un disparo natural). Traza `AIMP_TRACE_PINS=1` |
 | Hallazgo 16 (árbol de composites) | 🟡 `findings/16-arbol-de-composites.md`: hijos en `CompositeInstance+0x2C`, índice pid → entidad, mensaje de `on_entered` (entró/salió en `msg+0x20`). Código y tests listos; **falta runtime** |
+| Hallazgo 20 (PLAY_ANIMATION, agachado del avatar) | ✅ `findings/20-animaciones-play-animation.md`: set `HUMAN`, tick del controlador `FUN_00679150`; `AIMP_GHOST_CROUCH=4` por defecto (corridas 83–89) |
+| Muerte en coop | 🟡 `work/DESIGN_DEATH.md`: caído con `Character+0x4253` (corrida 92); falta red, revivir y el remate del Alien |
 | Alien compartido | 📝 diseño en `work/DESIGN_ALIEN.md` (percepción `FUN_00730c30`, objetivo en `cerebro+0x10`). Falta una partida con el Alien activo (el usuario) |
 | Ítems compartidos (`AIMP_SYNC_PICKUP`) | 🟡 hook de `pickup_collected` (`FUN_007a2b30`) y aplicación en el otro con `FUN_00795ee0` por pid. Sin probar en el juego (instructions.md 8d) |
 | Mod fase 6 (disparadores del host) | 🟡 `AIMP_SYNC_PINS=1` en `mod/src/pins.c`: **verificado por red en una máquina** (corridas 72–73: 9/9 pines del host aplicados, y el cliente bloquea los suyos). Falta con dos máquinas y una zona con efecto visible |

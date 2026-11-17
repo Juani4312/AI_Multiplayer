@@ -6,6 +6,8 @@
 #include "throw.h"
 #include "ctrl.h"
 #include "anim.h"
+#include "memsrv.h"
+#include "death.h"
 #include "hook.h"
 #include "log.h"
 #include "autopad.h"
@@ -95,6 +97,8 @@ int game_init(void)
     pins_install(probe_net()); /* opcional: AIMP_TRACE_PINS=1 (traza) / AIMP_SYNC_PINS=1 (fase 6) */
     throw_install(probe_net()); /* opcional: AIMP_TRACE_THROW=1 / AIMP_SYNC_THROW=1 / AIMP_THROW_ECHO=ms (hallazgo 17) */
     ctrl_install(); /* opcional: AIMP_TRACE_CTRL=1 / AIMP_TRACE_CMD=1 (solo miran) */
+    death_install(); /* opcional: AIMP_TRACE_UI=1 (muerte en coop, en investigación) */
+    memsrv_install(); /* opcional: AIMP_MEMSRV_FILE (lector de memoria para investigar) */
     autopad_install(); /* opcional: AIMP_AUTOPAD=guion (pruebas sin nadie al teclado) */
     return 1;
 }

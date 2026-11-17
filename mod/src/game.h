@@ -285,6 +285,11 @@ static const uint8_t AIMP_SWITCH_COMMAND_PROLOGUE[9] __attribute__((unused)) = {
 /* Corrida 26: hay dos controladores consecutivos de 0x2B0 bytes (0x10 + 2 slots de 0x150). El de scripts
  * ([SCRIPT]) está en Character+0x3570: ConditionHasScript (FUN_006eaa80) mira sus +0/+4 y ActionScript
  * (FUN_006d2830) ejecuta su comando. Ahí hay que dar el MOVE_TOWARDS para que lo ejecute la rama cinemática. */
+/* Esqueleto (2026-11-17, lector de memoria, 5 personajes): Character+0x600 -> +0x1C -> +0x60 = nombre ("MALE",
+ * "FEMALEFP"), seguido de los índices de los padres de cada hueso. */
+#define CHR_SKEL_OWNER            0x600
+#define SKEL_OWNER_SKEL           0x1C
+#define SKEL_NAME                 0x60
 #define CHR_SCRIPTCTRL            0x3570
 #define CMDCTRL_OWNER             0x34
 #define CMDCTRL_EXEC              0x00  /* comando en ejecución (FUN_00677990 revisa +0 y +4; corrida 21) */
