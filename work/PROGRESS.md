@@ -14,6 +14,7 @@ _Última actualización: 2026-11-17, 02:15, cierre de sesión. **Mod desinstalad
 - muerte en coop: evento de red, revivir en la terminal de guardado, qué hace el caído (DESIGN_DEATH.md);
 - una partida con el Alien (remate y Alien compartido);
 - partida común (comparar y copiar el save del host) e inventario compartido: `work/DESIGN_SESSION.md`._ Antes: 2026-11-16, cierre (corridas 65–82). Limitaciones conocidas y contingencias para el futuro: `work/CONTINGENCIAS.md`.
+**Partida real del usuario (run sin morir):** nunca se prueba sobre ella. `work/scripts/mode.sh test [save]` guarda `saves/current.tar.gz`, carga el save de prueba e instala el mod; `mode.sh play` la restaura y desinstala el mod. Al cerrar una sesión, `mode.sh play`.
 Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safezone` = la partida de las corridas 20–82 (sin enemigos).
 
 ## Decisiones vigentes

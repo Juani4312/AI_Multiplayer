@@ -33,3 +33,5 @@ mod/build/
 
 # Backups locales de saves (saves.sh load)
 saves/backups/
+# Modo de papito (work/scripts/mode.sh)
+saves/.mode

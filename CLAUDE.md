@@ -11,5 +11,6 @@ Reglas clave (el detalle está en prompt.md):
 - Respondé en español rioplatense.
 - La instalación de Steam (`"/mnt/1,8TB/SteamLibrary/steamapps/common/Alien Isolation"`) es **solo lectura**. Trabajá sobre `game/`.
 - Ningún offset sale de memoria: todo con evidencia de REA/Ghidra o de runtime.
+- La partida del usuario es una run sin morir: probá siempre con `work/scripts/mode.sh test` (save de prueba) y al terminar `mode.sh play` (restaura su partida y saca el mod). Nunca pruebes sobre `saves/current`.
 - Pedí confirmación antes de instalar, descargar, ejecutar el juego o cambiar configuración.
 - Al cerrar cada bloque de trabajo, actualizá `work/PROGRESS.md` y `work/NOTES.md` y hacé commit y push.
