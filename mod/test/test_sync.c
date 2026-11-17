@@ -254,7 +254,7 @@ int main(void)
     expect(log, "AIMP_SYNC_USE=1 (fase 5, experimental)", 1);
     expect(log, "objetivo 044106b16f529959, personaje 2ff722b2099d5b9b (jugador local), flag 01587c00", 1);
     expect(log, "SYNC   mandado al otro jugador (evento 1, nivel 16)", 1);
-    expect(log, "no se mandan los objetivos con prefijo [3e3ec35d,1e38b898]", 1);
+    expect(log, "no se mandan los objetivos con prefijo [3e3ec35d,1e38b898,087f97b5]", 1);
     expect(log, "SYNC   no se manda: el objetivo empieza con un prefijo de AIMP_SYNC_USE_SKIP", 1);
     expect(log, "SYNC   mandado al otro jugador (evento 2", 0);
     expect(log, "objetivo eed179bb3c7301a5, personaje 1c3460b37e03a5dc, flag 00000000", 1);
