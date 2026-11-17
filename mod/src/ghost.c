@@ -1249,16 +1249,21 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                 }
                 if (g_pose_on) {
                     g_pose_on = 0;
-                    if (g_stand_ok && g_rm_speed < 0.3f) {
-                        /* quieto: animación de parado; la caminata vuelve sola en 1 s ("el comando no era el nuestro")
-                         * o antes si el otro arranca (cambio de paso) */
-                        log_printf("GHOST: títere: se paró quieto: PLAY_ANIMATION de parado 0x%08x", g_stand.anim);
+                    if (g_stand_ok) {
+                        /* Siempre la animación de parado (prueba con dos máquinas, 2026-11-17: si se paraba caminando y
+                         * frenaba enseguida, el MOVE_TOWARDS solo lo dejaba agachado). La caminata vuelve sola: quieto, en
+                         * 1 s ("el comando no era el nuestro"); moviéndose, en ~300 ms. */
+                        int moving = g_rm_speed >= 0.3f;
+                        static uint32_t s_stand_logs;
+                        if (s_stand_logs++ < 60)
+                            log_printf("GHOST: títere: se paró%s: PLAY_ANIMATION de parado 0x%08x", moving ? " caminando" : " quieto",
+                                       g_stand.anim);
                         g_allow_cmd = 1;
                         anim_play(ctrl, g_cmd_a, g_cmd_b, &g_stand);
                         g_allow_cmd = 0;
                         if (g_pose_tick)
                             anim_ctrl_tick(ctrl);
-                        g_last_restart = now;
+                        g_last_restart = moving ? now - g_freq * 7 / 10 : now;
                         break;
                     }
                     g_last_restart = 0;
