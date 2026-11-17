@@ -35,6 +35,7 @@
  * salvo el que inyecta el mod al aplicar un evento del host (y solo ese: lo que dispara en cadena y
  * cumple una regla también se bloquea, porque el host lo manda aparte).
  */
+#include "death.h"
 #include "pins.h"
 #include "game.h"
 #include "hook.h"
@@ -267,6 +268,9 @@ static int note(uint32_t ent, void *ctx, const uint32_t *pinp, void *msg, double
         mem_u32(outer + OUT_TYPE, &type);
         pid = path_id(outer, &depth);
     }
+    /* Checkpoint.finished_saving (vtable rva 0xE51880 o la del subobjeto 0xE514E8; ShortGuid 5bacef5d): muerte en coop */
+    if (pin == 0x5BACEF5Du && vt && (vt - (uint32_t)g_aimp_exe == 0x00E51880u || vt - (uint32_t)g_aimp_exe == 0x00E514E8u))
+        death_note_checkpoint();
     if (msg)
         mem_u32((uintptr_t)msg, &mobj);
     uint32_t mflags = 0;

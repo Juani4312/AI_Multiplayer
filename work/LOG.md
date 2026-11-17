@@ -192,3 +192,4 @@
 - 04:01 (2026-11-17) Corridas 98-99: inventario completo del host (evento 9) mandado como host y aplicado como cliente (3 correcciones exactas).
 - 04:08 (2026-11-17) Corrida 100: huella de la partida (session.c, evento 10): misma partida / PARTIDAS DISTINTAS verificado con el peer.
 - 04:12 (2026-11-17) Corrida 101: avatar del compañero caído visto acurrucado (captura). Cierre: mode.sh play (partida del usuario restaurada e idéntica a saves/current, mod desinstalado), README/PROGRESS/NOTES al día.
+- 04:14 (2026-11-17) Revivir también al pasar un checkpoint (Checkpoint.finished_saving vía pins.c; escrito, sin probar). dist actualizada. Sigue en modo juego.
