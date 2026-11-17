@@ -37,12 +37,12 @@ Corrida 95 (`safezone`): caído y revivido del compañero (avatar en pose), `KIL
 1. **Qué hace el caído.** Hoy se mueve libre, invisible para el daño. Opciones:
    - a) "fantasma": se mueve libre, el Alien y los NPCs lo ignoran (falta: que la IA no lo vea), y en la otra máquina el avatar desaparece;
    - b) espectador: la cámara sigue al avatar del compañero y el personaje queda quieto y escondido. Es más prolijo, pero hay que controlar la cámara.
-2. **Red:** un evento `AIMP_EVT_DOWNED` / `REVIVED`. El otro oculta o muestra el avatar y sabe si quedan vivos.
-3. **Revivir de verdad:**
+2. ~~**Red:**~~ hecho (`AIMP_EVT_COOP`, corrida 95). Falta decidir si el avatar del caído se oculta en vez de acurrucarse.
+3. **Revivir de verdad:** hecho con la terminal de guardado (corrida 95, con el peer). Falta revivir al completar un objetivo o al pasar un checkpoint, y probarlo con dos máquinas y una terminal real:
    - cuando el vivo usa una terminal de guardado (el "usar" ya se detecta y la terminal ya se identifica en `AIMP_SYNC_USE_SKIP`);
    - o cuando pasa un checkpoint o completa un objetivo;
    - el caído aparece al lado del compañero (teletransporte, como el avatar).
-4. **Si caen los dos:** game over normal. Se saca `+0x4253` y se llama a `FUN_007d0c10` sobre el jugador, y los dos recargan su save.
+4. ~~**Si caen los dos:**~~ hecho (corrida 95). game over normal. Se saca `+0x4253` y se llama a `FUN_007d0c10` sobre el jugador, y los dos recargan su save.
 5. **Remate del Alien:** el agarre (`ACT_PLAYER_DEATH`) es una animación sincronizada. Con la salud recortada no se sabe si la animación termina bien o deja al jugador trabado. Hace falta una partida con el Alien.
 6. **Host:** el host no necesita estar vivo. Su proceso sigue simulando el mundo aunque esté caído. Solo se corta si cierra el juego.
 

@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-17, 04:20, cierre del trabajo autónomo. **Modo juego:** la partida del usuario quedó restaurada (`saves/current.tar.gz`) y el mod desinstalado. Hecho hoy (corridas 83–101):
+_Última actualización: 2026-11-17, 04:15, cierre del trabajo autónomo. **Modo juego:** la partida del usuario quedó restaurada (`saves/current.tar.gz`) y el mod desinstalado. Hecho hoy (corridas 83–101):
 - avatar agachado (pose, hallazgo 20) y avatar mujer por esqueleto;
 - lector de memoria (`memsrv`);
 - muerte en coop: caído, red, revivir en la terminal y game over si caen los dos (`work/DESIGN_DEATH.md`);
