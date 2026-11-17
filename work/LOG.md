@@ -194,3 +194,4 @@
 - 04:12 (2026-11-17) Corrida 101: avatar del compañero caído visto acurrucado (captura). Cierre: mode.sh play (partida del usuario restaurada e idéntica a saves/current, mod desinstalado), README/PROGRESS/NOTES al día.
 - 04:14 (2026-11-17) Revivir también al pasar un checkpoint (Checkpoint.finished_saving vía pins.c; escrito, sin probar). dist actualizada. Sigue en modo juego.
 - 04:15 (2026-11-17) Estático: NPC_SetInvisible = FUN_0078b100 (oculta el modelo; sirve para esconder el avatar del caído). Anotado en DESIGN_DEATH.
+- 04:16 (2026-11-17) Estático: IGNORE_PLAYER = valor 0 de ALERTNESS_STATE (NPCs humanos). Fin del trabajo autónomo: todo commiteado, modo juego (partida del usuario restaurada, mod desinstalado).
