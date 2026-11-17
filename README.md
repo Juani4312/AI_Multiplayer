@@ -3,7 +3,7 @@
 Mod de investigación e interoperabilidad, de uso personal, sobre una copia comprada del juego.
 No contiene ni redistribuye binarios, assets ni código del juego.
 
-**Estado (2026-11-15):** experimental. Dos jugadores, uno en Linux (Proton) y otro en Windows 10, conectados por Tailscale, ya se ven y comparten los "usar". El avatar del otro jugador es un "títere": un NPC que cada frame se pone en la posición exacta del otro, con animación de caminar o correr (probado con dos máquinas: "responsivo y exacto"). Los objetos arrojados se ven volar del otro lado y terminan donde cayó el original. Todavía no es un coop jugable: no se sincronizan la IA, el Alien, las armas de fuego ni el progreso de la misión. **Dónde quedamos y qué sigue:** sección "Último trabajo y siguiente paso", al final.
+**Estado (2026-11-17):** experimental. Dos jugadores, uno en Linux (Proton) y otro en Windows 10, conectados por Tailscale, ya se ven y comparten los "usar". El avatar del otro jugador es un "títere": un NPC que cada frame se pone en la posición exacta del otro, con animación de caminar o correr (probado con dos máquinas: "responsivo y exacto"). Los objetos arrojados se ven volar del otro lado y terminan donde cayó el original. Todavía no es un coop jugable: no se sincronizan la IA, el Alien, las armas de fuego ni el progreso de la misión. **Dónde quedamos y qué sigue:** sección "Último trabajo y siguiente paso", al final.
 
 | Fase | Qué hace | Estado |
 |------|----------|--------|
@@ -93,6 +93,15 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 5. Al terminar: cerrar el juego (`pkill -TERM -x AI.exe`), guardar el log en `work/evidence/runtime/` y **dejar el mod instalado en pasivo** (`runtime_setup.sh install --cfg "AIMP_GHOST=0"`).
 
 ## Último trabajo y siguiente paso
+
+**2026-11-17, madrugada (corridas 83–92, locales):**
+- **El avatar se ve agachado:** cuando el otro se agacha, el civil recibe una pose agachada del juego (`idle_crouch`, con una mano en el piso) mediante el comando `PLAY_ANIMATION`, y se desliza en esa pose mientras el otro avanza. Los humanos no tienen ciclo de caminar agachado. También andan `cower_low_idle` (acurrucado) y `jb_kn_idlebase01` (arrodillado) (`AIMP_GHOST_CROUCH_ANIM`). Hallazgo 20.
+- **Avatar mujer:** si en la zona hay una civil (esqueleto `FEMALE`), el mod la elige como avatar. Falta verlo en una zona con mujeres: en la sala del transit hay solo hombres.
+- **Muerte en coop (experimental, `AIMP_COOP_DOWNED=1`):** en vez de morir, el jugador queda "caído" (salud 1, invencible), sin game over, usando un flag del propio juego (`Character+0x4253`). Diseño y pendientes en `work/DESIGN_DEATH.md`.
+- **Herramientas:** lector de memoria en vivo (`AIMP_MEMSRV_FILE` + `work/scripts/memsrv.py`) y trazas de animaciones y de UI.
+- `mod/dist/winmm.dll` = `5473f92e…`. **El mod quedó desinstalado** para que el usuario juegue.
+
+**Siguiente:** prueba con dos máquinas (instructions.md 8d, con el agachado nuevo); para la muerte en coop, el evento de red y revivir en la terminal de guardado; una partida con el Alien.
 
 **2026-11-16, madrugada (trabajo autónomo, corridas 72–79):**
 - **Fase 6 por red en una máquina:** el cliente aplica los disparos de zona del host (9 de 9) y bloquea los suyos.

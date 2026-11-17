@@ -84,6 +84,7 @@ static float g_vec[4] __attribute__((aligned(16)));
 /* Pedidos que recibió SpawnCharacter (0xF0 bytes: el mensaje de sesión 0x2E, hallazgo 12). */
 #define SC_REQ_SIZE 0xF0
 static uint8_t g_scq[MAX_REQS][SC_REQ_SIZE];
+static int g_prefer_female = 1, g_skel_logged;
 static int g_mode, g_state = G_OFF, g_from_key = -1, g_npc_type = 6, g_obs_logged, g_warned_npc, g_chosen_once;
 static int64_t g_last_pick;
 static int g_front_cm; /* AIMP_GHOST_FRONT_CM */
@@ -413,6 +414,7 @@ int ghost_install(void)
         }
     }
     g_npc_type = aimp_env_int(L"AIMP_GHOST_NPC_TYPE", 6);
+    g_prefer_female = aimp_env_int(L"AIMP_GHOST_PREFER_FEMALE", 1);
     g_walk = g_mode >= 2 && aimp_env_int(L"AIMP_GHOST_WALK", 0);
     if (g_walk) {
         uint8_t a[sizeof AIMP_CMD_MOVE_START_PROLOGUE], b[sizeof AIMP_CMD_MOVE_UPDATE_PROLOGUE];
@@ -648,6 +650,7 @@ static void start_moving(uint32_t p, int64_t now)
     g_av_crouched = 0;
     g_pose_on = 0;
     g_pose_n = 0;
+    g_skel_logged = 0;
     g_crouch_chk = 0;
     g_spd_at = 0;
     g_walk_ctrl = g_walk ? p + g_walk_off : 0;
@@ -678,15 +681,48 @@ static void set_noauth(const Chars *c, uint32_t p)
     log_printf("GHOST: no se encontró el bloque del avatar (AIMP_GHOST_NOAUTH no se aplica)");
 }
 
+/* Nombre del esqueleto del personaje (2026-11-17, lector de memoria): Character+0x600 -> +0x1C -> +0x60 (char[]).
+ * El jugador da "FEMALEFP" y los civiles y el guardia de HAB_ShoppingCentre, "MALE". */
+static int chr_skeleton(uint32_t chr, char *out, size_t cap)
+{
+    uint32_t a = 0, b = 0;
+    out[0] = 0;
+    return mem_u32(chr + CHR_SKEL_OWNER, &a) && a && mem_u32(a + SKEL_OWNER_SKEL, &b) && b && mem_cstr(b + SKEL_NAME, out, cap) && out[0];
+}
+
 static void pick_npc(const Chars *c, int64_t now)
 {
-    uint32_t best = 0, best_i = 0;
-    for (uint32_t i = 0; i < c->nnpc && !best; i++) {
+    uint32_t best = 0, best_i = 0, fem = 0, fem_i = 0, n = 0;
+    char sk[24], all[160];
+    all[0] = 0;
+    for (uint32_t i = 0; i < c->nnpc; i++) {
         uint32_t def = 0, type = 0;
         if (c->npc[i] && mem_u32(c->npc[i] + CHR_DEF, &def) && def && mem_u32(def + DEF_TYPE, &type) && (int)type == g_npc_type) {
-            best = c->npc[i];
-            best_i = i;
+            if (!best) {
+                best = c->npc[i];
+                best_i = i;
+            }
+            if (chr_skeleton(c->npc[i], sk, sizeof sk) && !fem && aimp_memcmp(sk, "FEMALE", 7) == 0) {
+                fem = c->npc[i];
+                fem_i = i;
+            }
+            if (n++ < 8) {
+                size_t l = 0;
+                while (all[l])
+                    l++;
+                aimp_snprintf(all + l, sizeof all - l, "%s[%u]=%s", l ? " " : "", i, sk[0] ? sk : "?");
+            }
         }
+    }
+    /* AIMP_GHOST_PREFER_FEMALE (pedido del usuario, 2026-11-17): si hay una civil con esqueleto FEMALE, ella */
+    if (g_prefer_female && fem) {
+        best = fem;
+        best_i = fem_i;
+    }
+    if (best && !g_skel_logged) {
+        log_printf("GHOST: candidatos de tipo %d por esqueleto: %s; se elige NPCs[%u]%s", g_npc_type, all, best_i,
+                   fem && g_prefer_female ? " (mujer)" : g_prefer_female ? " (no hay mujeres)" : "");
+        g_skel_logged = 1;
     }
     if (!best) {
         if (g_mode == 2) {

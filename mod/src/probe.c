@@ -15,6 +15,8 @@
 #include "ghost.h"
 #include "sync.h"
 #include "throw.h"
+#include "memsrv.h"
+#include "death.h"
 #include "ctrl.h"
 #include <tlhelp32.h>
 
@@ -627,6 +629,8 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
     }
     pins_frame(now, g_cur.level_cur);
     ctrl_frame(now, g_freq); /* AIMP_TRACE_CTRL (solo mira) */
+    memsrv_frame(now, g_freq); /* AIMP_MEMSRV_FILE (solo lee) */
+    death_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0); /* AIMP_COOP_DOWNED */
     if (status_due) {
         status(&g_cur, now - g_last_status);
         net_status(&g_net, now);
