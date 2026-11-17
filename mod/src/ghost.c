@@ -45,6 +45,7 @@
  * hacerlo; si el juego se cae, el registro de excepciones (crash.c) dice dónde.
  */
 #include "ghost.h"
+#include "anim.h"
 #include "ctrl.h"
 #include "game.h"
 #include "hook.h"
@@ -150,6 +151,14 @@ static ChrFn g_chr_crouch, g_chr_uncrouch;
 static int g_crouch_mode = 0, g_av_crouched, g_crouch_can = 1, g_crouch_restart;
 static uint32_t g_crouch_calls, g_crouch_lost;
 static int64_t g_crouch_chk;
+/* AIMP_GHOST_CROUCH=4 (2026-11-17, pedido del usuario: "que se note agachado"): el civil no tiene ciclo de caminar
+ * agachado, pero sí poses quietas (COWER_LOW_*, IDLE_CROUCH_1). Agachado, el avatar recibe un PLAY_ANIMATION con la
+ * pose (AIMP_GHOST_CROUCH_SET / _ANIM: texto o 0x<hash>) y el títere lo sigue moviendo en esa pose. Al pararse,
+ * MOVE_TOWARDS de nuevo. AIMP_GHOST_CROUCH_DROP_CM baja el modelo mientras el otro está agachado (con cualquier modo). */
+static AnimReq g_pose;
+static int g_pose_ok, g_pose_on, g_pose_logged, g_crouch_drop_cm, g_pose_tick = 1;
+static uint32_t g_pose_n;
+static int64_t g_pose_at;
 /* AIMP_GHOST_WALK_FAST_MMS (2026-11-16): el jugador camina a 2,46 m/s y el WALK del civil anima a ~1,2 m/s; con
  * el títere las piernas iban a la mitad del ritmo ("se desliza"). Entre este umbral y el de correr va FAST_WALK. */
 static int g_walk_fast_mms = 1800, g_walk_type_mid = MOVE_TYPE_FAST_WALK;
@@ -282,6 +291,55 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static uint32_t det
     return g_motiv_orig(node, edx, agent, arg2);
 }
 
+/* "0x<hex>" o texto (se usa su hash FNV-1a, como el engine) */
+static uint32_t env_hash(const wchar_t *name, const char *def, char *txt, size_t cap)
+{
+    wchar_t w[96];
+    int i = 0;
+    if (aimp_env_str(name, w, 96))
+        for (; i < (int)cap - 1 && w[i]; i++)
+            txt[i] = (char)(w[i] < 128 ? w[i] : '?');
+    else
+        for (; i < (int)cap - 1 && def[i]; i++)
+            txt[i] = def[i];
+    txt[i] = 0;
+    if (txt[0] == '0' && (txt[1] == 'x' || txt[1] == 'X')) {
+        uint32_t v = 0;
+        for (const char *p = txt + 2; *p; p++) {
+            int d = *p >= '0' && *p <= '9' ? *p - '0' : *p >= 'a' && *p <= 'f' ? *p - 'a' + 10 : *p >= 'A' && *p <= 'F' ? *p - 'A' + 10 : -1;
+            if (d < 0)
+                break;
+            v = v * 16 + (uint32_t)d;
+        }
+        return v;
+    }
+    return anim_hash(txt);
+}
+
+static void pose_config(void)
+{
+    char ts[96], ta[96];
+    anim_req_default(&g_pose);
+    g_pose.set = env_hash(L"AIMP_GHOST_CROUCH_SET", "HUMAN", ts, sizeof ts); /* corrida 83: el set de los civiles */
+    g_pose.anim = env_hash(L"AIMP_GHOST_CROUCH_ANIM", "cower_low_idle", ta, sizeof ta);
+    g_pose.play_count = aimp_env_int(L"AIMP_GHOST_CROUCH_COUNT", 1000);
+    g_pose.blend_in = (float)aimp_env_int(L"AIMP_GHOST_CROUCH_BLEND_MS", 250) / 1000.0f;
+    /* bits: 1 gravedad, 2 colisión, 4 interrumpible, 8 RemoveMotion, 16 IsCrouchedAnim, 32 NoIK, 64 NoFootIK, 128 start_instantly */
+    int f = aimp_env_int(L"AIMP_GHOST_CROUCH_FLAGS", 1 | 2 | 8 | 16 | 128);
+    g_pose.gravity = (f & 1) != 0;
+    g_pose.collision = (f & 2) != 0;
+    g_pose.interruption = (f & 4) != 0;
+    g_pose.remove_motion = (f & 8) != 0;
+    g_pose.crouched_anim = (f & 16) != 0;
+    g_pose.no_ik = (f & 32) != 0;
+    g_pose.no_foot_ik = (f & 64) != 0;
+    g_pose.start_instantly = (f & 128) != 0;
+    g_pose_tick = aimp_env_int(L"AIMP_GHOST_CROUCH_TICK", 1);
+    g_pose_ok = anim_ready() && g_pose.anim;
+    log_printf("AIMP_GHOST_CROUCH=4 (pose): set \"%s\" 0x%08x, animación \"%s\" 0x%08x, x%d, flags %d, bajar %d cm%s", ts, g_pose.set, ta,
+               g_pose.anim, g_pose.play_count, f, g_crouch_drop_cm, g_pose_ok ? "" : " (NO disponible: falta PLAY_ANIMATION o la animación)");
+}
+
 int ghost_install(void)
 {
     g_mode = aimp_env_int(L"AIMP_GHOST", 0);
@@ -353,6 +411,9 @@ int ghost_install(void)
             g_crouch_cycle = aimp_env_int(L"AIMP_GHOST_CROUCH_CYCLE", 0);
             g_crouch_mode = aimp_env_int(L"AIMP_GHOST_CROUCH", 0); /* corrida 77: en el humano armado rompe la pose */
             g_crouch_can = aimp_env_int(L"AIMP_GHOST_CROUCH_CAN", 1);
+            g_crouch_drop_cm = aimp_env_int(L"AIMP_GHOST_CROUCH_DROP_CM", 0);
+            if (g_crouch_mode == 4)
+                pose_config();
             {
                 uint8_t c1[sizeof AIMP_CHR_CROUCH_PROLOGUE], c2[sizeof AIMP_CHR_UNCROUCH_PROLOGUE];
                 uintptr_t p1 = g_aimp_exe + AIMP_RVA_CHR_CROUCH, p2 = g_aimp_exe + AIMP_RVA_CHR_UNCROUCH;
@@ -561,6 +622,8 @@ static void start_moving(uint32_t p, int64_t now)
     g_yaw_since = 0;
     g_idle_on = 0;
     g_av_crouched = 0;
+    g_pose_on = 0;
+    g_pose_n = 0;
     g_crouch_chk = 0;
     g_spd_at = 0;
     g_walk_ctrl = g_walk ? p + g_walk_off : 0;
@@ -857,7 +920,7 @@ static int walk_is_ours(uint32_t ctrl, uint32_t *type)
 int ghost_switch_filter(uint32_t ctrl, uint32_t cmd)
 {
     uint32_t mine = g_walk_ctrl, type = 0xFFFFFFFFu;
-    if (!mine || ctrl != mine || !cmd || g_allow_cmd || cmd_is_ours(cmd, &type))
+    if (!mine || ctrl != mine || !cmd || g_allow_cmd || cmd_is_ours(cmd, &type) || anim_cmd_is(cmd, g_cmd_a, g_cmd_b))
         return 1;
     LONG n = InterlockedIncrement(&g_n_blocked);
     if (n <= 20 || (n & 255) == 0) {
@@ -1014,7 +1077,7 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
                 el = 0.0f;
             static float s_p[4] __attribute__((aligned(16)));
             s_p[0] = g_rm_p[0] + g_rm_v[0] * el;
-            s_p[1] = g_rm_p[1];
+            s_p[1] = g_rm_p[1] - (g_rm_crouch ? (float)g_crouch_drop_cm / 100.0f : 0.0f);
             s_p[2] = g_rm_p[2] + g_rm_v[2] * el;
             float pyaw = tyaw;
             if (g_rm_speed > 0.5f)
@@ -1033,6 +1096,52 @@ static int walk_chr(const float *t, float tyaw, const char *src, const char *whe
             g_target[7] = s_p[1];
             g_target[11] = s_p[2] + g_rm_v[2] * lk;
             float lt[3] = { g_target[3], g_target[7], g_target[11] };
+            if (g_crouch_mode == 4 && g_pose_ok) {
+                if (g_rm_crouch) {
+                    uint32_t ex = 0, pe = 0, xt = 0xFFFFFFFFu;
+                    mem_u32(ctrl + CMDCTRL_EXEC, &ex);
+                    mem_u32(ctrl + CMDCTRL_CURRENT, &pe);
+                    int run = anim_cmd_is(ex, g_cmd_a, g_cmd_b) || anim_cmd_is(pe, g_cmd_a, g_cmd_b);
+                    /* corrida 85: la pose quedaba pendiente (+4) y seguía el MOVE_TOWARDS; se loguea a los 0,5, 1, 2 y 4 s */
+                    static const int s_pose_ms[4] = { 500, 1000, 2000, 4000 };
+                    if (g_pose_on && g_pose_logged < 4 && now - g_pose_at >= g_freq * s_pose_ms[g_pose_logged] / 1000) {
+                        char nm[32];
+                        if (ex)
+                            mem_u32(ex + CMD_TYPE, &xt);
+                        cmd_name(xt, nm, sizeof nm);
+                        char pn[32];
+                        uint32_t pt = 0xFFFFFFFFu;
+                        if (pe)
+                            mem_u32(pe + CMD_TYPE, &pt);
+                        cmd_name(pt, pn, sizeof pn);
+                        log_printf("GHOST: títere: pose a los %d ms: %s (en ejecución: %s 0x%08x, pendiente: %s 0x%08x)", s_pose_ms[g_pose_logged],
+                                   run ? "sigue el PLAY_ANIMATION del mod" : "NO está", nm, ex, pn, pe);
+                        g_pose_logged++;
+                    }
+                    if (!g_pose_on || (!run && now - g_pose_at >= g_freq && g_pose_n < 30)) {
+                        log_printf("GHOST: títere: el otro se agachó; PLAY_ANIMATION de la pose (%u)%s", g_pose_n + 1,
+                                   g_pose_on ? " (la anterior ya no estaba)" : "");
+                        g_allow_cmd = 1;
+                        anim_play(ctrl, g_cmd_a, g_cmd_b, &g_pose);
+                        g_allow_cmd = 0;
+                        if (g_pose_tick)
+                            anim_ctrl_tick(ctrl); /* corrida 86: sin esto queda pendiente para siempre */
+                        g_pose_on = 1;
+                        g_pose_logged = 0;
+                        g_pose_at = now;
+                        g_pose_n++;
+                    }
+                    break;
+                }
+                if (g_pose_on) {
+                    g_pose_on = 0;
+                    g_last_restart = 0;
+                    walk_start(ctrl, lt, now, "títere: se paró (deja la pose)");
+                    if (g_pose_tick)
+                        anim_ctrl_tick(ctrl);
+                    break;
+                }
+            }
             /* agachado y quieto: comando IDLE con la postura (AIMP_GHOST_CROUCH_STANCE); al moverse o pararse, MOVE */
             if ((g_crouch_mode == 1 || g_crouch_mode == 3) && g_chr_crouch) {
                 /* agachado del juego (FUN_007cae20/FUN_007cae90): al cambiar el otro, y cada 500 ms se verifica que
