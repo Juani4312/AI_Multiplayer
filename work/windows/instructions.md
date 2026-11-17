@@ -260,6 +260,24 @@ Qué mirar (F8 en cada momento):
 
 En el log: `PICKUP recogido` (con `pid` e `ids`) del lado que levantó, y `PICKUP remoto: … acá … (la entidad local con el mismo pid | los ids del otro)` del otro lado. `PINSYNC al cliente`, `PINSYNC aplicado`, `PINSYNC bloqueado`.
 
+### 8e. Agachado, inventario compartido, muerte en coop y armas de a una (2026-11-17, DLL `fc2fad47…`)
+
+Misma instalación que el paso 8, con `git pull` (DLL nueva de `mod/dist`), sumando a `-Extra` (y lo mismo en `papito`): `AIMP_SYNC_INV=1,AIMP_COOP_DOWNED=1,AIMP_SYNC_WEAPONS=1,AIMP_SYNC_USE=1`. El agachado nuevo ya viene activado por defecto.
+
+**Importante: las dos máquinas tienen que cargar la MISMA partida.** Hoy el mod solo compara el nivel. Copiar a la laptop un save de prueba de `saves/` (no la partida real del usuario), como dice `saves/README.md`, "En Windows".
+
+Novedades:
+- **Agachado:** cuando el otro se agacha, su avatar adopta una pose agachada (con una mano en el piso) y se desliza en ella mientras avanza.
+- **Inventario compartido:** todo lo que uno levanta, gasta o fabrica le pasa también al otro (munición, botiquines, bengalas, componentes, armas).
+- **Muerte en coop:** si uno recibe un golpe mortal, queda "caído" (salud 1, invencible, sin game over). Su avatar en la otra máquina queda acurrucado. Si el otro usa una terminal de guardado, el caído revive a su lado. Si caen los dos, game over normal.
+- **Armas de a una:** cada arma tiene dueño (el último que la sacó). Cerca (menos de 4 m) cualquiera puede sacarla si el otro no la tiene en la mano; lejos (más de 5 m), solo el dueño. Si no está disponible, el juego la guarda enseguida.
+
+Qué mirar (F8 en cada momento):
+1. Agacharse quieto y agachado caminando: ¿el avatar se ve agachado del otro lado?
+2. Levantar munición o un botiquín, usar un botiquín, fabricar algo: ¿cambia igual en el inventario de los dos? En el log: `INV: local: … ` de un lado e `INV: remoto: … x -> y` del otro.
+3. Sacar la pistola en una máquina; en la otra, intentar sacarla: cerca, ¿la toma (y en la primera la sigue teniendo en la mano?); lejos, ¿se guarda sola? En el log: `WEAPONS: saca …`, `WEAPONS: … no está disponible`, `WEAPONS: el otro sacó …`.
+4. Muerte (solo con un save de prueba, nunca con la partida real): dejarse matar por un enemigo en una máquina. ¿Queda caído en vez de game over? ¿El avatar se acurruca en la otra? Usar una terminal de guardado con el vivo: ¿el caído revive a su lado? En el log: `DEATH: el jugador quedó caído`, `DEATH: revivido por el compañero`.
+
 ## Problemas conocidos
 
 - **No aparece `aimp.log`:** el proxy no cargó. Revisar KnownDLLs, que `winmm.dll` esté al lado de `AI.exe` (no en una subcarpeta) y que el juego haya llegado a arrancar.
