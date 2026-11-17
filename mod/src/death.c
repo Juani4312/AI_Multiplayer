@@ -3,6 +3,7 @@
 #include "game.h"
 #include "hook.h"
 #include "log.h"
+#include "ghost.h"
 
 #define AIMP_RVA_UI_OPEN 0x0041F8F0u
 static const uint8_t UI_OPEN_PROLOGUE[7] = { 0x6A, 0xFF, 0x68, 0x48, 0x2E, 0x13, 0x01 };
@@ -51,7 +52,49 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_ui_
 #define CHR_INVINC_A   0x2E8
 #define CHR_INVINC_B   0x2EA
 
-static int g_downed_mode, g_downed;
+static int g_downed_mode, g_downed, g_remote_downed, g_revive_pending;
+static AimpNet *g_net;
+static float g_revive_pos[4] __attribute__((aligned(16)));
+static float g_revive_yaw;
+typedef void(__attribute__((fastcall)) * TeleportFn)(void *self, void *edx, const float *pos, float yaw, uint32_t p3);
+typedef void(__attribute__((fastcall)) * KillFn)(void *chr, void *edx, uint32_t attacker);
+static TeleportFn g_tp;
+static KillFn g_kill;
+static const uint8_t KILL_PROLOGUE[11] = { 0x51, 0x56, 0x8B, 0xF1, 0x8B, 0x4E, 0x64, 0x80, 0x79, 0x1F, 0x00 };
+#define AIMP_RVA_CHR_KILL 0x003D0C10u
+
+int death_coop_enabled(void) { return g_downed_mode; }
+
+static void send(uint32_t kind, uint32_t player)
+{
+    CoopEvt ev;
+    aimp_memset(&ev, 0, sizeof ev);
+    ev.kind = kind;
+    if (player) {
+        mem_read(player + CHR_POS, ev.pos, sizeof ev.pos);
+        mem_f32(player + CHR_YAW, &ev.yaw);
+    }
+    if (g_net && g_net->mode && net_event(g_net, AIMP_EVT_COOP, 0, &ev, sizeof ev))
+        log_printf("DEATH: avisado al otro: %s", kind == COOP_DOWNED ? "caído" : kind == COOP_REVIVED ? "revivido" : "revivir");
+}
+
+/* Los dos caídos: game over normal. Se saca el "no puede morir" y se lo mata como lo hace el juego. */
+static void both_down(uint32_t player)
+{
+    uint8_t z = 0;
+    log_printf("DEATH: los dos jugadores están caídos: game over");
+    mem_write(player + CHR_NO_DEATH, &z, 1);
+    uint8_t a = 0, b = 0;
+    mem_u8(player + CHR_INVINC_A, &a);
+    mem_u8(player + CHR_INVINC_B, &b);
+    a &= (uint8_t)~8;
+    b &= (uint8_t)~8;
+    mem_write(player + CHR_INVINC_A, &a, 1);
+    mem_write(player + CHR_INVINC_B, &b, 1);
+    g_downed_mode = 0; /* que no lo vuelva a marcar */
+    if (g_kill)
+        g_kill((void *)player, NULL, 0);
+}
 static uint32_t g_last_player;
 static int64_t g_last_chk;
 static wchar_t g_revive_file[MAX_PATH];
@@ -93,6 +136,25 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
         g_downed = 1;
         set_flags(player, 1);
         log_printf("DEATH: el jugador quedó caído (salud %u de %u): invencible; en coop sigue el compañero", hp, mx);
+        send(COOP_DOWNED, player);
+        if (g_remote_downed) {
+            both_down(player);
+            return;
+        }
+    }
+    if (g_downed && g_revive_pending) {
+        g_revive_pending = 0;
+        g_downed = 0;
+        set_flags(player, 0);
+        if (mx)
+            mem_write(player + CHR_HEALTH, &mx, 2);
+        if (g_tp) {
+            mem_f32(player + CHR_POS + 12, &g_revive_pos[3]);
+            g_tp((void *)player, NULL, g_revive_pos, g_revive_yaw, 0);
+        }
+        log_printf("DEATH: revivido por el compañero (salud %u), junto a él en (%.2f, %.2f, %.2f)", mx, (double)g_revive_pos[0],
+                   (double)g_revive_pos[1], (double)g_revive_pos[2]);
+        send(COOP_REVIVED, player);
     }
     WIN32_FILE_ATTRIBUTE_DATA fa;
     if (g_downed && g_revive_file[0] && GetFileAttributesExW(g_revive_file, GetFileExInfoStandard, &fa) &&
@@ -104,12 +166,60 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
         if (mx)
             mem_write(player + CHR_HEALTH, &mx, 2);
         log_printf("DEATH: el jugador revive (salud %u)", mx);
+        send(COOP_REVIVED, player);
     }
 }
 
-void death_install(void)
+void death_remote_event(const AimpEvt *e)
 {
+    CoopEvt ev;
+    if (!g_downed_mode || e->size < sizeof ev)
+        return;
+    aimp_memcpy(&ev, e->data, sizeof ev);
+    if (ev.kind == COOP_DOWNED) {
+        log_printf("DEATH: el otro jugador quedó caído%s", g_downed ? "; acá también: game over" : "");
+        g_remote_downed = 1;
+        ghost_set_remote_downed(1);
+        if (g_downed && g_last_player)
+            both_down(g_last_player);
+    } else if (ev.kind == COOP_REVIVED) {
+        log_printf("DEATH: el otro jugador revivió");
+        g_remote_downed = 0;
+        ghost_set_remote_downed(0);
+    } else if (ev.kind == COOP_REVIVE) {
+        if (!g_downed) {
+            log_printf("DEATH: pedido de revivir, pero acá no estoy caído: se ignora");
+            return;
+        }
+        g_revive_pos[0] = ev.pos[0] + 0.8f; /* al lado, no encima */
+        g_revive_pos[1] = ev.pos[1];
+        g_revive_pos[2] = ev.pos[2];
+        g_revive_yaw = ev.yaw;
+        g_revive_pending = 1;
+        log_printf("DEATH: el compañero usó una terminal de guardado: revivir junto a él");
+    }
+}
+
+void death_on_save_terminal(void)
+{
+    if (!g_downed_mode)
+        return;
+    log_printf("DEATH: terminal de guardado usada%s", g_remote_downed ? ": se pide revivir al compañero caído" : "");
+    if (g_remote_downed)
+        send(COOP_REVIVE, g_last_player);
+}
+
+void death_install(AimpNet *net)
+{
+    g_net = net;
     g_downed_mode = aimp_env_int(L"AIMP_COOP_DOWNED", 0);
+    {
+        uint8_t t[sizeof AIMP_CHR_TELEPORT_PROLOGUE], k[sizeof KILL_PROLOGUE];
+        if (mem_read(g_aimp_exe + AIMP_RVA_CHR_TELEPORT, t, sizeof t) && aimp_memcmp(t, AIMP_CHR_TELEPORT_PROLOGUE, sizeof t) == 0)
+            g_tp = (TeleportFn)(void *)(g_aimp_exe + AIMP_RVA_CHR_TELEPORT);
+        if (mem_read(g_aimp_exe + AIMP_RVA_CHR_KILL, k, sizeof k) && aimp_memcmp(k, KILL_PROLOGUE, sizeof k) == 0)
+            g_kill = (KillFn)(void *)(g_aimp_exe + AIMP_RVA_CHR_KILL);
+    }
     if (aimp_env_str(L"AIMP_COOP_REVIVE_FILE", g_revive_file, MAX_PATH)) {
         WIN32_FILE_ATTRIBUTE_DATA fa;
         if (GetFileAttributesExW(g_revive_file, GetFileExInfoStandard, &fa))

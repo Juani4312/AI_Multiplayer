@@ -185,3 +185,4 @@
 - 03:15 (2026-11-17) El usuario está en una run sin morir. Las corridas 90-92 mataron al jugador sobre su save (antes de que jugara); no quedó grabado en los slots. Su partida actual se guardó en saves/run-sin-morir-2026-11-17.tar.gz. Regla: pruebas de muerte solo sobre safezone.
 - 03:25 (2026-11-17) mode.sh (juego/prueba): la partida del usuario va a saves/current.tar.gz y las pruebas cargan safezone. CLAUDE.md, PROGRESS, saves/README y memoria al día.
 - 03:55 (2026-11-17) Corridas 93-94: inventario compartido (inv.c, AIMP_SYNC_INV, hallazgo 21) verificado en una máquina con el peer.
+- 03:39 (2026-11-17) Muerte en coop por red (escrito, sin probar): AIMP_EVT_COOP 7 (caído/revivido/revivir), los dos caídos -> game over, terminal de guardado (1e38b898) revive al compañero junto al que guarda, avatar del caído en cower_low_idle. Armas de a una trabado en local: el mando virtual no saca armas en la zona segura.
