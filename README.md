@@ -94,10 +94,12 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 
 ## Último trabajo y siguiente paso
 
-**2026-11-17, tarde (local, sin abrir el juego):**
-- **Copia del save del host** (`AIMP_SAVE_SYNC=1` en el que se une; `mod/src/savesync.c`): en el menú principal, el cliente trae del host los saves que tenga distintos y después "Continue" carga la partida del host. Lee y escribe con la misma API de Steam Cloud que el juego, comprime con un LZ propio (24 MB de saves → 3,5 MB) y guarda un backup de los saves propios antes de pisarlos. Tiene tests (con pérdida de paquetes); **falta probarlo en el juego** (corridas 102–103 preparadas en `work/NOTES.md`).
-- **Avatar del caído oculto** (`AIMP_GHOST_DOWNED_HIDE=1`, opcional): en vez de acurrucarse, el avatar del compañero caído desaparece (`NPC_SetInvisible` del juego). Sin probar en el juego.
-- `mod/dist` sigue en `3f54f468…` (prueba 8e): se actualiza cuando lo nuevo pase la prueba local.
+**2026-11-17, tarde (corridas 102–107, locales con el peer):**
+- **Copia del save del host** (`AIMP_SAVE_SYNC=1` en el que se une; `mod/src/savesync.c`): en la pantalla de título o el menú, el cliente trae del host los saves que tenga distintos, y "Continue" carga la partida del host (verificado: cargó otro nivel). Usa la misma API de Steam Cloud que el juego y comprime con un LZ propio (24 MB de saves → 3,5 MB; los 22 saves llegaron idénticos en 5,9 s). Guarda un backup de los saves propios antes de pisarlos.
+- **Guardar juntos:** cuando el host guarda, el cliente recibe ese save aunque esté jugando. Si su propio juego lo pisa (lo hace al morir), el mod lo repone. Límite encontrado: el game over recarga una copia en memoria, no el archivo. Para jugar el save del host después de un game over: pausa → Quit to Main Menu → Continue (verificado).
+- **Avatar del caído oculto** (`AIMP_GHOST_DOWNED_HIDE=1`, opcional): el avatar del compañero caído desaparece y vuelve al revivir (verificado).
+- **Al revivir o pararse estando quieto, el avatar se para** (`npc_neutral_idle_base`). Antes se quedaba acurrucado.
+- `mod/dist/winmm.dll` = `cdf3ed49…`; para la laptop, `work/windows/instructions.md` 8f (y sirve para la 8e).
 
 **2026-11-17, 03:00–04:15 (trabajo autónomo, corridas 93–101, locales con el peer simulado):**
 - **Partida del usuario protegida:** es una run sin morir. `work/scripts/mode.sh test` guarda su partida en `saves/current.tar.gz` y carga un save de prueba (`safezone`); `mode.sh play` la restaura y desinstala el mod.

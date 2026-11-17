@@ -3,20 +3,18 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-17, 14:45 (sesión local). **Modo juego:** la partida del usuario está cargada y el mod desinstalado.
+_Última actualización: 2026-11-17, 15:15 (sesión local, corridas 102–107; el usuario autorizó lanzar el juego). **Modo prueba mientras se trabaja; al cerrar, `mode.sh play`.**
 
-Hecho en esta sesión (sin abrir el juego: el permiso para lanzarlo fue denegado):
-- **copia del save del host** (`mod/src/savesync.c`, `AIMP_SAVE_SYNC=1` en el cliente): canal confiable `AIMP_PKT_XFER`, manifiesto con hash, compresión LZ propia (el LZNT1 de Wine no comprime), backup antes de escribir, lectura y escritura con `ISteamRemoteStorage` como el juego. Tests en wine OK (`test_savesync`);
-- `aimp_peer.py --serve-save / --fetch-save`;
-- avatar del caído oculto (`AIMP_GHOST_DOWNED_HIDE=1`, `NPC_SetInvisible`).
-
-Antes (corridas 83–101): avatar agachado, avatar mujer, `memsrv`, muerte en coop, inventario compartido, armas de a una, huella de la partida; todo verificado en una máquina con el peer, salvo el bloqueo de armas.
+Hecho en esta sesión:
+- **copia del save del host** (`mod/src/savesync.c`, `AIMP_SAVE_SYNC=1` en el cliente): verificada en los dos sentidos (corridas 102–103);
+- **guardar juntos**: el host avisa cuando guarda; el cliente se iguala también si su juego pisa el save (corridas 106–107). El game over recarga una copia en memoria: después de un game over, el save del host se juega con menú + Continue;
+- avatar del caído oculto (`AIMP_GHOST_DOWNED_HIDE=1`, corrida 104) y se para al revivir (`AIMP_GHOST_STAND_ANIM`, corrida 105);
+- `mod/dist` = `cdf3ed49…`, instrucciones 8f para la laptop.
 
 **Siguiente:**
-- **corridas 102–103 (locales, necesitan permiso para abrir el juego):** la copia del save en los dos sentidos; montaje y resultado esperado en `work/NOTES.md` ("Copia del save del host"). Si pasan, actualizar `mod/dist` y sumar a la prueba de a dos;
-- probar `AIMP_GHOST_DOWNED_HIDE` con el peer (evento "caído" con `--event`);
-- la prueba con dos máquinas (`work/windows/instructions.md` 8e, DLL `3f54f468` de `mod/dist`), con un save de prueba en las dos (nunca `current`);
-- después: revivir en checkpoints u objetivos (escrito el de checkpoint, sin probar), decidir qué hace el caído (fantasma o espectador) y el Alien (hace falta un save con el Alien)._
+- la prueba con dos máquinas: `work/windows/instructions.md` 8e y 8f (DLL `cdf3ed49`), con un save de prueba en `papito` (nunca `current`);
+- opcional: que el game over cargue el save del host (reemplazar la copia en memoria: trabajador `FUN_00a644f0`, buffer en `obj+0x298`; NOTES, corrida 106);
+- revivir en checkpoints (escrito, sin probar), decidir qué hace el caído (fantasma u oculto, ya disponible) y el Alien (hace falta un save con el Alien)._
 
 **Partida real del usuario (run sin morir):** nunca se prueba sobre ella. `work/scripts/mode.sh test [save]` guarda `saves/current.tar.gz`, carga el save de prueba e instala el mod; `mode.sh play` la restaura y desinstala el mod. Al cerrar una sesión, `mode.sh play`.
 Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safezone` = la partida de las corridas 20–82 (sin enemigos).
@@ -71,7 +69,7 @@ Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safez
 | Hallazgo 16 (árbol de composites) | 🟡 `findings/16-arbol-de-composites.md`: hijos en `CompositeInstance+0x2C`, índice pid → entidad, mensaje de `on_entered` (entró/salió en `msg+0x20`). Código y tests listos; **falta runtime** |
 | Hallazgo 20 (PLAY_ANIMATION, agachado del avatar) | ✅ `findings/20-animaciones-play-animation.md`: set `HUMAN`, tick del controlador `FUN_00679150`; `AIMP_GHOST_CROUCH=4` por defecto (corridas 83–89) |
 | Hallazgo 21 (inventario) / inventario compartido | ✅ en una máquina: `findings/21-inventario.md`, `AIMP_SYNC_INV=1` (corridas 93–94). Falta con dos máquinas y "armas de a una" |
-| Copia del save del host | 🟡 `mod/src/savesync.c` (`AIMP_SAVE_SYNC=1` en el cliente): tests OK; falta en el juego (corridas 102–103 en NOTES) |
+| Copia del save del host | ✅ en una máquina (corridas 102–103, 106–107): `mod/src/savesync.c`, `AIMP_SAVE_SYNC=1` en el cliente; guardar juntos; falta con dos máquinas (instructions 8f) |
 | Muerte en coop | 🟡 `work/DESIGN_DEATH.md`: caído con `Character+0x4253` (corrida 92); falta red, revivir y el remate del Alien |
 | Alien compartido | 📝 diseño en `work/DESIGN_ALIEN.md` (percepción `FUN_00730c30`, objetivo en `cerebro+0x10`). Falta una partida con el Alien activo (el usuario) |
 | Ítems compartidos (`AIMP_SYNC_PICKUP`) | 🟡 hook de `pickup_collected` (`FUN_007a2b30`) y aplicación en el otro con `FUN_00795ee0` por pid. Sin probar en el juego (instructions.md 8d) |
