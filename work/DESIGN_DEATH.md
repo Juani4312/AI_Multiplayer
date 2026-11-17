@@ -38,6 +38,8 @@ Corrida 95 (`safezone`): caído y revivido del compañero (avatar en pose), `KIL
    - a) "fantasma": se mueve libre, el Alien y los NPCs lo ignoran (falta: que la IA no lo vea), y en la otra máquina el avatar desaparece;
    - b) espectador: la cámara sigue al avatar del compañero y el personaje queda quieto y escondido. Es más prolijo, pero hay que controlar la cámara.
 2. ~~**Red:**~~ hecho (`AIMP_EVT_COOP`, corrida 95). Falta decidir si el avatar del caído se oculta en vez de acurrucarse.
+   - **Para ocultarlo:** la entidad `NPC_SetInvisible` usa `FUN_0078b100` thiscall(personaje, bool), `ret 4`. Pone `Character+0x2D9` y oculta el modelo (componente `+0x3F0`, `FUN_00691b00`) y el equipo (`FUN_00782870`). Es invisibilidad visual, no para los sentidos de la IA.
+   - Para que el Alien ignore al caído hace falta otra cosa: la percepción, `DESIGN_ALIEN.md`. Pista sin seguir: el valor `IGNORE_PLAYER` de algún enum.
 3. **Revivir de verdad:** hecho con la terminal de guardado (corrida 95, con el peer). **Checkpoint (escrito, sin probar):** cuando la entidad `Checkpoint` de los scripts dispara `finished_saving` (vtable rva `0xE51880`/`0xE514E8`, ShortGuid `5bacef5d`; lo ve el hook de pines, así que hace falta `AIMP_SYNC_PINS` o `AIMP_TRACE_PINS`), el vivo pide revivir al caído. Falta al completar un objetivo, y probarlo con dos máquinas:
    - cuando el vivo usa una terminal de guardado (el "usar" ya se detecta y la terminal ya se identifica en `AIMP_SYNC_USE_SKIP`);
    - o cuando pasa un checkpoint o completa un objetivo;
