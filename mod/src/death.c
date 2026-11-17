@@ -64,6 +64,7 @@ static const uint8_t KILL_PROLOGUE[11] = { 0x51, 0x56, 0x8B, 0xF1, 0x8B, 0x4E, 0
 #define AIMP_RVA_CHR_KILL 0x003D0C10u
 
 int death_coop_enabled(void) { return g_downed_mode; }
+int death_remote_is_downed(void) { return g_remote_downed; }
 
 static void send(uint32_t kind, uint32_t player)
 {

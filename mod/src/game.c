@@ -9,6 +9,7 @@
 #include "memsrv.h"
 #include "death.h"
 #include "inv.h"
+#include "weapons.h"
 #include "hook.h"
 #include "log.h"
 #include "autopad.h"
@@ -97,6 +98,7 @@ int game_init(void)
     sync_install(probe_net()); /* opcional: AIMP_TRACE_USE=1 / AIMP_SYNC_USE=1 (fase 5, experimental) */
     pins_install(probe_net()); /* opcional: AIMP_TRACE_PINS=1 (traza) / AIMP_SYNC_PINS=1 (fase 6) */
     throw_install(probe_net()); /* opcional: AIMP_TRACE_THROW=1 / AIMP_SYNC_THROW=1 / AIMP_THROW_ECHO=ms (hallazgo 17) */
+    weapons_install(probe_net()); /* opcional: AIMP_SYNC_WEAPONS=1 (armas de a una) */
     inv_install(probe_net()); /* opcional: AIMP_TRACE_INV=1 / AIMP_SYNC_INV=1 (inventario compartido) */
     ctrl_install(); /* opcional: AIMP_TRACE_CTRL=1 / AIMP_TRACE_CMD=1 (solo miran) */
     death_install(probe_net()); /* opcional: AIMP_COOP_DOWNED=1 (muerte en coop) / AIMP_TRACE_UI=1 */

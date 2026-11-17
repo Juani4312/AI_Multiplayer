@@ -24,6 +24,7 @@
 #define AIMP_EVT_PICKUP 5   /* ítem recogido (pickup_collected, throw.c): PickupEvt de throw.h */
 #define AIMP_EVT_INV 6      /* cambios del inventario (inv.c): InvEvt de inv.h */
 #define AIMP_EVT_COOP 7     /* muerte en coop (death.c): CoopEvt de death.h */
+#define AIMP_EVT_WEAPON 8   /* armas de a una (weapons.c): WeaponEvt de weapons.h */
 #define AIMP_EVT_DATA 112
 #define AIMP_EVT_QUEUE 16
 #define AIMP_EVT_REPEAT 3

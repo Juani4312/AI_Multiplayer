@@ -14,6 +14,8 @@ void death_install(AimpNet *net);
 /* Por red (AIMP_COOP_DOWNED=1 con AIMP_NET): AIMP_EVT_COOP avisa caído / revivido; si caen los dos, game over normal
  * (el último en caer muere de verdad); el que usa una terminal de guardado con el compañero caído lo revive a su lado. */
 int death_coop_enabled(void);
+/* 1 si el otro jugador avisó que está caído. */
+int death_remote_is_downed(void);
 void death_remote_event(const AimpEvt *e);
 /* El jugador local usó una terminal de guardado (sync.c). */
 void death_on_save_terminal(void);

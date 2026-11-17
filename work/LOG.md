@@ -187,3 +187,4 @@
 - 03:55 (2026-11-17) Corridas 93-94: inventario compartido (inv.c, AIMP_SYNC_INV, hallazgo 21) verificado en una máquina con el peer.
 - 03:39 (2026-11-17) Muerte en coop por red (escrito, sin probar): AIMP_EVT_COOP 7 (caído/revivido/revivir), los dos caídos -> game over, terminal de guardado (1e38b898) revive al compañero junto al que guarda, avatar del caído en cower_low_idle. Armas de a una trabado en local: el mando virtual no saca armas en la zona segura.
 - 03:43 (2026-11-17) Corrida 95 (safezone): muerte en coop por red verificada con el peer, incluido el game over cuando caen los dos.
+- 03:54 (2026-11-17) Corridas 96-97: armas de a una (weapons.c, AIMP_SYNC_WEAPONS) con lectura del arma en mano y eventos verificados; el bloqueo queda para una prueba con persona.
