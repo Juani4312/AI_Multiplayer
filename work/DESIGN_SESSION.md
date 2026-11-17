@@ -26,6 +26,7 @@ _2026-11-17. Preguntas del usuario: "¿qué pasa si cada uno tiene un save disti
    - después, "Continue" en el cliente carga la partida del host;
    - plan B, si no anda: a mano con `saves.sh` o una carpeta compartida.
 3. **Guardar juntos:** cuando el host guarda en una terminal, el cliente guarda también (o recibe el save del host). Así un game over de los dos recarga el mismo punto en las dos máquinas.
+   **Hecho (2026-11-17, corridas 106–108 y 113–115):** el host avisa cuando guarda (`XFER_NOTIFY`) y el cliente copia ese save, también dentro del nivel; si su juego lo pisa, el mod lo repone. El game over no lee el archivo sino un buffer de 1 MB en memoria (RVA `0x134EF80`): el cliente mantiene ahí el checkpoint del host, así que con los dos caídos, "Load Current Save" recarga el mismo punto en las dos máquinas (verificado con el peer).
 4. **Ojo con Steam Cloud:** con una sola cuenta, la laptop offline no sincroniza, y por eso arrancó en otra misión. Con el amigo (otra cuenta) los saves son de cada uno: la copia del punto 2 es necesaria igual.
 
 ## 2. Inventario compartido

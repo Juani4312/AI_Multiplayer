@@ -45,7 +45,7 @@ Corrida 95 (`safezone`): caído y revivido del compañero (avatar en pose), `KIL
    - cuando el vivo usa una terminal de guardado (el "usar" ya se detecta y la terminal ya se identifica en `AIMP_SYNC_USE_SKIP`);
    - o cuando pasa un checkpoint o completa un objetivo;
    - el caído aparece al lado del compañero (teletransporte, como el avatar).
-4. ~~**Si caen los dos:**~~ hecho (corrida 95). game over normal. Se saca `+0x4253` y se llama a `FUN_007d0c10` sobre el jugador, y los dos recargan su save.
+4. ~~**Si caen los dos:**~~ hecho (corrida 95). game over normal. Se saca `+0x4253` y se llama a `FUN_007d0c10` sobre el jugador, y los dos recargan su save. Con `AIMP_SAVE_SYNC=1` el cliente recarga el checkpoint del host (corrida 115). Después de la recarga el estado de caídos se reinicia y el modo caído vuelve (corrida 116; antes quedaba apagado).
 5. **Remate del Alien:** el agarre (`ACT_PLAYER_DEATH`) es una animación sincronizada. Con la salud recortada no se sabe si la animación termina bien o deja al jugador trabado. Hace falta una partida con el Alien.
 6. **Host:** el host no necesita estar vivo. Su proceso sigue simulando el mundo aunque esté caído. Solo se corta si cierra el juego.
 

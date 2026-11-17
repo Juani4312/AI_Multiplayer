@@ -94,12 +94,13 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 
 ## Último trabajo y siguiente paso
 
-**2026-11-17, tarde (corridas 102–107, locales con el peer):**
+**2026-11-17, tarde (corridas 102–116, locales con el peer):**
 - **Copia del save del host** (`AIMP_SAVE_SYNC=1` en el que se une; `mod/src/savesync.c`): en la pantalla de título o el menú, el cliente trae del host los saves que tenga distintos, y "Continue" carga la partida del host (verificado: cargó otro nivel). Usa la misma API de Steam Cloud que el juego y comprime con un LZ propio (24 MB de saves → 3,5 MB; los 22 saves llegaron idénticos en 5,9 s). Guarda un backup de los saves propios antes de pisarlos.
-- **Guardar juntos:** cuando el host guarda, el cliente recibe ese save aunque esté jugando. Si su propio juego lo pisa (lo hace al morir), el mod lo repone. Límite encontrado: el game over recarga una copia en memoria, no el archivo. Para jugar el save del host después de un game over: pausa → Quit to Main Menu → Continue (verificado).
+- **Guardar juntos:** cuando el host guarda, el cliente recibe ese save aunque esté jugando. Si su propio juego lo pisa (lo hace al morir), el mod lo repone.
+- **Game over en coop:** el game over no recarga el archivo, sino un buffer del checkpoint en memoria. El cliente mantiene ahí el checkpoint del host, así que con los dos caídos, "Load Current Save" recarga el mismo punto en las dos máquinas (verificado, corridas 113–115). Corregido además: después de ese game over el modo caído quedaba apagado.
 - **Avatar del caído oculto** (`AIMP_GHOST_DOWNED_HIDE=1`, opcional): el avatar del compañero caído desaparece y vuelve al revivir (verificado).
 - **Al revivir o pararse estando quieto, el avatar se para** (`npc_neutral_idle_base`). Antes se quedaba acurrucado.
-- `mod/dist/winmm.dll` = `cdf3ed49…`; para la laptop, `work/windows/instructions.md` 8f (y sirve para la 8e).
+- `mod/dist/winmm.dll` = `f6b9beca…`; para la laptop, `work/windows/instructions.md` 8f (y sirve para la 8e).
 
 **2026-11-17, 03:00–04:15 (trabajo autónomo, corridas 93–101, locales con el peer simulado):**
 - **Partida del usuario protegida:** es una run sin morir. `work/scripts/mode.sh test` guarda su partida en `saves/current.tar.gz` y carga un save de prueba (`safezone`); `mode.sh play` la restaura y desinstala el mod.

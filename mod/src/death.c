@@ -52,7 +52,7 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_ui_
 #define CHR_INVINC_A   0x2E8
 #define CHR_INVINC_B   0x2EA
 
-static int g_downed_mode, g_downed, g_remote_downed, g_revive_pending;
+static int g_downed_mode, g_downed_cfg, g_downed, g_remote_downed, g_revive_pending;
 static volatile LONG g_checkpoint_hit;
 static AimpNet *g_net;
 static float g_revive_pos[4] __attribute__((aligned(16)));
@@ -93,7 +93,7 @@ static void both_down(uint32_t player)
     b &= (uint8_t)~8;
     mem_write(player + CHR_INVINC_A, &a, 1);
     mem_write(player + CHR_INVINC_B, &b, 1);
-    g_downed_mode = 0; /* que no lo vuelva a marcar */
+    g_downed_mode = 0; /* que no lo vuelva a marcar; vuelve con el jugador de la próxima carga (death_frame) */
     if (g_kill)
         g_kill((void *)player, NULL, 0);
 }
@@ -117,6 +117,20 @@ static void set_flags(uint32_t chr, int downed)
 
 void death_frame(int64_t now, int64_t freq, uint32_t player)
 {
+    /* Jugador nuevo (carga después del game over, o cambio de nivel): los dos recargan, así que el estado de caídos
+     * vuelve a cero y el modo caído se vuelve a activar (corrida 115: después del game over de los dos quedaba apagado
+     * y el compañero seguía "caído", así que el próximo caído daba game over al instante). */
+    if (g_downed_cfg && player && player != g_last_player && g_last_player) {
+        if (!g_downed_mode || g_remote_downed || g_downed)
+            log_printf("DEATH: carga nueva: se reinicia el estado de caídos (modo caído activo)");
+        g_downed_mode = 1;
+        if (g_remote_downed) {
+            g_remote_downed = 0;
+            ghost_set_remote_downed(0);
+        }
+        g_revive_pending = 0;
+        g_downed = 0;
+    }
     if (!g_downed_mode || !player || now - g_last_chk < freq / 10)
         return;
     if (InterlockedExchange(&g_checkpoint_hit, 0)) {
@@ -221,7 +235,7 @@ void death_on_save_terminal(void)
 void death_install(AimpNet *net)
 {
     g_net = net;
-    g_downed_mode = aimp_env_int(L"AIMP_COOP_DOWNED", 0);
+    g_downed_mode = g_downed_cfg = aimp_env_int(L"AIMP_COOP_DOWNED", 0);
     {
         uint8_t t[sizeof AIMP_CHR_TELEPORT_PROLOGUE], k[sizeof KILL_PROLOGUE];
         if (mem_read(g_aimp_exe + AIMP_RVA_CHR_TELEPORT, t, sizeof t) && aimp_memcmp(t, AIMP_CHR_TELEPORT_PROLOGUE, sizeof t) == 0)

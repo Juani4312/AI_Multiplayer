@@ -278,7 +278,7 @@ Qué mirar (F8 en cada momento):
 3. Sacar la pistola en una máquina; en la otra, intentar sacarla: cerca, ¿la toma (y en la primera la sigue teniendo en la mano?); lejos, ¿se guarda sola? En el log: `WEAPONS: saca …`, `WEAPONS: … no está disponible`, `WEAPONS: el otro sacó …`.
 4. Muerte (solo con un save de prueba, nunca con la partida real): dejarse matar por un enemigo en una máquina. ¿Queda caído en vez de game over? ¿El avatar se acurruca en la otra? Usar una terminal de guardado con el vivo, o pasar un checkpoint (con `AIMP_SYNC_PINS=1`): ¿el caído revive a su lado? En el log: `DEATH: el jugador quedó caído`, `DEATH: revivido por el compañero`.
 
-### 8f. Copia del save del host (2026-11-17, DLL `cdf3ed49…`)
+### 8f. Copia del save del host (2026-11-17, DLL `f6b9beca…`)
 
 La DLL nueva sirve también para la prueba 8e (es compatible). Con `git pull`, instalar `mod/dist/winmm.dll` como siempre.
 
@@ -296,7 +296,7 @@ Pasos:
    Por Tailscale, la copia completa (unos 3,5 MB) debería tardar pocos segundos.
 3. En las dos: Play Game → Alien: Isolation → Continue Game. En el log: `SESSION: misma partida`.
 4. Opcional, guardar juntos: el host usa una terminal de guardado. En la laptop: `SAVESYNC: el host guardó (aviso …)` y `save del host copiado`.
-5. Opcional, game over: el game over recarga la partida que tenía en memoria la laptop, no la del host. Para volver a la del host: pausa → Quit to Main Menu → Continue Game.
+5. Opcional, game over (solo con un save de prueba): con `AIMP_COOP_DOWNED=1` en las dos, que caigan los dos. En las dos: "Load Current Save". Las dos tienen que aparecer en el último checkpoint del host. En el log de la laptop: `SAVESYNC: checkpoint en memoria (…) reemplazado por el del host`. Después de la recarga, el log tiene que decir `DEATH: carga nueva: se reinicia el estado de caídos`.
 
 **Volver a los saves propios de la laptop:** con el juego cerrado, copiar los archivos de la carpeta de `save_backup` a `C:\Program Files (x86)\Steam\userdata\<cuenta>\214490\remote\`.
 
