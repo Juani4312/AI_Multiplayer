@@ -31,6 +31,18 @@ Hoy todo eso se configura con `aimp.cfg` (`AIMP_SYNC_INV`, `AIMP_COOP_DOWNED`, e
    - que el host fuerce la suya en el cliente;
    - o ajustes propios del mod (daño, munición), elegidos con el mismo tipo de selector.
 
+## Decisión (2026-11-18): reusar botones de Extras
+
+El usuario propuso reemplazar un botón que ya existe ("tipo el de créditos del menú principal"). El submenú **Extras** tiene varios que en coop no se usan: `AI_UI_FRONTEND_CREDITS`, `_GALLERY`, `_DEV_DIARIES`, `_MAKING_OF`, `_DELETED_SCENES`, `_TRAILER`, `_ACHIEVEMENTS`.
+
+**Primera versión, sin pantallas nuevas:**
+- cada botón es una opción del mod que **cambia de valor al apretarlo** ("Coop: dificultad — Normal" → "Difícil" → …);
+- el nombre y la descripción se cambian con `ui.c` (las etiquetas se vuelven a pedir al entrar al submenú; la descripción, al resaltar);
+- **hay que interceptar la acción del botón** para que no abra los créditos: ver cómo avisa la UI (candidatas: `GenericCallback*`, `ActivateLayer`) y no dejarla pasar;
+- el valor se guarda en `aimp.cfg`; lo que tiene que coincidir lo manda el host.
+
+Más adelante, si hace falta: abrir la pantalla de opciones con sliders.
+
 ## Siguiente paso
 
 Corrida corta: `AIMP_TRACE_UI_CALLBACKS=1` (por hacer), que loguee cada `GenericCallback*` con sus argumentos, y alguien que cambie opciones en el menú (alcanza con el mando virtual).
