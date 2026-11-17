@@ -28,6 +28,11 @@ _2026-11-17. Preguntas del usuario: "¿qué pasa si cada uno tiene un save disti
 
 ## 2. Inventario compartido
 
+**Decisión del usuario (2026-11-17): se comparte todo.** "Cuando uno agarra balas, un arma, key items, lo que sea, lo recibimos los dos, y cuando algo se consume se le consume a los dos." Las armas (lanzallamas incluido) las tienen los dos. Los casos del punto 4 quedan resueltos así:
+- armas, llaves e ítems de misión: los tienen los dos;
+- munición, botiquines, componentes y arrojables: un solo contador para los dos;
+- lo único a definir es la munición cargada en el arma de cada uno: se propone compartir la reserva y que cada uno tenga su cargador.
+
 **Lo que hay:**
 - Los ítems del mundo se procesan solo para el jugador 0 (hallazgo 07).
 - `AIMP_SYNC_PICKUP` ya saca del mundo del otro el ítem que levantó uno (`FUN_00795ee0`, sin probar con dos máquinas).
