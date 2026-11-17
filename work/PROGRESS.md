@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-17, 16:30 (sesión local, corridas 102–118; el usuario autorizó lanzar el juego y "testeá todo"). **Modo juego:** partida del usuario restaurada (verificada: 23 de 23 archivos iguales a `saves/current`), mod desinstalado.
+_Última actualización: 2026-11-17, 22:40 (sesión local, corridas 102–122, más la prueba de a dos 119). **Modo prueba:** papito tiene `safezone` como host para la próxima prueba de a dos (8g); al terminar, `mode.sh play`.
 
 Hecho en esta sesión:
 - **copia del save del host** (`mod/src/savesync.c`, `AIMP_SAVE_SYNC=1` en el cliente): verificada en los dos sentidos (102–103);
@@ -12,14 +12,16 @@ Hecho en esta sesión:
 - bug de `death.c`: después del game over de los dos, el modo caído quedaba apagado; arreglado (116);
 - avatar del caído oculto (`AIMP_GHOST_DOWNED_HIDE=1`, 104) y se para al revivir (`AIMP_GHOST_STAND_ANIM`, 105);
 - `memsrv`: `V`, `F`, `LOADF`, `LOADN` (investigación); `aimp_peer.py --serve-save/--fetch-save/--serve-after/--radius`;
-- `mod/dist` = `f6b9beca…`, instrucciones 8f para la laptop;
+- **prueba de a dos (corrida 119):** copia del save, misma partida, inventario y munición OK; arreglados después: agachado al pararse, prólogos con ASLR en Windows (`aimp_code_cmp`), avisos de guardado vacíos, conductos que no se replican; se deja de usar "armas de a una" (decisión del usuario);
+- **mensajes del coop en el menú** (`ui.c`): "esperando al host… no entres todavía", "partida del host copiada. Ya podés entrar", "Continue Game - partida del host" (corridas 121–122);
+- `mod/dist` = `fb157b7a…`, instrucciones 8g para la laptop;
 - saves de prueba nuevos: `airport` (otro nivel, sin NPCs) y **`alien`** (misión 6 con el Alien cargado). Alien: tipo 1, "BackstageAlien"; en backstage se estaciona encima del jugador; cerebro → objetivo → jugador verificado en runtime (DESIGN_ALIEN).
 
 **Siguiente:**
 - la prueba con dos máquinas: `work/windows/instructions.md` 8e y 8f (DLL `f6b9beca`), con un save de prueba en `papito` (nunca `current`);
 - interacciones del mundo (robot, compuertas): identificar la entidad del robot con la traza de pines y las marcas F8 de la prueba 8g, y sincronizar su estado;
 - muerte con pantalla negra al quedar caído por un enemigo (prueba 8g: qué lo mató);
-- **a futuro (idea del usuario):** menú de configuración del mod en el juego (dificultad y otras opciones): overlay D3D11 o menús del juego;
+- **a futuro (idea del usuario):** menú de configuración del mod reusando las pantallas de opciones del juego (sus selectores y sliders): dificultad, qué se comparte. Plan en `work/DESIGN_CONFIG_MENU.md` (primero, ver el protocolo de `GenericCallback*`);
 - revivir en checkpoints (escrito, sin probar: hace falta caminar hasta uno), decidir qué hace el caído (oculto ya disponible);
 - Alien compartido con el save `alien`: ¿se puede llevar su objetivo (`cerebro+0x10`) al avatar? (hace falta un avatar: en ese save no hay civiles; con `--replay` el peer podría dar la posición, pero el títere necesita un NPC humano).
 - avatar mujer: sin probar (ni `safezone` ni `airport` tienen civiles mujeres)._
