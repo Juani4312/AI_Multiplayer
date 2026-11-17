@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-17, 16:25 (sesión local, corridas 102–116; el usuario autorizó lanzar el juego y "testeá todo").
+_Última actualización: 2026-11-17, 16:30 (sesión local, corridas 102–118; el usuario autorizó lanzar el juego y "testeá todo"). **Modo juego:** partida del usuario restaurada (verificada: 23 de 23 archivos iguales a `saves/current`), mod desinstalado.
 
 Hecho en esta sesión:
 - **copia del save del host** (`mod/src/savesync.c`, `AIMP_SAVE_SYNC=1` en el cliente): verificada en los dos sentidos (102–103);
@@ -12,11 +12,14 @@ Hecho en esta sesión:
 - bug de `death.c`: después del game over de los dos, el modo caído quedaba apagado; arreglado (116);
 - avatar del caído oculto (`AIMP_GHOST_DOWNED_HIDE=1`, 104) y se para al revivir (`AIMP_GHOST_STAND_ANIM`, 105);
 - `memsrv`: `V`, `F`, `LOADF`, `LOADN` (investigación); `aimp_peer.py --serve-save/--fetch-save/--serve-after/--radius`;
-- `mod/dist` = `f6b9beca…`, instrucciones 8f para la laptop.
+- `mod/dist` = `f6b9beca…`, instrucciones 8f para la laptop;
+- saves de prueba nuevos: `airport` (otro nivel, sin NPCs) y **`alien`** (misión 6 con el Alien cargado). Alien: tipo 1, "BackstageAlien"; en backstage se estaciona encima del jugador; cerebro → objetivo → jugador verificado en runtime (DESIGN_ALIEN).
 
 **Siguiente:**
 - la prueba con dos máquinas: `work/windows/instructions.md` 8e y 8f (DLL `f6b9beca`), con un save de prueba en `papito` (nunca `current`);
-- revivir en checkpoints (escrito, sin probar: hace falta caminar hasta uno), decidir qué hace el caído (oculto ya disponible) y el Alien (hace falta un save con el Alien)._
+- revivir en checkpoints (escrito, sin probar: hace falta caminar hasta uno), decidir qué hace el caído (oculto ya disponible);
+- Alien compartido con el save `alien`: ¿se puede llevar su objetivo (`cerebro+0x10`) al avatar? (hace falta un avatar: en ese save no hay civiles; con `--replay` el peer podría dar la posición, pero el títere necesita un NPC humano).
+- avatar mujer: sin probar (ni `safezone` ni `airport` tienen civiles mujeres)._
 
 **Partida real del usuario (run sin morir):** nunca se prueba sobre ella. `work/scripts/mode.sh test [save]` guarda `saves/current.tar.gz`, carga el save de prueba e instala el mod; `mode.sh play` la restaura y desinstala el mod. Al cerrar una sesión, `mode.sh play`.
 Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safezone` = la partida de las corridas 20–82 (sin enemigos).
@@ -73,7 +76,7 @@ Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safez
 | Hallazgo 21 (inventario) / inventario compartido | ✅ en una máquina: `findings/21-inventario.md`, `AIMP_SYNC_INV=1` (corridas 93–94). Falta con dos máquinas y "armas de a una" |
 | Copia del save del host | ✅ en una máquina (corridas 102–116): `mod/src/savesync.c`, `AIMP_SAVE_SYNC=1` en el cliente; guardar juntos; game over con el checkpoint del host (buffer RVA `0x134EF80`); falta con dos máquinas (instructions 8f) |
 | Muerte en coop | 🟡 `work/DESIGN_DEATH.md`: caído con `Character+0x4253` (corrida 92); falta red, revivir y el remate del Alien |
-| Alien compartido | 📝 diseño en `work/DESIGN_ALIEN.md` (percepción `FUN_00730c30`, objetivo en `cerebro+0x10`). Falta una partida con el Alien activo (el usuario) |
+| Alien compartido | 📝 diseño en `work/DESIGN_ALIEN.md`; save `alien` (misión 6) con el Alien: tipo 1, cerebro → objetivo → jugador verificado en runtime (corridas 117–118) |
 | Ítems compartidos (`AIMP_SYNC_PICKUP`) | 🟡 hook de `pickup_collected` (`FUN_007a2b30`) y aplicación en el otro con `FUN_00795ee0` por pid. Sin probar en el juego (instructions.md 8d) |
 | Mod fase 6 (disparadores del host) | 🟡 `AIMP_SYNC_PINS=1` en `mod/src/pins.c`: **verificado por red en una máquina** (corridas 72–73: 9/9 pines del host aplicados, y el cliente bloquea los suyos). Falta con dos máquinas y una zona con efecto visible |
 | Hallazgo 17 (arrojables y equipo) | 🟡 `findings/17-arrojables.md`: tirar = `FUN_007b5050` (pool `0x16F0DE4`, composite `Thrown\X` + `spawn_explosive`; el vuelo lo simula `ProjectileMotion` con la posición y la velocidad dadas), colocar = `FUN_007b5190`. Las armas de fuego son composites (`Weapons\…`); su disparo no se siguió |
