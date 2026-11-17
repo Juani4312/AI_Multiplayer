@@ -12,6 +12,7 @@
 #include "weapons.h"
 #include "session.h"
 #include "savesync.h"
+#include "ui.h"
 #include "hook.h"
 #include "log.h"
 #include "autopad.h"
@@ -102,6 +103,7 @@ int game_init(void)
     throw_install(probe_net()); /* opcional: AIMP_TRACE_THROW=1 / AIMP_SYNC_THROW=1 / AIMP_THROW_ECHO=ms (hallazgo 17) */
     session_install(probe_net()); /* con AIMP_NET: ¿misma partida en las dos máquinas? */
     savesync_install(probe_net()); /* con AIMP_NET: el host sirve sus saves; AIMP_SAVE_SYNC=1 en el cliente los copia */
+    ui_install(); /* con AIMP_NET: estado del coop en los textos del menú (AIMP_UI_TEXT=0 lo apaga) */
     weapons_install(probe_net()); /* opcional: AIMP_SYNC_WEAPONS=1 (armas de a una) */
     inv_install(probe_net()); /* opcional: AIMP_TRACE_INV=1 / AIMP_SYNC_INV=1 (inventario compartido) */
     ctrl_install(); /* opcional: AIMP_TRACE_CTRL=1 / AIMP_TRACE_CMD=1 (solo miran) */

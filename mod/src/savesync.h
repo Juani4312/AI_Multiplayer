@@ -107,6 +107,20 @@ void savesync_test_drop(SaveSync *s, int every);
 /* Tests: intervalo de consulta de las fechas y tiempo de asentamiento (ms). */
 void savesync_test_poll(SaveSync *s, int poll_ms, int settle_ms);
 
+/* Estado para mostrar en el menú (ui.c). */
+enum {
+    SSUI_NONE,          /* sin red */
+    SSUI_HOST_WAITING,  /* host sin cliente */
+    SSUI_HOST_CONNECTED,
+    SSUI_CLI_WAITING,   /* cliente: todavía sin el host */
+    SSUI_CLI_CONNECTED, /* cliente sin AIMP_SAVE_SYNC */
+    SSUI_CLI_COPYING,   /* pidiendo o recibiendo los saves */
+    SSUI_CLI_COPIED,    /* copió los saves del host */
+    SSUI_CLI_SAME,      /* ya tenía los mismos */
+    SSUI_CLI_ERROR
+};
+int savesync_ui(void);
+
 uint32_t savesync_fnv(const void *p, size_t n);
 /* Compresión del canal (LZ voraz, formato de bloque de LZ4). 0 si no entra en cap o no achica. */
 uint32_t savesync_lz_compress(const uint8_t *in, uint32_t n, uint8_t *out, uint32_t cap);
