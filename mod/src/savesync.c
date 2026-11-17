@@ -51,6 +51,17 @@ struct SaveSync {
     uint32_t notify_seq, notify_in;
     int notify_left;
     int backed_up; /* el backup se hace en la primera copia de la sesión (la que tiene los saves propios) */
+    /* caché de hashes por (nombre, tamaño, fecha): no se vuelven a leer los saves que no cambiaron */
+    struct {
+        char name[XFER_NAME];
+        int32_t size;
+        int64_t stamp;
+        uint32_t hash;
+    } hc[XFER_MAX_FILES];
+    int nhc;
+    uint32_t content_sig;
+    int have_content_sig;
+    uint32_t same_content;
     /* checkpoint del host en memoria (ver savesync.h) */
     int mem_mode;
     uint8_t *host_ckpt;
@@ -252,6 +263,51 @@ static uint32_t local_hash(SaveSync *s, const char *name, int32_t size, int32_t 
     return h;
 }
 
+static uint32_t cached_hash(SaveSync *s, const char *name, int32_t size, int32_t *got)
+{
+    int64_t st = s->st.stamp ? s->st.stamp(s->st.ctx, name) : 0;
+    int slot = -1;
+    for (int i = 0; i < s->nhc; i++)
+        if (!aimp_memcmp(s->hc[i].name, name, aimp_strlen(name) + 1)) {
+            slot = i;
+            break;
+        }
+    if (slot >= 0 && s->st.stamp && s->hc[slot].size == size && s->hc[slot].stamp == st) {
+        *got = size;
+        return s->hc[slot].hash;
+    }
+    uint32_t h = local_hash(s, name, size, got);
+    if (*got != size)
+        return h;
+    if (slot < 0 && s->nhc < XFER_MAX_FILES && aimp_strlen(name) < XFER_NAME)
+        slot = s->nhc++;
+    if (slot >= 0) {
+        aimp_memset(s->hc[slot].name, 0, XFER_NAME);
+        aimp_memcpy(s->hc[slot].name, name, aimp_strlen(name));
+        s->hc[slot].size = size;
+        s->hc[slot].stamp = st;
+        s->hc[slot].hash = h;
+    }
+    return h;
+}
+
+/* Firma del contenido de todos los .ais (con la caché). */
+static uint32_t content_signature(SaveSync *s)
+{
+    uint32_t sig = 2166136261u;
+    int c = s->st.count(s->st.ctx);
+    for (int i = 0; i < c && i < 64; i++) {
+        char nm[64];
+        int32_t sz = 0, got = 0;
+        if (!s->st.entry(s->st.ctx, i, nm, sizeof nm, &sz) || !is_save_name(nm) || sz <= 0)
+            continue;
+        uint32_t h = cached_hash(s, nm, sz, &got);
+        sig = (sig ^ savesync_fnv(nm, aimp_strlen(nm))) * 16777619u;
+        sig = (sig ^ h) * 16777619u;
+    }
+    return sig;
+}
+
 /* ---- host ---- */
 static void free_blob(SaveSync *s)
 {
@@ -277,7 +333,7 @@ static void build_manifest(SaveSync *s, int64_t now)
         aimp_memset(e, 0, sizeof *e);
         aimp_memcpy(e->name, nm, aimp_strlen(nm));
         int32_t got;
-        e->hash = local_hash(s, nm, sz, &got);
+        e->hash = cached_hash(s, nm, sz, &got);
         if (got != sz)
             continue;
         e->size = (uint32_t)sz;
@@ -790,6 +846,10 @@ static void poll_stamps(SaveSync *s, int64_t now)
         s->have_sig = 1;
         s->stamp_sig = h;
         s->nsaves = n;
+        if (s->net->mode == 1 && !s->have_content_sig) {
+            s->content_sig = content_signature(s);
+            s->have_content_sig = 1;
+        }
         return;
     }
     if (h != s->stamp_sig) {
@@ -825,13 +885,23 @@ void savesync_tick(SaveSync *s, int64_t now, int64_t freq, uint32_t level)
     if (n->mode == 1) {
         if (s->change_pending && now - s->changed_at >= ms_ticks(s, s->settle_ms)) {
             s->change_pending = 0;
-            /* único también si el host reinicia el juego (el cliente descarta el aviso que ya vio) */
-            s->notify_seq = (GetTickCount() << 4) | 2u;
-            if (s->notify_seq == s->notify_in)
-                s->notify_seq += 16;
-            s->notify_left = 3;
-            s->xid = 0; /* el próximo REQ arma un manifiesto nuevo */
-            log_printf("SAVESYNC host: guardé: aviso %u al cliente (guardar juntos)", s->notify_seq);
+            /* prueba con dos máquinas (2026-11-17): 17 avisos en 23 min y en todos el cliente ya tenía lo mismo (las
+             * fechas cambian sin que cambie el contenido); solo se avisa si cambió el contenido */
+            uint32_t sig = content_signature(s);
+            if (s->have_content_sig && sig == s->content_sig) {
+                if (s->same_content++ < 5)
+                    log_printf("SAVESYNC host: cambiaron las fechas de los saves pero no el contenido: sin aviso");
+            } else {
+                s->content_sig = sig;
+                s->have_content_sig = 1;
+                /* único también si el host reinicia el juego (el cliente descarta el aviso que ya vio) */
+                s->notify_seq = (GetTickCount() << 4) | 2u;
+                if (s->notify_seq == s->notify_in)
+                    s->notify_seq += 16;
+                s->notify_left = 3;
+                s->xid = 0; /* el próximo REQ arma un manifiesto nuevo */
+                log_printf("SAVESYNC host: guardé: aviso %u al cliente (guardar juntos)", s->notify_seq);
+            }
         }
         if (s->notify_left > 0 && !s->blob) {
             uint8_t b[sizeof(XferHdr)];

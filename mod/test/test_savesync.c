@@ -422,6 +422,25 @@ int main(void)
         }
         CHECK(done && cs.writes == writes0 + 1, "el juego del cliente pisó su CHSV00 y el mod lo volvió a igualar al del host, sin bucle (escrituras %d)",
               cs.writes - writes0);
+        /* el host "guarda" el mismo contenido (cambia la fecha, no los bytes): no hay aviso ni copia */
+        {
+            MemFile *hf = find(&hs, "CHSV00.ais");
+            uint8_t *copy = malloc((size_t)hf->size);
+            memcpy(copy, hf->data, (size_t)hf->size);
+            int32_t n = hf->size;
+            m_write(&hs, "CHSV00.ais", copy, n);
+            free(copy);
+            int w0 = cs.writes;
+            for (int i = 0; i < 300; i++) {
+                QueryPerformanceCounter(&now);
+                net_poll(&c, now.QuadPart);
+                net_poll(&h, now.QuadPart);
+                savesync_tick(sh, now.QuadPart, f.QuadPart, 10);
+                savesync_tick(sc, now.QuadPart, f.QuadPart, 10);
+                Sleep(2);
+            }
+            CHECK(cs.writes == w0, "el host reescribió el mismo contenido: sin aviso ni copia (escrituras %d)", cs.writes - w0);
+        }
         net_close(&c);
         net_close(&h);
     }
