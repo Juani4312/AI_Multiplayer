@@ -10,6 +10,7 @@
 #include "log.h"
 #include "net.h"
 #include "sync.h"
+#include "diff.h"
 
 HMODULE g_aimp_self;
 uintptr_t g_aimp_exe;
@@ -216,6 +217,35 @@ int main(void)
         __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
         CHECK(cli.have_remote && g_uses == before && esp0 == esp1,
               "con el host conectado, el cliente no abre la terminal (el original no corre) y el stack queda balanceado");
+    }
+
+    printf("[dificultad del coop: escalones sobre la base y la elección del host]\n");
+    {
+        float base[26] = { 0 }, out[26];
+        base[2] = -5.0f; /* Nightmare: radio de acecho mín −5 */
+        base[13] = 1.0f; /* +1 amenaza */
+        diff_apply_block(out, base, 0);
+        int same = 1;
+        for (int i = 0; i < 26; i++)
+            same &= out[i] == base[i];
+        CHECK(same, "Normal (0): la base sin cambios");
+        diff_apply_block(out, base, 2);
+        CHECK(out[2] == -15.0f && out[3] == -10.0f && out[13] == 3.0f && out[10] == -6.0f && out[17] == -20.0f && out[18] == -40.0f,
+              "Pesadilla (2): radio %.0f/%.0f, amenazas %+.0f, menace %.0f, conductos %.0f/%.0f", (double)out[2], (double)out[3],
+              (double)out[13], (double)out[10], (double)out[17], (double)out[18]);
+        diff_install(&cli); /* el hook del cargador falla en la imagen falsa; solo hace falta la red */
+        diff_set_local(0);
+        CHECK(cli.have_remote && !diff_from_host() && diff_effective() == 0, "sin noticias del host manda la elección local");
+        AimpEvt oe;
+        memset(&oe, 0, sizeof oe);
+        oe.kind = AIMP_EVT_OPTIONS;
+        OptionsEvt ov = { 1, 2 };
+        memcpy(oe.data, &ov, sizeof ov);
+        oe.size = sizeof ov;
+        diff_remote_event(&oe);
+        CHECK(diff_from_host() && diff_effective() == 2, "el cliente conectado usa la del host (%d)", diff_effective());
+        diff_set_local(1);
+        CHECK(diff_effective() == 2, "cambiar la local no pisa la del host mientras está conectado");
     }
 
     printf("[uso remoto: se aplica encolando un A 0x26 con el jugador local]\n");

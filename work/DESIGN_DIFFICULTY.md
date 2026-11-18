@@ -106,6 +106,14 @@ Los nombres de los campos están en `AI.exe`: el cargador tiene una tabla nombre
   - es evidencia de que el juego usa esos valores, pero no es concluyente: al principio de la misión 6 el script retiene al Alien en los conductos. Para ver el efecto en la caza hace falta avanzar hasta que baje (alguien jugando).
 - `memsrv`: `W <addr> <hex>` (solo con `AIMP_MEMSRV_TEST=1`).
 
+## Implementado (2026-11-18, `diff.c`, corrida 129)
+
+- El cargador `FUN_006f8b00` queda enganchado siempre (`AIMP_COOP_DIFF=1` por defecto): guarda los 5 punteros y una copia de los valores base del bloque del Alien.
+- Dificultad del coop (menú "Coop", `ui.c`): 0 Normal (no toca nada), 1 Difícil, 2 Pesadilla. Cada escalón suma, sobre la base de las 5 estructuras, un salto como el de Hard a Nightmare: radios de acecho −5 (mín y máx), menace decrease/cool down −3 s, max_menaces +1, Vent_Attract −10/−20 s, backstage min/max distance −5/−10. Siempre desde la copia base: no se acumula.
+- El host manda su elección al cliente (`AIMP_EVT_OPTIONS` = 11, `OptionsEvt` de `diff.h`) al conectar y cuando cambia; el cliente conectado usa la del host (el menú muestra "(la eligió el host)") y vuelve a la propia si el host se va. Tests en `test_sync`.
+- **Corrida 129:** con "Difícil" elegido en el menú, la estructura de Nightmare pasó de radio −5/0, menace −3, amenazas +1, conductos −10/−20, backstage −5/−10 a −10/−5, −6, +2, −20/−40, −10/−20 (y las otras 4, un escalón cada una).
+- Pendiente: ver el efecto jugando con el Alien; sumar los sentidos del ALIEN (bloque por plantilla) y, si hace falta, el daño.
+
 ## Orden sugerido
 
 1. Ubicar las estructuras de dificultad cargadas (tabla nombre → campo) y probar un multiplicador sobre un parámetro del Alien en el save `alien`. Es el primer resultado visible.

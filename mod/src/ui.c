@@ -3,6 +3,7 @@
 #include "hook.h"
 #include "log.h"
 #include "savesync.h"
+#include "diff.h"
 
 #define AIMP_RVA_TEXT_LOOKUP 0x00590B60u /* FUN_00990b60 */
 static const uint8_t TEXT_LOOKUP_PROLOGUE[11] = { 0x51, 0x8B, 0x54, 0x24, 0x08, 0x8D, 0x44, 0x24, 0x03, 0x50, 0x52 };
@@ -72,6 +73,7 @@ __attribute__((cdecl, force_align_arg_pointer, noinline)) static void det_credit
     }
     g_coop_diff = (g_coop_diff + 1) % 3;
     opt_save();
+    diff_set_local(g_coop_diff);
     char n8[32];
     log_printf("UI: menú del mod: dificultad del coop = %s (opciones.txt)", aimp_utf8(n8, sizeof n8, DIFF_NAMES[g_coop_diff]));
 }
@@ -143,6 +145,11 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static const wchar_
         case K_EXTRAS_DESC:
             return L"Opciones del mod coop";
         case K_CREDITS:
+            if (diff_from_host())
+            {
+                static wchar_t tmp[64];
+                return join(g_buf[k], 256, L"Dificultad del coop: ", NULL, join(tmp, 64, DIFF_NAMES[diff_effective()], NULL, L" (la eligió el host)"));
+            }
             return join(g_buf[k], 256, L"Dificultad del coop: ", NULL, DIFF_NAMES[g_coop_diff]);
         default:
             return L"Apretá para cambiar. Normal: la del juego. Lo decide el host";
@@ -243,6 +250,7 @@ void ui_install(void)
             opt_load();
         }
     }
+    diff_set_local(g_coop_diff);
     if (g_menu_on &&
         hook_install(&g_hk_credits, "botón Credits de Extras (FUN_0082aa60)", (void *)(g_aimp_exe + AIMP_RVA_UI_CREDITS), UI_CREDITS_PROLOGUE,
                      sizeof UI_CREDITS_PROLOGUE, 6, (void *)det_credits, (void **)&g_credits_orig)) {

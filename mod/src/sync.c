@@ -21,6 +21,7 @@
 #include "session.h"
 #include "weapons.h"
 #include "death.h"
+#include "diff.h"
 #include "inv.h"
 #include "sync.h"
 #include "game.h"
@@ -332,6 +333,10 @@ void sync_frame(AimpNet *net, uint32_t level)
         }
         if (e.kind == AIMP_EVT_COOP) { /* muerte en coop (death.c) */
             death_remote_event(&e);
+            continue;
+        }
+        if (e.kind == AIMP_EVT_OPTIONS) { /* opciones del coop del host (diff.c) */
+            diff_remote_event(&e);
             continue;
         }
         if (e.kind == AIMP_EVT_SESSION) { /* huella de la partida (session.c) */

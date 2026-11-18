@@ -20,6 +20,7 @@
 #include "inv.h"
 #include "weapons.h"
 #include "session.h"
+#include "diff.h"
 #include "savesync.h"
 #include "ctrl.h"
 #include <tlhelp32.h>
@@ -637,6 +638,7 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
     death_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0); /* AIMP_COOP_DOWNED */
     inv_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0, g_cur.level_cur); /* AIMP_TRACE_INV / AIMP_SYNC_INV */
     session_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0, g_cur.level_cur); /* huella de la partida */
+    diff_frame(now, g_freq); /* dificultad del coop: el host la manda (diff.c) */
     weapons_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0, g_cur.level_cur); /* AIMP_SYNC_WEAPONS */
     savesync_frame(now, g_freq, g_cur.level_cur); /* copia del save del host (AIMP_SAVE_SYNC) */
     if (status_due) {
