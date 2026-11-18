@@ -4,6 +4,24 @@ Cómo instalar el mod coop en cada máquina, conectar a los dos jugadores y qué
 
 > El mod es **experimental**. Probalo con una partida que no te importe perder. Si estás en una run sin morir, no la uses para probar (en Linux, `work/scripts/mode.sh` separa tu partida de las de prueba: ver más abajo).
 
+## Instalación rápida
+
+1. **Las dos máquinas en [Tailscale](https://tailscale.com)**, en la misma red (o el host le comparte su máquina al otro). Anotá la IP `100.x.y.z` del host.
+2. **Copiar al lado de `AI.exe`** (Steam → Alien: Isolation → Administrar → Ver archivos locales):
+   - `mod/dist/winmm.dll`;
+   - `mod/dist/aimp-host.cfg` (el host) o `mod/dist/aimp-join.cfg` (el que se une), **renombrado a `aimp.cfg`**. En el de join, cambiar `100.x.y.z` por la IP del host.
+3. **Solo en Linux (Proton):** opción de lanzamiento `WINEDLLOVERRIDES="winmm=n,b" %command%`.
+4. Abrir el juego desde Steam. Tiene que aparecer `%LOCALAPPDATA%\AI_Multiplayer\aimp.log`. Si no aparece, el mod no cargó: ver [Problemas comunes](#11-problemas-comunes).
+5. El que se une, en **Play Game**, espera "Coop: partida del host copiada. Ya podés entrar" y entra con **Continue Game**. El host también entra con Continue Game.
+
+Con los scripts es un comando, y verifican todo:
+- Windows: `work\windows\aimp_check.ps1 -Action install -Preset join -Peer 100.x.y.z:47811` y, con el juego abierto, `-Action verify` ([sección 3](#3-instalar-en-windows)).
+- Linux: `work/scripts/runtime_setup.sh install --preset join --peer 100.x.y.z:47811` y `verify` ([sección 4](#4-instalar-en-linux-proton)).
+
+**¿Lo instala Claude Code?** Que siga [`INSTALAR_CON_CLAUDE.md`](INSTALAR_CON_CLAUDE.md): procedimiento con todos los chequeos y el diagnóstico si el mod no carga.
+
+---
+
 Índice:
 1. [Antes de empezar](#1-antes-de-empezar)
 2. [Conseguir la DLL](#2-conseguir-la-dll)
@@ -72,22 +90,28 @@ Desde la raíz del repo, en PowerShell:
 # 1. Chequeos: hash del juego, KnownDLLs, DLLs que ya hay en la carpeta
 powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action check
 
-# 2. Instalar (ejemplo: el que se une)
-powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Net join -Peer 100.x.y.z:47811 -Ghost 3 -Extra AIMP_GHOST_WALK=1,AIMP_SYNC_USE=1
+# 2. Instalar con la configuración recomendada (el que se une; el host: -Preset host)
+powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Preset join -Peer 100.x.y.z:47811
+
+# 3. Abrir el juego desde Steam hasta el menú principal y, con el juego abierto:
+powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action verify
 ```
+
+`verify` dice si Windows cargó la `winmm.dll` del mod, muestra las líneas importantes del log (build reconocida, red, copia del save) y, si el mod no cargó, el diagnóstico (KnownDLLs, Smart App Control, bloqueos de Integridad de código).
 
 Parámetros de `aimp_check.ps1`:
 
 | Parámetro | Valores | Qué hace |
 |-----------|---------|----------|
-| `-Action` | `check`, `install`, `collect`, `revert` | `check`: chequeos sin tocar nada. `install`: copia `mod\dist\winmm.dll` (verifica su hash) y escribe `aimp.cfg` en la carpeta del juego. `collect`: copia `aimp.log` a `work\windows\logs\`. `revert`: saca `winmm.dll` y `aimp.cfg` |
-| `-Net` | `none`, `host`, `join` | se escribe como `AIMP_NET` |
-| `-Peer` | `ip:puerto` | con `-Net join`: la IP de Tailscale del host (`AIMP_NET_PEER`) |
-| `-Ghost` | `0` a `3` | `AIMP_GHOST` (usar 3) |
-| `-Extra` | `CLAVE=valor,CLAVE=valor` | cualquier otra clave de la [referencia](#9-referencia-de-parámetros) |
+| `-Action` | `check`, `install`, `verify`, `collect`, `revert` | `check`: chequeos sin tocar nada (con `-Peer`, además hace ping al host). `install`: copia `mod\dist\winmm.dll` (verifica su hash) y escribe `aimp.cfg` en la carpeta del juego. `verify`: con el juego abierto, si cargó y por qué no. `collect`: copia `aimp.log` a `work\windows\logs\`. `revert`: saca `winmm.dll` y `aimp.cfg` |
+| `-Preset` | `host`, `join` | la configuración recomendada (`mod\dist\aimp-host.cfg` o `aimp-join.cfg`); `join` necesita `-Peer` |
+| `-Peer` | `ip:puerto` | la IP de Tailscale del host y el puerto 47811 (`AIMP_NET_PEER`) |
+| `-Extra` | `CLAVE=valor,CLAVE=valor` | claves extra o que reemplazan a las del preset ([referencia](#9-referencia-de-parámetros)) |
+| `-Net`, `-Ghost` | | sin preset: `AIMP_NET` y `AIMP_GHOST` sueltos |
+| `-Report` | archivo | dónde se escribe el informe (por defecto `instalacion-informe.md` en la raíz del repo) |
 | `-Tag` | texto | nombre para los logs de `collect` |
 
-`-ExecutionPolicy Bypass` vale solo para ese proceso: no cambia la configuración del sistema. El script encuentra la carpeta del juego solo (registro de Steam y `libraryfolders.vdf`) y deja un informe en `work\windows\report.md`.
+`-ExecutionPolicy Bypass` vale solo para ese proceso: no cambia la configuración del sistema. El script encuentra la carpeta del juego solo (registro de Steam y `libraryfolders.vdf`) y deja todo en un informe (`instalacion-informe.md`).
 
 ### A mano
 
@@ -107,14 +131,17 @@ En Proton, Wine usa por defecto su propia `winmm` e ignora la de la carpeta del 
 ### Con el script
 
 ```sh
-work/scripts/runtime_setup.sh status                                   # qué hay instalado
-work/scripts/runtime_setup.sh install --cfg "AIMP_NET=host;AIMP_GHOST=3"  # instala con esa config
-work/scripts/runtime_setup.sh revert                                   # lo saca todo
+work/scripts/runtime_setup.sh status                                       # qué hay instalado (y dónde está el juego)
+work/scripts/runtime_setup.sh install --preset host                        # el host
+work/scripts/runtime_setup.sh install --preset join --peer 100.x.y.z:47811  # el que se une
+work/scripts/runtime_setup.sh verify                                       # con el juego abierto: ¿cargó? ¿hay red?
+work/scripts/runtime_setup.sh revert                                       # lo saca todo
 ```
 
-- `install` copia **`mod/build/winmm.dll`** (la compilada localmente; para usar la de `mod/dist`, copiala antes a `mod/build/`), agrega al registro del prefix el override `winmm=native,builtin` solo para `AI.exe` (con backup de `user.reg`) y, con `--cfg`, escribe `aimp.cfg` en el prefix. Las claves van separadas por `;`. Sin `--cfg`, borra el `aimp.cfg`.
-- Se niega a correr con el juego abierto (Wine reescribe el registro al cerrar).
-- **Las rutas están fijas** al principio del script (`GAME`, `PFX`, `BACKUP`): en otra máquina, editalas. El prefix de Alien: Isolation es `steamapps/compatdata/214490/pfx`.
+- `install` copia la DLL (`mod/build/winmm.dll` si la compilaste; si no, `mod/dist/winmm.dll`), agrega al registro del prefix el override `winmm=native,builtin` solo para `AI.exe` (con backup de `user.reg`), así que **no hace falta opción de lanzamiento**, y escribe `aimp.cfg` en el prefix.
+- `--preset` usa `mod/dist/aimp-<preset>.cfg`; `--cfg "A=1;B=2"` agrega claves o reemplaza las del preset (sin `--preset`, es toda la config). Sin ninguna de las dos, borra el `aimp.cfg`.
+- Se niega a correr con el juego abierto (Wine reescribe el registro al cerrar). Necesita que el juego se haya abierto una vez con Proton.
+- Encuentra el juego y el prefix con las bibliotecas de Steam (`libraryfolders.vdf`). Para forzar rutas: `AIMP_GAME_DIR`, `AIMP_PFX`, `AIMP_DLL`.
 
 **Si estás en una run que no querés arriesgar** (la de esta máquina): `work/scripts/mode.sh test [save] [--cfg "..."]` guarda tu partida en `saves/current.tar.gz`, carga un save de prueba (`saves/`) e instala el mod; `work/scripts/mode.sh play` restaura tu partida y saca el mod.
 
@@ -165,7 +192,7 @@ En una LAN sin Tailscale también anda (IP local del host), siempre que el puert
 
 ## 7. Configuraciones recomendadas
 
-Lo que hoy está probado o listo para la próxima prueba de a dos. Copiar tal cual en el `aimp.cfg` de cada uno.
+Lo que hoy está probado o listo para la próxima prueba de a dos. Están en el repo como `mod/dist/aimp-host.cfg` y `mod/dist/aimp-join.cfg` (los presets de los scripts, con las trazas incluidas); copiar el que corresponda como `aimp.cfg`.
 
 **Host:**
 ```ini
@@ -337,7 +364,8 @@ Solo agregan líneas al log; no cambian el juego. Útiles para reportar un probl
 
 | Síntoma | Causa probable | Qué hacer |
 |---------|----------------|-----------|
-| No aparece `aimp.log` | el mod no cargó | Windows: `winmm.dll` al lado de `AI.exe` (no en una subcarpeta) y que `winmm` no esté en KnownDLLs. Proton: falta `WINEDLLOVERRIDES="winmm=n,b"` (o `runtime_setup.sh install`) |
+| No aparece `aimp.log` | el mod no cargó | Windows: `winmm.dll` al lado de `AI.exe` (no en una subcarpeta) y que `winmm` no esté en KnownDLLs; `aimp_check.ps1 -Action verify` con el juego abierto dice por qué. Proton: falta `WINEDLLOVERRIDES="winmm=n,b"` (o `runtime_setup.sh install`) |
+| Windows 11: archivos bien, pero sin log | el juego usa la `winmm.dll` del sistema: la bloqueó Smart App Control / Integridad de código, o Windows ya la tenía cargada | ver la sección 2 de [`INSTALAR_CON_CLAUDE.md`](INSTALAR_CON_CLAUDE.md). Visto en Windows 11 25H2; en Windows 10 anda |
 | El log dice `build NO reconocida` | otra versión del juego | verificar el SHA-256 de `AI.exe` (sección 1); el mod queda inactivo a propósito |
 | El juego avisa por Steam Cloud al abrir | los saves cambiaron (los copió el mod) | elegir los archivos **locales** |
 | `NET … sin datos del otro jugador` | no se ven por red | revisar IP y puerto en `AIMP_NET_PEER`, que Tailscale esté conectado en los dos, y el firewall de Windows |

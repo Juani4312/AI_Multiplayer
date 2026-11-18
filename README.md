@@ -44,7 +44,7 @@ Los dos jugadores **tienen que tener exactamente este hash**, los mismos datos d
 
 ## Instalación
 
-Todo el detalle está en **[`INSTALACION.md`](INSTALACION.md)**: requisitos, instalar en Windows y en Linux (Proton), el archivo `aimp.cfg`, la red con Tailscale, las configuraciones recomendadas para host y para el que se une, cómo arrancar una partida de a dos, la referencia de todos los parámetros y problemas comunes.
+Todo el detalle está en **[`INSTALACION.md`](INSTALACION.md)** (empieza con una instalación rápida de 5 pasos); para que lo instale Claude Code, [`INSTALAR_CON_CLAUDE.md`](INSTALAR_CON_CLAUDE.md). La guía cubre: requisitos, instalar en Windows y en Linux (Proton), el archivo `aimp.cfg`, la red con Tailscale, las configuraciones recomendadas para host y para el que se une, cómo arrancar una partida de a dos, la referencia de todos los parámetros y problemas comunes.
 
 Resumen: `winmm.dll` (de `mod/dist/`) al lado de `AI.exe` en las dos máquinas (en Proton, además, `WINEDLLOVERRIDES="winmm=n,b" %command%`), un `aimp.cfg` con `AIMP_NET=host` en uno y `AIMP_NET=join` + `AIMP_NET_PEER=<IP del host>:47811` en el otro, y las dos máquinas en la misma red de Tailscale. Log: `%LOCALAPPDATA%\AI_Multiplayer\aimp.log`.
 

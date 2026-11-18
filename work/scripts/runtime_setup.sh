@@ -1,25 +1,47 @@
 #!/usr/bin/env bash
-# Instala o revierte el mod en la instalación del usuario (Proton). Todo es reversible.
+# Instala o revierte el mod en Linux (Proton). Todo es reversible. Guía: INSTALACION.md.
 #
 #   runtime_setup.sh status
-#   runtime_setup.sh install [--cfg "AIMP_X=1;AIMP_Y=2"]   (sin --cfg: borra el aimp.cfg)
+#   runtime_setup.sh install [--preset host|join] [--peer IP:47811] [--cfg "AIMP_X=1;AIMP_Y=2"]
+#                    --preset: la configuración recomendada de mod/dist/aimp-<preset>.cfg (join necesita --peer);
+#                    --cfg: claves extra (o, sin --preset, toda la config). Sin ninguna de las dos, borra el aimp.cfg.
+#   runtime_setup.sh verify     (con el juego abierto o recién cerrado: ¿cargó el mod? ¿hay red?)
 #   runtime_setup.sh revert
 #
 # Qué toca "install" (y "revert" deshace):
-#   1. Copia mod/build/winmm.dll a la carpeta del juego (no pisa un winmm.dll ajeno).
+#   1. Copia la DLL (mod/build/winmm.dll si se compiló; si no, mod/dist/winmm.dll) a la carpeta del juego
+#      (no pisa un winmm.dll ajeno).
 #   2. Agrega al registro del prefix (pfx/user.reg) la sección
 #        [Software\\Wine\\AppDefaults\\AI.exe\\DllOverrides]  "winmm"="native,builtin"
 #      Es el equivalente de WINEDLLOVERRIDES="winmm=n,b", pero solo para AI.exe y sin
 #      tocar la config de Steam. Antes de la primera edición guarda user.reg en BACKUP.
-#   3. Opcional: escribe aimp.cfg en %LOCALAPPDATA%\AI_Multiplayer del prefix.
+#   3. Escribe aimp.cfg en %LOCALAPPDATA%\AI_Multiplayer del prefix.
 # Se niega a correr si AI.exe o algún wineserver está corriendo (Wine reescribe user.reg).
+#
+# Rutas: se detectan con las bibliotecas de Steam (libraryfolders.vdf). Para forzarlas: AIMP_GAME_DIR (carpeta de
+# Alien Isolation), AIMP_PFX (prefix de Proton del juego, appid 214490) y AIMP_DLL (la DLL a instalar).
 set -euo pipefail
 
-GAME="/mnt/1,8TB/SteamLibrary/steamapps/common/Alien Isolation"
-PFX="/mnt/1,8TB/SteamLibrary/steamapps/compatdata/214490/pfx"
-BACKUP="/mnt/1,8TB/SteamLibrary/AlienIsolation_backup_AI_Multiplayer/runtime"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-DLL="$ROOT/mod/build/winmm.dll"
+find_game() {
+  local vdf lib
+  for vdf in "$HOME/.local/share/Steam/steamapps/libraryfolders.vdf" "$HOME/.steam/steam/steamapps/libraryfolders.vdf" \
+             "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/libraryfolders.vdf"; do
+    [ -f "$vdf" ] || continue
+    while IFS= read -r lib; do
+      [ -f "$lib/steamapps/common/Alien Isolation/AI.exe" ] && { echo "$lib"; return 0; }
+    done < <(sed -n 's/^[[:space:]]*"path"[[:space:]]*"\(.*\)"/\1/p' "$vdf")
+  done
+  return 1
+}
+LIB="$(find_game || true)"
+[ -n "$LIB" ] || LIB="/mnt/1,8TB/SteamLibrary"
+GAME="${AIMP_GAME_DIR:-$LIB/steamapps/common/Alien Isolation}"
+PFX="${AIMP_PFX:-$LIB/steamapps/compatdata/214490/pfx}"
+BACKUP="$(dirname "$(dirname "$(dirname "$GAME")")")/AlienIsolation_backup_AI_Multiplayer/runtime"
+if [ -n "${AIMP_DLL:-}" ]; then DLL="$AIMP_DLL"
+elif [ -f "$ROOT/mod/build/winmm.dll" ]; then DLL="$ROOT/mod/build/winmm.dll"
+else DLL="$ROOT/mod/dist/winmm.dll"; fi
 EXPECT_SHA="dde66521798aae8c39ed4e7a3400f561fcecfff83619d1426b9e0cedf5819a90"
 CFG_DIR="$PFX/drive_c/users/steamuser/AppData/Local/AI_Multiplayer"
 MARK="AI_Multiplayer"   # texto que está dentro de nuestra DLL
@@ -84,12 +106,62 @@ status() {
   ls -la "$CFG_DIR"/aimp.log* 2>/dev/null || echo "logs: ninguno todavía"
 }
 
+# install [--preset host|join] [--peer IP:PUERTO] [--cfg "A=1;B=2"]: vale la primera aparición de cada clave, así que
+# las de --cfg reemplazan a las del preset.
+write_cfg() {
+  local preset="" peer="" extra="" out="$CFG_DIR/aimp.cfg"
+  shift
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --preset) preset="$2"; shift 2 ;;
+      --peer) peer="$2"; shift 2 ;;
+      --cfg) extra="$2"; shift 2 ;;
+      *) echo "ERROR: opción desconocida $1" >&2; exit 1 ;;
+    esac
+  done
+  if [ -z "$preset" ] && [ -z "$extra" ]; then rm -f "$out"; echo "aimp.cfg: ninguno (mod sin configuración)"; return; fi
+  local tmp; tmp="$(mktemp)"
+  if [ -n "$extra" ]; then echo "$extra" | tr ';' '\n' | grep -v '^$' > "$tmp"; fi
+  if [ -n "$preset" ]; then
+    local pf="$ROOT/mod/dist/aimp-$preset.cfg"
+    [ -f "$pf" ] || { echo "ERROR: no existe $pf (presets: host, join)" >&2; rm -f "$tmp"; exit 1; }
+    [ "$preset" != join ] || [ -n "$peer" ] || { echo "ERROR: --preset join necesita --peer IP_DEL_HOST:47811" >&2; rm -f "$tmp"; exit 1; }
+    while IFS= read -r line; do
+      case "$line" in
+        AIMP_NET_PEER=*) [ -n "$peer" ] && line="AIMP_NET_PEER=$peer" ;;
+      esac
+      local key="${line%%=*}"
+      if [[ "$line" == AIMP_* ]] && grep -q "^$key=" "$tmp"; then continue; fi
+      echo "$line" >> "$tmp"
+    done < "$pf"
+  fi
+  mv "$tmp" "$out"
+  echo "aimp.cfg escrito ($( [ -n "$preset" ] && echo "preset $preset" || echo "a mano")):"; grep -v '^#' "$out" | sed 's/^/  /'
+}
+
+verify() {
+  local log="$CFG_DIR/aimp.log"
+  if [ ! -f "$log" ]; then
+    echo "NO hay $log: el mod no cargó. Revisar que winmm.dll esté al lado de AI.exe y el override ('$0 status')."
+    echo "Si se lanzó con opciones propias, que no pisen WINEDLLOVERRIDES (o agregar winmm=n,b)."
+    return 1
+  fi
+  echo "log: $log ($(stat -c '%y' "$log" | cut -c1-19))"
+  head -6 "$log"
+  echo "..."
+  grep -E 'build|FATAL|ERROR|NET |SESSION|SAVESYNC' "$log" | tail -10 || true
+  if grep -q 'build NO reconocida' "$log"; then echo "=> build del juego no reconocida: el mod queda inactivo (verificar integridad en Steam)";
+  elif grep -qE 'recibidos [1-9]' "$log"; then echo "=> el mod cargó y hay datos del otro jugador";
+  else echo "=> el mod cargó; todavía sin datos del otro jugador (¿el otro tiene el juego abierto? ¿IP/Tailscale?)"; fi
+}
+
 case "${1:-status}" in
   status) status ;;
   install)
     guard_idle
     [ "$(sha256sum "$GAME/AI.exe" | cut -d' ' -f1)" = "$EXPECT_SHA" ] || { echo "ERROR: AI.exe no es la build esperada" >&2; exit 2; }
-    [ -f "$DLL" ] || { echo "ERROR: falta $DLL (compilar primero)" >&2; exit 2; }
+    [ -f "$DLL" ] || { echo "ERROR: falta $DLL" >&2; exit 2; }
+    [ -d "$PFX" ] || { echo "ERROR: no está el prefix $PFX: abrí el juego una vez con Proton (o definí AIMP_PFX)" >&2; exit 2; }
     if [ -f "$GAME/winmm.dll" ] && ! is_ours "$GAME/winmm.dll"; then
       echo "ERROR: ya hay un winmm.dll ajeno en la carpeta del juego; no lo piso" >&2; exit 2
     fi
@@ -104,12 +176,10 @@ case "${1:-status}" in
     echo "copiado: $GAME/winmm.dll"
     reg_edit add
     mkdir -p "$CFG_DIR"
-    if [ "${2:-}" = "--cfg" ] && [ -n "${3:-}" ]; then
-      echo "$3" | tr ';' '\n' > "$CFG_DIR/aimp.cfg"; echo "aimp.cfg escrito"
-    else
-      rm -f "$CFG_DIR/aimp.cfg"
-    fi
-    status ;;
+    write_cfg "$@"
+    status
+    echo "siguiente: abrir el juego desde Steam (no hace falta opción de lanzamiento) y, en el menú, '$0 verify'" ;;
+  verify) verify ;;
   revert)
     guard_idle
     if [ -f "$GAME/winmm.dll" ]; then
@@ -120,5 +190,5 @@ case "${1:-status}" in
     rm -f "$CFG_DIR/aimp.cfg"
     echo "(los logs en $CFG_DIR quedan; borrarlos a mano si se quiere)"
     status ;;
-  *) echo "uso: $0 status|install [--cfg \"A=1;B=2\"]|revert" >&2; exit 1 ;;
+  *) echo "uso: $0 status | install [--preset host|join] [--peer IP:47811] [--cfg \"A=1;B=2\"] | verify | revert" >&2; exit 1 ;;
 esac
