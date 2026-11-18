@@ -15,6 +15,7 @@
  *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
  *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
  *   MSG <texto>       (solo con AIMP_MEMSRV_TEST=1) aviso en pantalla con el diálogo "Warning" del juego
+ *   CALL <rva> <ecx> <n> [args]  (solo con AIMP_MEMSRV_TEST=1) thiscall de prueba con n (0..4) argumentos
  *   ACT <hex>         (solo con AIMP_MEMSRV_TEST=1) el personaje vuelve a su acción por defecto (FUN_0065bdd0)
  *   WD <hex>          (solo con AIMP_MEMSRV_TEST=1) el Alien se retira (como NPC_WithdrawAlien)
  *   LOCO              (solo con AIMP_MEMSRV_TEST=1) el jugador 0 vuelve a la locomoción (FUN_00658080; sale del remate)
@@ -218,7 +219,7 @@ static void run(char *txt)
         if (p[0] == 'B') {
             aimp_snprintf(line, sizeof line, "B 0x%08x\n", (unsigned)g_aimp_exe);
             put(line);
-        } else if (p[0] == 'C')
+        } else if (p[0] == 'C' && (p[1] == 0 || p[1] == ' ' || p[1] == '\r'))
             chars();
         else if (p[0] == 'R') {
             uint32_t a = num(&q), n = num(&q);
@@ -250,6 +251,30 @@ static void run(char *txt)
             if (g_test)
                 ui_message(p + 4);
             put(g_test ? "MSG ok\n" : "MSG NO\n");
+        } else if (p[0] == 'C' && p[1] == 'A' && p[2] == 'L' && p[3] == 'L' && p[4] == ' ') {
+            /* CALL <rva> <ecx> <n> [a1..a4]: (solo AIMP_MEMSRV_TEST=1) thiscall a AI.exe+rva con ecx y n argumentos de 32
+             * bits (n = 0..4; el llamado limpia n*4 bytes: n tiene que ser el de su ret). Para experimentos en la partida
+             * de prueba; un n o una dirección equivocados hacen caer el juego. */
+            q = p + 5;
+            uint32_t rva = num(&q), ecx = num(&q), n = num(&q), a[4] = { 0 };
+            for (uint32_t i = 0; i < n && i < 4; i++)
+                a[i] = num(&q);
+            uint32_t r = 0;
+            int ok = g_test && rva > 0x1000 && rva < 0x00D9E13Bu && n <= 4;
+            if (ok) {
+                uintptr_t f = g_aimp_exe + rva;
+                void *c = (void *)(uintptr_t)ecx;
+                log_printf("MEMSRV: CALL rva 0x%x ecx 0x%08x n %u (%x %x %x %x)", rva, ecx, n, a[0], a[1], a[2], a[3]);
+                switch (n) {
+                case 0: r = ((uint32_t(__attribute__((fastcall)) *)(void *, void *))f)(c, NULL); break;
+                case 1: r = ((uint32_t(__attribute__((fastcall)) *)(void *, void *, uint32_t))f)(c, NULL, a[0]); break;
+                case 2: r = ((uint32_t(__attribute__((fastcall)) *)(void *, void *, uint32_t, uint32_t))f)(c, NULL, a[0], a[1]); break;
+                case 3: r = ((uint32_t(__attribute__((fastcall)) *)(void *, void *, uint32_t, uint32_t, uint32_t))f)(c, NULL, a[0], a[1], a[2]); break;
+                default: r = ((uint32_t(__attribute__((fastcall)) *)(void *, void *, uint32_t, uint32_t, uint32_t, uint32_t))f)(c, NULL, a[0], a[1], a[2], a[3]); break;
+                }
+            }
+            aimp_snprintf(line, sizeof line, "CALL %s eax 0x%08x\n", ok ? "ok" : "NO", r);
+            put(line);
         } else if (p[0] == 'A' && p[1] == 'C' && p[2] == 'T' && p[3] == ' ') {
             /* ACT <hex>: (solo AIMP_MEMSRV_TEST=1) el personaje vuelve a su acción por defecto (FUN_0065bdd0) */
             q = p + 4;

@@ -230,3 +230,4 @@
 - 17:30 (2026-11-18) Aviso no modal con el cartel de recogidas (pickupOverlay, FUN_00805d90): el HUD lo procesa pero no dibuja nada (corrida 139). Descartado y sacado; candidatos anotados en NOTES.
 - 17:55 (2026-11-18) Remate (corridas 140-142): el Alien quedaba trabado en su mitad del remate; suelto (FUN_0065bdd0) remata al caído en bucle. Regla: retenido mientras el jugador está caído, suelto al revivir (corrida 142 OK). NPC_WithdrawAlien replicado (death_alien_withdraw, AIMP_COOP_ALIEN_WITHDRAW, apagado). memsrv ACT/WD. dist 9454e2a9.
 - 18:05 (2026-11-18) Corrida 143: remate con el compañero (peer) ya caído → game over normal del juego. OK.
+- 18:30 (2026-11-18) Corridas 144-145: reiniciar sentidos y memoria del Alien (FUN_0072f910, como NPC_ResetSensesAndMemory) no evita que remate al caído al soltarlo. memsrv CALL (prueba) y arreglo del comando C. Candidatas anotadas (ConditionPlayerIsAnEnemy/alianza). dist actualizada.
