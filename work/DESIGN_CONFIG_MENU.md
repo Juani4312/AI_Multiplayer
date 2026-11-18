@@ -49,8 +49,9 @@ Más adelante, si hace falta: abrir la pantalla de opciones con sliders.
 - Hechos: entrar a Extras no llama al juego (el submenú vive en el SWF); en PC Extras tiene **un solo botón, Credits**. Ese botón no pasa por `GenericCallback*` ni `ActivateLayer` (traza `AIMP_TRACE_UI_CALLBACKS=1`, corrida 127): llama a la acción `show_credits_screen`, registrada en `0x852608` junto a otras del frontend (`show_attract_screen` → `FUN_0082aa50`); su manejador es **`FUN_0082aa60`** (cdecl(params*): toma el objeto del frontend y salta a `FUN_00823310`, que abre `credits_screen`).
 - **`ui.c`, `AIMP_MOD_MENU=1` (por defecto):** "Extras" se llama "Coop" (`AI_UI_FRONTEND_EXTRAS`, desc "Opciones del mod coop"); el botón es "Dificultad del coop: Normal/Difícil/Pesadilla" (`AI_UI_FRONTEND_CREDITS`), que cambia al apretarlo (hook de `FUN_0082aa60`, sin abrir los créditos). Se guarda en `%LOCALAPPDATA%\AI_Multiplayer\opciones.txt` (`dificultad_coop=N`); `ui_coop_difficulty()` lo expone. **Corrida 128:** la etiqueta se actualiza al instante al apretar (capturas `shots/run128-menu-coop*.png`).
 - **Para más opciones:** las demás entradas de Extras de otras plataformas (Image Gallery, Dev Diaries, Trailer, Making Of, Deleted Scenes, Achievements) podrían estar ocultas según la plataforma (`Get_Current_Platform`, `FUN_008103a0`) o el contenido; habilitarlas daría más botones. Alternativa: que un mismo botón recorra varias opciones.
-- Pendiente: que el valor tenga efecto (`diff.c`) y que lo decida el host (mandarlo al conectar).
+- **Efecto (corrida 129):** el valor ya cambia la dificultad (`diff.c`, ver DESIGN_DIFFICULTY) y lo decide el host (`AIMP_EVT_OPTIONS`); en el cliente conectado el botón dice "(la eligió el host)".
 
 ## Siguiente paso
 
-Corrida corta: `AIMP_TRACE_UI_CALLBACKS=1` (por hacer), que loguee cada `GenericCallback*` con sus argumentos, y alguien que cambie opciones en el menú (alcanza con el mando virtual).
+- Más opciones en el menú "Coop" (compartir ítems, reglas de guardado): o habilitar más botones de Extras (ver arriba), o que el mismo botón recorra "opción: valor" con dos acciones (apretar cambia el valor; otro botón cambia de opción).
+- `AIMP_TRACE_UI_CALLBACKS=1` ya existe: loguea `GenericCallback`, `GenericCallbackInt` y `ActivateLayer`. Sirve para ver el protocolo de la pantalla de opciones (sliders) si algún día se usa.
