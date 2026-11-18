@@ -3,31 +3,25 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-17, 22:40 (sesión local, corridas 102–122, más la prueba de a dos 119). **Modo prueba:** papito tiene `safezone` como host para la próxima prueba de a dos (8g); al terminar, `mode.sh play`.
+_Última actualización: 2026-11-18 (sesión local, corridas 123–133). Al cerrar, `mode.sh play`: partida del usuario restaurada y mod desinstalado. Para la próxima prueba de a dos (8g), volver a poner a papito como host con `mode.sh test safezone --cfg "AIMP_NET=host;..."` (la cfg completa está en LOG.md, 2026-11-18)._
 
-Hecho en esta sesión:
-- **copia del save del host** (`mod/src/savesync.c`, `AIMP_SAVE_SYNC=1` en el cliente): verificada en los dos sentidos (102–103);
-- **guardar juntos**: el host avisa cuando guarda (verificado con un guardado real, 108); el cliente se iguala también si su juego pisa el save (106–107);
-- **game over con el checkpoint del host**: el game over recarga un buffer de 1 MB en memoria (RVA `0x134EF80`, corrida 113); el cliente mantiene ahí el checkpoint del host (114) y el coop completo con los dos caídos recarga el checkpoint del host (115);
-- bug de `death.c`: después del game over de los dos, el modo caído quedaba apagado; arreglado (116);
-- avatar del caído oculto (`AIMP_GHOST_DOWNED_HIDE=1`, 104) y se para al revivir (`AIMP_GHOST_STAND_ANIM`, 105);
-- `memsrv`: `V`, `F`, `LOADF`, `LOADN` (investigación); `aimp_peer.py --serve-save/--fetch-save/--serve-after/--radius`;
-- **prueba de a dos (corrida 119):** copia del save, misma partida, inventario y munición OK; arreglados después: agachado al pararse, prólogos con ASLR en Windows (`aimp_code_cmp`), avisos de guardado vacíos, conductos que no se replican; se deja de usar "armas de a una" (decisión del usuario);
-- **mensajes del coop en el menú** (`ui.c`): "esperando al host… no entres todavía", "partida del host copiada. Ya podés entrar", "Continue Game - partida del host" (corridas 121–122);
-- `mod/dist` = `fb157b7a…`, instrucciones 8g para la laptop;
-- saves de prueba nuevos: `airport` (otro nivel, sin NPCs) y **`alien`** (misión 6 con el Alien cargado). Alien: tipo 1, "BackstageAlien"; en backstage se estaciona encima del jugador; cerebro → objetivo → jugador verificado en runtime (DESIGN_ALIEN).
+Hecho en esta sesión (detalle en NOTES.md, 2026-11-18):
+- **dificultad del juego** (`diff.c`, corridas 123–125): `FUN_006f8b00` carga las 5 dificultades al arrancar (orden Easy, Medium, Hard, Nightmare, Novice); bloque del Alien con modificadores aditivos; la partida del usuario es Nightmare;
+- **guardar desde el mod** (`gamesave.c`, corrida 126): `FUN_007a90b0` escribe el checkpoint que ya está en memoria, no el estado del momento (por eso "host caído" usa la opción b);
+- **menú "Coop"** (`ui.c`, corridas 127–128): "Extras" → "Coop"; su botón (Credits, hook de `show_credits_screen` `FUN_0082aa60`) es "Dificultad del coop: Normal/Difícil/Pesadilla", guardada en `opciones.txt`;
+- **dificultad del coop con efecto** (`diff.c`, corrida 129): cada escalón suma un salto Hard→Nightmare sobre las 5 estructuras, desde la copia base; la decide el host (`AIMP_EVT_OPTIONS`);
+- **host caído: guarda el cliente** (`savesync` inverso, `XFER_REV`, corridas 130–133): la terminal del cliente se abre con el host caído; su save pasa al host (backup, archivos y checkpoint en memoria) y el game over del host lo carga. Verificado con el peer de los dos lados; el disparo desde una terminal real, solo en tests;
+- herramientas: `memsrv` `SAVE` y `PUSH`, `AIMP_TRACE_UI_CALLBACKS`, `aimp_peer.py --push-save/--accept-push`;
+- `mod/dist` = `3ea5509b…`; instrucciones 8g al día.
 
 **Siguiente:**
-- la prueba con dos máquinas: `work/windows/instructions.md` 8e y 8f (DLL `f6b9beca`), con un save de prueba en `papito` (nunca `current`);
-- interacciones del mundo (robot, compuertas): identificar la entidad del robot con la traza de pines y las marcas F8 de la prueba 8g, y sincronizar su estado;
-- muerte con pantalla negra al quedar caído por un enemigo (prueba 8g: qué lo mató);
-- **dificultad del coop (en curso, `work/DESIGN_DIFFICULTY.md`):** layout de la dificultad del juego ubicado (`FUN_006f8b00`, 5 estructuras cargadas al arrancar, índice activo desde el save, modificadores del Alien aditivos); prueba de efecto en memoria con el save `alien` sugerente pero no concluyente (corrida 125). **Host caído: guarda el cliente** (corridas 131 y 133): la terminal del cliente se abre con el host caído y su save pasa al host (savesync inverso; el game over carga ese save). Falta probarlo con la terminal real de a dos (instrucciones 8g). **`diff.c` hecho** (corrida 129): el menú "Coop" (antes Extras) elige Normal, Difícil o Pesadilla; cada escalón endurece al Alien sobre la dificultad del juego, y la decide el host. Falta verlo jugando con el Alien;
-- **guardado exigente:** escrito (`AIMP_COOP_SAVE_RULE=1`, test), falta probarlo de a dos (8g) y un aviso en pantalla (el prompt de la terminal no tiene texto; alternativa: el diálogo "Overwrite save data?");
-- **a futuro (idea del usuario):** dificultad del coop (Alien más agresivo con los parámetros de dificultad del juego escalados en memoria, menos pickups, reglas de caída y revivir, el Alien que caza a los dos): `work/DESIGN_DIFFICULTY.md`;
-- **a futuro (idea del usuario):** menú de configuración del mod reusando las pantallas de opciones del juego (sus selectores y sliders): dificultad, qué se comparte. Plan en `work/DESIGN_CONFIG_MENU.md` (primero, ver el protocolo de `GenericCallback*`);
-- revivir en checkpoints (escrito, sin probar: hace falta caminar hasta uno), decidir qué hace el caído (oculto ya disponible);
-- Alien compartido con el save `alien`: ¿se puede llevar su objetivo (`cerebro+0x10`) al avatar? (hace falta un avatar: en ese save no hay civiles; con `--replay` el peer podría dar la posición, pero el títere necesita un NPC humano).
-- avatar mujer: sin probar (ni `safezone` ni `airport` tienen civiles mujeres)._
+- **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `3ea5509b`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, pantalla negra al caer, agachado, escotilla;
+- sentir la dificultad del coop jugando con el save `alien` (el efecto solo se verificó en memoria); sumar los sentidos del ALIEN (bloque por plantilla) si hace falta;
+- interacciones del mundo (robot, compuertas): identificar la entidad del robot con la traza de pines de 8g y sincronizar su estado;
+- pantalla negra al quedar caído por un enemigo (8g: qué lo mató);
+- aviso en pantalla del guardado exigente (el prompt de la terminal no tiene texto; alternativa: el diálogo "Overwrite save data?");
+- más opciones en el menú Coop (que un botón recorra varias, o habilitar los botones de Extras ocultos en PC: DESIGN_CONFIG_MENU);
+- a futuro: ruido compartido con histéresis, varios Aliens, desangrado (DESIGN_DIFFICULTY); Alien compartido (DESIGN_ALIEN); revivir en checkpoints; avatar mujer.
 
 **Partida real del usuario (run sin morir):** nunca se prueba sobre ella. `work/scripts/mode.sh test [save]` guarda `saves/current.tar.gz`, carga el save de prueba e instala el mod; `mode.sh play` la restaura y desinstala el mod. Al cerrar una sesión, `mode.sh play`.
 Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safezone` = la partida de las corridas 20–82 (sin enemigos).
