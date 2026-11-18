@@ -2,6 +2,7 @@
 #include "ui.h"
 #include "hook.h"
 #include "log.h"
+#include "game.h"
 #include "savesync.h"
 #include "diff.h"
 
@@ -79,6 +80,50 @@ __attribute__((cdecl, force_align_arg_pointer, noinline)) static void det_credit
 }
 static wchar_t g_buf[K_N][256]; /* la UI copia el texto; uno por clave para que dos pedidos seguidos no se pisen */
 
+/* ---- Avisos dentro del juego (2026-11-18) ----
+ * FUN_0077c9e0 thiscall([g_root+0x78], const char *clave), ret 4: el diálogo "Warning" del juego (título
+ * AI_UI_DLG_WARNING_TITLE, botón AI_UI_DLG_BTN_OK) con el texto de esa clave. Lo usa el Checkpoint para "Saving is
+ * disabled" (0x5A27F8). No abre otro si ya hay uno ([mgr+0x4010]). Con una clave propia, el hook de textos devuelve el
+ * mensaje del mod. */
+#define AIMP_RVA_UI_WARNING 0x0037C9E0u
+#define MSG_KEY "AI_AIMP_COOP_MSG"
+static const uint8_t UI_WARNING_PROLOGUE[13] = { 0x64, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x6A, 0xFF, 0x68, 0xF0, 0xD6, 0x12, 0x01 };
+typedef void(__attribute__((fastcall)) * UiWarningFn)(void *mgr, void *edx, const char *key);
+static wchar_t g_msg[300];
+static volatile LONG g_msg_pending;
+
+void ui_message(const char *utf8)
+{
+    int n = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, g_msg, (int)(sizeof g_msg / sizeof g_msg[0]) - 1);
+    g_msg[n > 0 ? n : 0] = 0;
+    InterlockedExchange(&g_msg_pending, 1);
+    log_printf("UI: aviso en pantalla pedido: %s", utf8);
+}
+
+void ui_frame(int have_player)
+{
+    if (!g_msg_pending || !have_player)
+        return;
+    uint8_t pr[sizeof UI_WARNING_PROLOGUE];
+    uintptr_t f = g_aimp_exe + AIMP_RVA_UI_WARNING;
+    uint32_t root = 0, mgr = 0, open_lo = 0, open_hi = 0;
+    InterlockedExchange(&g_msg_pending, 0);
+    if (!mem_read(f, pr, sizeof pr) || aimp_code_cmp(pr, UI_WARNING_PROLOGUE, sizeof pr) != 0) {
+        log_printf("UI: el prólogo de FUN_0077c9e0 no coincide: no hay aviso en pantalla");
+        return;
+    }
+    if (!mem_u32(g_aimp_exe + AIMP_RVA_G_ROOT, &root) || !root || !mem_u32(root + 0x78, &mgr) || !mgr)
+        return;
+    mem_u32(mgr + 0x4010, &open_lo);
+    mem_u32(mgr + 0x4014, &open_hi);
+    if (open_lo | open_hi) {
+        log_printf("UI: ya hay un diálogo abierto: el aviso no se muestra");
+        return;
+    }
+    ((UiWarningFn)(void *)f)((void *)(uintptr_t)mgr, NULL, MSG_KEY);
+    log_printf("UI: aviso en pantalla mostrado (FUN_0077c9e0)");
+}
+
 static int streq(const char *a, const char *b)
 {
     for (; *a && *a == *b; a++, b++)
@@ -128,6 +173,8 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static const wchar_
     const wchar_t *orig = g_orig(db, edx, key);
     if (!key || key[0] != 'A' || key[1] != 'I' || key[2] != '_')
         return orig;
+    if (streq(key, MSG_KEY))
+        return g_msg[0] ? g_msg : orig;
     int k = -1;
     for (int i = 0; i < K_N; i++)
         if (streq(key, g_keys[i])) {
