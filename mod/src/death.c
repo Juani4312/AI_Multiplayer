@@ -118,11 +118,11 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_dam
 }
 
 static int g_trace_dmg;
-static void note_player_killed(uint32_t player);
+static void note_player_killed(uint32_t player, uint32_t attacker);
 __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_kill(void *chr, void *edx, uint32_t attacker)
 {
     if ((uint32_t)(uintptr_t)chr == g_trace_player && g_trace_player)
-        note_player_killed(g_trace_player);
+        note_player_killed(g_trace_player, attacker);
     LONG n = g_trace_dmg ? InterlockedIncrement(&g_n_kill) : 1000;
     if (n <= 100) {
         char who[80], at[80];
@@ -187,7 +187,30 @@ int death_player_to_loco(uint32_t player, const char *why)
 }
 
 static volatile DWORD g_kill_at; /* GetTickCount() del último remate al jugador local (0 = ninguno pendiente) */
-static void note_player_killed(uint32_t player)
+static uint32_t g_kill_attacker, g_kill_attacker_vt;
+static int g_withdraw_cfg;
+
+/* FUN_0065bdd0 thiscall(acción), ret: vuelve a la acción por defecto del personaje (vt[0](1) destruye la actual; con
+ * controlador de jugador, FUN_00658080; si no, la de su tipo). Corrida 140: el Alien queda trabado en su mitad del
+ * remate (vtable rva 0xEAE5D0) esperando que el jugador termine de morir. */
+#define AIMP_RVA_ACT_DEFAULT 0x0025BDD0u
+static const uint8_t ACT_DEFAULT_PROLOGUE[13] = { 0x6A, 0xFF, 0x68, 0x32, 0xD9, 0x12, 0x01, 0x64, 0xA1, 0x00, 0x00, 0x00, 0x00 };
+int death_char_default_action(uint32_t chr, const char *why)
+{
+    uint32_t act = 0, vt = 0;
+    uint8_t pr[sizeof ACT_DEFAULT_PROLOGUE];
+    if (!chr || !mem_u32(chr + CHR_ACTION, &act) || !act || !mem_u32(act, &vt) ||
+        !mem_read(g_aimp_exe + AIMP_RVA_ACT_DEFAULT, pr, sizeof pr) || aimp_code_cmp(pr, ACT_DEFAULT_PROLOGUE, sizeof pr) != 0)
+        return 0;
+    ((ActToLocoFn)(void *)(g_aimp_exe + AIMP_RVA_ACT_DEFAULT))((void *)(uintptr_t)act, NULL);
+    uint32_t vt2 = 0;
+    mem_u32(act, &vt2);
+    log_printf("DEATH: %s: personaje 0x%08x, acción vtable rva 0x%x -> 0x%x (por defecto, FUN_0065bdd0)", why, chr,
+               (unsigned)(vt - g_aimp_exe), (unsigned)(vt2 - g_aimp_exe));
+    return 1;
+}
+
+static void note_player_killed(uint32_t player, uint32_t attacker)
 {
     uint32_t act = 0, vt = 0;
     if (!g_downed_mode || !mem_u32(player + CHR_ACTION, &act) || !act || !mem_u32(act, &vt))
@@ -195,8 +218,74 @@ static void note_player_killed(uint32_t player)
     if (vt - g_aimp_exe == ACT_LOCO_VT_RVA)
         return; /* muerte sin animación (KILL, daño): el modo caído ya alcanza */
     g_kill_at = GetTickCount() | 1;
-    log_printf("DEATH: remate al jugador en la acción de vtable rva 0x%x%s; se le devuelve el control en %d ms",
-               (unsigned)(vt - g_aimp_exe), vt - g_aimp_exe == ACT_DEATH_VT_RVA ? " (muerte por el Alien)" : "", g_death_act_ms);
+    g_kill_attacker = attacker;
+    g_kill_attacker_vt = 0;
+    if (attacker && mem_u32(attacker + CHR_ACTION, &act) && act)
+        mem_u32(act, &g_kill_attacker_vt);
+    log_printf("DEATH: remate al jugador en la acción de vtable rva 0x%x%s (atacante 0x%08x en la acción 0x%x); se le devuelve el control en %d ms",
+               (unsigned)(vt - g_aimp_exe), vt - g_aimp_exe == ACT_DEATH_VT_RVA ? " (muerte por el Alien)" : "", attacker,
+               g_kill_attacker_vt ? (unsigned)(g_kill_attacker_vt - g_aimp_exe) : 0u, g_death_act_ms);
+}
+
+/* Retirada del Alien (2026-11-18), como la entidad NPC_WithdrawAlien (manejador de arranque FUN_00496da0, sin posición):
+ * w = [Alien+0x34F0], c = [w+0x18] (c+0x14 = el Alien; [c] = modo); FUN_007349d0(c) (reinicia: bandera 0x13 del árbol
+ * en 0), FUN_006c5ef0(c, 0) (bandera 0x13), si [c] == 0, FUN_0072fc20(c, 1) (modo 1 = retirarse: arma el director del
+ * Alien en +0x34D0) y [w+0xC] = 0 (FUN_00821d20). Solo para personajes de tipo 1 (el Alien). */
+#define CHR_ALIEN_WITHDRAW 0x34F0
+static const uint8_t WD_RESET_PROLOGUE[10] = { 0x56, 0x8B, 0xF1, 0x8B, 0x4E, 0x14, 0x6A, 0x00, 0x6A, 0x13 };
+static const uint8_t WD_FLAG_PROLOGUE[10] = { 0x8B, 0x44, 0x24, 0x04, 0x8B, 0x49, 0x14, 0x50, 0x6A, 0x13 };
+static const uint8_t WD_MODE_PROLOGUE[10] = { 0x8B, 0x44, 0x24, 0x04, 0x53, 0x56, 0x8B, 0xF1, 0x33, 0xDB };
+typedef void(__attribute__((fastcall)) * WdResetFn)(void *c, void *edx);
+typedef void(__attribute__((fastcall)) * WdArgFn)(void *c, void *edx, uint32_t v);
+
+int death_alien_withdraw(uint32_t alien, const char *why)
+{
+    uint32_t def = 0, type = 0, w = 0, c = 0, mode = 0;
+    uint8_t a[10], b[10], d[10], z = 0;
+    if (!alien || !mem_u32(alien + CHR_DEF, &def) || !def || !mem_u32(def + 4, &type) || type != 1 ||
+        !mem_u32(alien + CHR_ALIEN_WITHDRAW, &w) || !w || !mem_u32(w + 0x18, &c) || !c)
+        return 0;
+    if (!mem_read(g_aimp_exe + 0x003349D0u, a, 10) || aimp_code_cmp(a, WD_RESET_PROLOGUE, 10) != 0 ||
+        !mem_read(g_aimp_exe + 0x002C5EF0u, b, 10) || aimp_code_cmp(b, WD_FLAG_PROLOGUE, 10) != 0 ||
+        !mem_read(g_aimp_exe + 0x0032FC20u, d, 10) || aimp_code_cmp(d, WD_MODE_PROLOGUE, 10) != 0) {
+        log_printf("DEATH: los prólogos de la retirada del Alien no coinciden");
+        return 0;
+    }
+    ((WdResetFn)(void *)(g_aimp_exe + 0x003349D0u))((void *)(uintptr_t)c, NULL);
+    ((WdArgFn)(void *)(g_aimp_exe + 0x002C5EF0u))((void *)(uintptr_t)c, NULL, 0);
+    mem_u32(c, &mode);
+    if (mode == 0)
+        ((WdArgFn)(void *)(g_aimp_exe + 0x0032FC20u))((void *)(uintptr_t)c, NULL, 1);
+    mem_write(w + 0x0C, &z, 1);
+    mem_u32(c, &mode);
+    log_printf("DEATH: %s: el Alien 0x%08x se retira (modo %u)", why, alien, mode);
+    return 1;
+}
+
+/* El atacante queda en su mitad del remate (el Alien: acción rva 0xEAE5D0) mientras el jugador está caído: si se lo
+ * suelta, vuelve a rematar al caído cada ~4,5 s (corrida 141). Como cada máquina tiene su propio Alien, que solo persigue
+ * a su jugador, retenerlo no afecta al compañero. Al revivir se lo suelta (FUN_0065bdd0) y, con
+ * AIMP_COOP_ALIEN_WITHDRAW=1 (experimental, apagado), se lo manda a retirarse. */
+static uint32_t g_held_attacker, g_held_vt;
+static void hold_attacker(void)
+{
+    g_held_attacker = g_kill_attacker;
+    g_held_vt = g_kill_attacker_vt;
+    g_kill_attacker = 0;
+    if (g_held_attacker)
+        log_printf("DEATH: el atacante 0x%08x queda retenido en su acción (rva 0x%x) mientras el jugador esté caído",
+                   g_held_attacker, g_held_vt ? (unsigned)(g_held_vt - g_aimp_exe) : 0u);
+}
+static void release_attacker(const char *why)
+{
+    uint32_t a = g_held_attacker, act = 0, vt = 0;
+    g_held_attacker = 0;
+    if (!a || !mem_u32(a + CHR_ACTION, &act) || !act || !mem_u32(act, &vt))
+        return;
+    if (vt == g_held_vt)
+        death_char_default_action(a, why);
+    if (g_withdraw_cfg)
+        death_alien_withdraw(a, why);
 }
 
 int death_coop_enabled(void) { return g_downed_mode; }
@@ -268,6 +357,8 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
         }
         g_revive_pending = 0;
         g_downed = 0;
+        g_held_attacker = 0;
+        g_kill_at = 0;
     }
     if (!g_downed_mode || !player || now - g_last_chk < freq / 10)
         return;
@@ -310,6 +401,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
         if (mem_u32(player + CHR_ACTION, &act) && act && mem_u32(act, &vt) && vt - g_aimp_exe != ACT_LOCO_VT_RVA &&
             death_player_to_loco(player, "fin del remate")) {
             clear_fade();
+            hold_attacker();
             if (g_downed)
                 set_flags(player, 1);
         } else
@@ -318,6 +410,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
     if (g_downed && g_revive_pending) {
         g_revive_pending = 0;
         g_downed = 0;
+        release_attacker("revivido (atacante)");
         set_flags(player, 0);
         if (mx)
             mem_write(player + CHR_HEALTH, &mx, 2);
@@ -336,6 +429,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
          fa.ftLastWriteTime.dwHighDateTime != g_revive_time.dwHighDateTime)) {
         g_revive_time = fa.ftLastWriteTime;
         g_downed = 0;
+        release_attacker("revivido (atacante)");
         set_flags(player, 0);
         if (mx)
             mem_write(player + CHR_HEALTH, &mx, 2);
@@ -404,6 +498,7 @@ void death_install(AimpNet *net)
             log_printf("DEATH: el prólogo de FUN_00658080 no coincide: el remate deja la pantalla negra");
     }
     g_death_act_ms = aimp_env_int(L"AIMP_COOP_DEATH_ACT_MS", 4000);
+    g_withdraw_cfg = aimp_env_int(L"AIMP_COOP_ALIEN_WITHDRAW", 0);
     if (aimp_env_str(L"AIMP_COOP_REVIVE_FILE", g_revive_file, MAX_PATH)) {
         WIN32_FILE_ATTRIBUTE_DATA fa;
         if (GetFileAttributesExW(g_revive_file, GetFileExInfoStandard, &fa))

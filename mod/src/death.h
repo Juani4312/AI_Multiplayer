@@ -14,6 +14,9 @@
  *                    acción que no es la locomoción (el agarre del Alien, vtable rva 0xEAE690), a los
  *                    AIMP_COOP_DEATH_ACT_MS (4000; -1 = nunca) se lo devuelve a la locomoción (FUN_00658080) y se borra el
  *                    fundido de pantalla (singleton 0x019D0970, +0x1B48): si no, la pantalla queda negra para siempre.
+ *                    El atacante queda retenido en su mitad del remate mientras el jugador esté caído (suelto, lo vuelve
+ *                    a rematar cada ~4,5 s) y se lo suelta al revivir (FUN_0065bdd0, acción por defecto).
+ *                    AIMP_COOP_ALIEN_WITHDRAW=1 (experimental): además, el Alien se retira al soltarlo (NPC_WithdrawAlien).
  *   AIMP_TRACE_DMG=1 golpes sobre el jugador (FUN_007caac0: daño, atacante, flags, pila) y llamadas a matar (líneas DMG). */
 void death_install(AimpNet *net);
 /* Por red (AIMP_COOP_DOWNED=1 con AIMP_NET): AIMP_EVT_COOP avisa caído / revivido; si caen los dos, game over normal
@@ -44,6 +47,10 @@ typedef struct {
 void death_frame(int64_t now, int64_t freq, uint32_t player);
 /* Devuelve al jugador a la locomoción (sale de una acción como la de muerte; FUN_00658080). 1 si se llamó. */
 int death_player_to_loco(uint32_t player, const char *why);
+/* Vuelve a la acción por defecto del personaje (FUN_0065bdd0). 1 si se llamó. */
+int death_char_default_action(uint32_t chr, const char *why);
+/* Manda al Alien (personaje de tipo 1) a retirarse, como NPC_WithdrawAlien. 1 si se pudo. */
+int death_alien_withdraw(uint32_t alien, const char *why);
 /* 1 si el jugador local está caído (para mandarlo por red más adelante). */
 int death_is_downed(void);
 
