@@ -22,6 +22,7 @@
 #include "weapons.h"
 #include "death.h"
 #include "diff.h"
+#include "savesync.h"
 #include "inv.h"
 #include "sync.h"
 #include "game.h"
@@ -109,7 +110,7 @@ static const char *save_blocked(uint32_t pl)
     if (!g_save_rule || !g_net || !g_net->mode || !g_net->have_remote)
         return NULL;
     if (g_net->mode == 2)
-        return "en coop guarda el host";
+        return death_remote_is_downed() ? NULL : "en coop guarda el host (salvo que esté caído)";
     const AimpPkt *r = &g_net->remote;
     if (!(r->flags & AIMP_FLAG_PLAYER) || r->level != g_level || death_remote_is_downed())
         return NULL; /* el otro no está en el nivel, o está caído: no cuenta */
@@ -145,13 +146,16 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_use
                        t, c, mine ? " (jugador local)" : "", rd32(p + 16));
         if (mine && aimp_memcmp(t, "1e38b898", 8) == 0) {
             /* Guardado exigente (DESIGN_DIFFICULTY, decisión del usuario 2026-11-17): con AIMP_COOP_SAVE_RULE=1 guarda
-             * solo el host (la partida canónica es la suya: savesync pisaría el guardado del cliente) y solo si el
-             * compañero vivo está a menos de AIMP_COOP_SAVE_NEAR_CM. Bloquear = no llamar al productor del uso. */
+             * el host (la partida canónica es la suya: savesync pisaría el guardado del cliente) y solo si el
+             * compañero vivo está a menos de AIMP_COOP_SAVE_NEAR_CM. Con el host caído guarda el cliente y su save
+             * pasa al host (savesync inverso). Bloquear = no llamar al productor del uso. */
             const char *why = save_blocked(pl);
             if (why) {
                 log_printf("SYNC   terminal de guardado bloqueada: %s", why);
                 return;
             }
+            if (g_net && g_net->mode == 2 && death_remote_is_downed())
+                savesync_client_saving(); /* host caído: este save se le manda al host (savesync, sentido inverso) */
             death_on_save_terminal(); /* terminal de guardado: revive al compañero caído (death.c) */
         }
         if (mine && g_on && g_net && g_net->mode && skipped(t)) {

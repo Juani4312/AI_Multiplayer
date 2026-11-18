@@ -36,6 +36,10 @@
 #define XFER_ACK 5
 #define XFER_DONE 6
 #define XFER_NOTIFY 7 /* host -> cliente: "mis saves cambiaron" (guardar juntos); xid = número de aviso */
+/* Bit de dirección en op: el mismo protocolo al revés (el cliente sirve, el host recibe). Host caído: el cliente guarda
+ * en la terminal y le manda su save al host, que lo escribe, lo pone en su checkpoint en memoria y revive a su lado
+ * (DESIGN_DIFFICULTY, "Host caído", opción b). Lo maneja una segunda instancia (savesync_new_rev). */
+#define XFER_REV 0x80
 
 #define XFER_MAX_FILES 32
 #define XFER_NAME 16
@@ -102,6 +106,20 @@ int savesync_state(const SaveSync *s);
 uint32_t savesync_written_mask(const SaveSync *s);
 /* veces que se pisó el checkpoint en memoria con el del host */
 uint32_t savesync_ckpt_writes(const SaveSync *s);
+/* Sentido inverso (cliente -> host), segunda instancia sobre la misma red: en el cliente sirve, en el host recibe.
+ * fwd = la instancia normal (en el cliente, la que se suspende mientras se manda el save propio). */
+SaveSync *savesync_new_rev(SaveSync *fwd, const wchar_t *backup_dir);
+/* Cliente: "voy a guardar con el host caído": el próximo cambio de los saves propios se le manda al host. Mientras
+ * tanto la instancia normal no pisa el checkpoint en memoria ni vuelve a igualar los saves a los del host. */
+void savesync_push_arm(SaveSync *rev);
+/* 0 nada, 1 esperando que el juego guarde, 2 mandando al host */
+int savesync_push_state(const SaveSync *rev);
+/* Host: si es NULL o devuelve 1, se acepta el save del cliente (en el juego: estaba caído hace poco). */
+void savesync_set_accept(SaveSync *rev, int (*accept)(void));
+/* En el juego: el cliente usó la terminal de guardado con el host caído (sync.c). */
+void savesync_client_saving(void);
+/* En el juego: la instancia inversa (NULL con AIMP_SAVE_PUSH=0). */
+SaveSync *savesync_game_rev(void);
 /* Tests: descartar 1 de cada n paquetes de datos salientes (0 = ninguno). */
 void savesync_test_drop(SaveSync *s, int every);
 /* Tests: intervalo de consulta de las fechas y tiempo de asentamiento (ms). */
