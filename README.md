@@ -94,12 +94,17 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 
 ## Último trabajo y siguiente paso
 
+**2026-11-18 (locales, corridas 126–133):**
+- **Menú "Coop":** en el menú principal, "Extras" pasa a llamarse "Coop". Su botón es **"Dificultad del coop"** (Normal, Difícil o Pesadilla) y cambia al apretarlo. Normal deja la dificultad del juego tal cual; cada escalón suma otro salto como el de Hard a Nightmare: el Alien acecha más cerca, vuelve antes, hay una amenaza más y sale antes de los conductos. La elige el host y se la manda al cliente (`ui.c`, `diff.c`; verificado en memoria).
+- **Host caído: guarda el cliente.** Con el host caído, la terminal de guardado del cliente se abre. El host revive a su lado y, unos segundos después, recibe ese save: lo escribe con backup de los suyos y lo pone en su checkpoint en memoria (`savesync` en sentido inverso). Verificado de los dos lados con el peer: el game over del host cargó el save del "cliente". Falta probarlo con una terminal real de a dos (`work/windows/instructions.md` 8g).
+- **Guardar desde el mod** (`gamesave.c`): el guardado del juego (`FUN_007a90b0`) escribe el checkpoint que ya está en memoria, no el estado del momento.
+- `mod/dist/winmm.dll` = `3ea5509b…`.
+
 **2026-11-17, noche (prueba de a dos, corrida 119, y locales 120–122):**
 - **Prueba con dos máquinas:** la copia del save y la partida común andan, y el inventario y la munición se comparten. Arreglado después: el avatar que quedaba agachado, funciones que el mod no reconocía en Windows (ASLR), avisos de guardado vacíos y la escotilla que quedaba ocupada por el avatar. "Armas de a una" se deja de usar: los dos tienen todas las armas y la reserva de munición es común.
 - **Cartel en el menú:** en Play Game y en Continue Game el juego muestra el estado del coop ("esperando al host… no entres todavía", "partida del host copiada. Ya podés entrar").
 - **Pendiente:** las interacciones del mundo (un robot que abre una compuerta se movió solo en una máquina) y una pantalla negra al quedar caído por un enemigo. Próxima prueba: `work/windows/instructions.md` 8g.
-- **A futuro:** menú de configuración del mod con las pantallas de opciones del juego (`work/DESIGN_CONFIG_MENU.md`).
-- `mod/dist/winmm.dll` = `fb157b7a…`.
+- `mod/dist/winmm.dll` era `fb157b7a…`; la actual está más arriba.
 
 **2026-11-17, tarde (corridas 102–118, locales con el peer):**
 - **Copia del save del host** (`AIMP_SAVE_SYNC=1` en el que se une; `mod/src/savesync.c`): en la pantalla de título o el menú, el cliente trae del host los saves que tenga distintos, y "Continue" carga la partida del host (verificado: cargó otro nivel). Usa la misma API de Steam Cloud que el juego y comprime con un LZ propio (24 MB de saves → 3,5 MB; los 22 saves llegaron idénticos en 5,9 s). Guarda un backup de los saves propios antes de pisarlos.
