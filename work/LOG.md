@@ -219,3 +219,4 @@
 - 00:10 (2026-11-18) Guardado exigente (AIMP_COOP_SAVE_RULE): guarda solo el host y con el compañero cerca; test_sync; dist 0ed9ec82; papito host con la regla.
 - 00:20 (2026-11-18) El usuario confirma: su partida vieja está en Nightmare (cierra el orden de las dificultades). Diseño: con el host caído, el cliente puede guardar y lo revive (que el host guarde solo al revivir); menú del mod con los botones de Extras que cambian de valor al apretarlos.
 - 21:00 (2026-11-18) Corrida 126: FUN_007a90b0 es el guardado (muerte: 0,0,1,0; terminal: 1,1,0,0 con el diálogo), pero escribe el checkpoint en memoria, no el estado vivo. Plan para host caído: savesync al revés. gamesave.c, memsrv SAVE. Un TP de prueba sacó al jugador del mapa (el usuario lo vio).
+- 21:30 (2026-11-18) Menú del mod: Extras → "Coop" con "Dificultad del coop" que cambia al apretarlo (hook de show_credits_screen, FUN_0082aa60); verificado en la corrida 128. dist 361846c0. Papito como host.
