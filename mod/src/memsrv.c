@@ -15,6 +15,8 @@
  *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
  *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
  *   MSG <texto>       (solo con AIMP_MEMSRV_TEST=1) aviso en pantalla con el diálogo "Warning" del juego
+ *   ACT <hex>         (solo con AIMP_MEMSRV_TEST=1) el personaje vuelve a su acción por defecto (FUN_0065bdd0)
+ *   WD <hex>          (solo con AIMP_MEMSRV_TEST=1) el Alien se retira (como NPC_WithdrawAlien)
  *   LOCO              (solo con AIMP_MEMSRV_TEST=1) el jugador 0 vuelve a la locomoción (FUN_00658080; sale del remate)
  *   KILL <hex>        (solo con AIMP_MEMSRV_TEST=1) mata al personaje como lo hace el juego: FUN_007d0c10 thiscall(chr,
  *                     atacante = 0), ret 4; daño igual a su salud (Character+0x33C). La llama ACT_PLAYER_DEATH (FUN_00668120).
@@ -248,6 +250,18 @@ static void run(char *txt)
             if (g_test)
                 ui_message(p + 4);
             put(g_test ? "MSG ok\n" : "MSG NO\n");
+        } else if (p[0] == 'A' && p[1] == 'C' && p[2] == 'T' && p[3] == ' ') {
+            /* ACT <hex>: (solo AIMP_MEMSRV_TEST=1) el personaje vuelve a su acción por defecto (FUN_0065bdd0) */
+            q = p + 4;
+            uint32_t chr = num(&q);
+            int ok = g_test && chr && is_char(chr) && death_char_default_action(chr, "memsrv ACT");
+            put(ok ? "ACT ok\n" : "ACT NO\n");
+        } else if (p[0] == 'W' && p[1] == 'D' && p[2] == ' ') {
+            /* WD <hex>: (solo AIMP_MEMSRV_TEST=1) el Alien se retira (death_alien_withdraw) */
+            q = p + 3;
+            uint32_t chr = num(&q);
+            int ok = g_test && chr && is_char(chr) && death_alien_withdraw(chr, "memsrv WD");
+            put(ok ? "WD ok\n" : "WD NO\n");
         } else if (p[0] == 'L' && p[1] == 'O' && p[2] == 'C' && p[3] == 'O') {
             /* LOCO: (solo AIMP_MEMSRV_TEST=1) el jugador 0 vuelve a la locomoción (sale de la acción de muerte) */
             uint32_t pl = player0();

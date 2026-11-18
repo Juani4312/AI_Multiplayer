@@ -304,7 +304,7 @@ Pasos:
 
 Reportar: los tiempos de la copia (líneas `SAVESYNC` con su hora) y si "Continue" cargó el mismo lugar que el host.
 
-### 8g. Segunda prueba de a dos: load y game over (2026-11-17; DLL actual `ceea5bb5…`, 2026-11-18)
+### 8g. Segunda prueba de a dos: load y game over (2026-11-17; DLL actual `9454e2a9…`, 2026-11-18)
 
 Arreglos después de la primera prueba conjunta (8e/8f):
 - **Agachado:** al pararse caminando, el avatar quedaba agachado. Ahora siempre recibe la animación de parado.
@@ -313,7 +313,7 @@ Arreglos después de la primera prueba conjunta (8e/8f):
 - **Menú del mod:** en el menú principal, "Extras" ahora se llama **"Coop"**; adentro, "Dificultad del coop" cambia entre Normal, Difícil y Pesadilla al apretarlo y se guarda en `%LOCALAPPDATA%\AI_Multiplayer\opciones.txt`. **Tiene efecto:** cada escalón suma sobre la dificultad del juego otro salto como el de Hard a Nightmare (el Alien acecha más cerca, vuelve antes, una amenaza más, sale antes de los conductos). La elige el host: en la laptop, con el host conectado, dice "(la eligió el host)". Los créditos quedan inaccesibles con el mod (`AIMP_MOD_MENU=0` los devuelve).
 - **Mensajes en el menú:** en Play Game, la línea de abajo muestra el estado del coop ("esperando al host… no entres todavía", "partida del host copiada. Ya podés entrar"). "Continue Game" dice "esperá al host", "esperá, copiando" o "partida del host". No hace falta mirar el log para saber cuándo entrar.
 - **Conductos:** entrar a un conducto ya no se replica. Antes el avatar del otro "entraba" y la escotilla quedaba ocupada: en la laptop no aparecía la "E".
-- **Pantalla negra al caer por un remate (2026-11-18, DLL `df452eb1…`):** cuando un enemigo "remata" (el agarre del Alien, y los de humanos o androides), con el modo caído la pantalla quedaba negra para siempre. Ahora, 4 s después del remate, el caído recupera el control y la imagen (sigue caído). En el log: `DEATH: remate al jugador…` y `DEATH: fundido de pantalla: … -> 0`. Si pasa, anotar qué enemigo fue.
+- **Pantalla negra al caer por un remate (2026-11-18, DLL `df452eb1…`):** cuando un enemigo "remata" (el agarre del Alien, y los de humanos o androides), con el modo caído la pantalla quedaba negra para siempre. Ahora, 4 s después del remate, el caído recupera el control y la imagen (sigue caído). El enemigo que remató se queda quieto en su animación hasta que el caído revive (si no, lo remata en bucle). En el log: `DEATH: remate al jugador…` y `DEATH: fundido de pantalla: … -> 0`. Si pasa, anotar qué enemigo fue.
 - **Armas de a una: se deja de usar.** Los dos tienen todas las armas y la munición de reserva es compartida (inventario compartido). Instalar **sin** `AIMP_SYNC_WEAPONS`.
 
 Configuración en la laptop (`git pull` y reinstalar):
