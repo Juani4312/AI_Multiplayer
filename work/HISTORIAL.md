@@ -6,11 +6,18 @@ Lo que se hizo en cada sesión, del más nuevo al más viejo. Antes estaba al fi
 - Evidencia de cada corrida: `work/NOTES.md`.
 - Log cronológico corto: `work/LOG.md`.
 
+**2026-11-18, tarde (locales, corridas 134–147, save `alien`):**
+- **Pantalla negra al caer por un remate (el problema de la prueba de a dos):** cuando un enemigo remata al jugador (el agarre del Alien), con el modo caído la pantalla quedaba negra para siempre. Ahora se ve el remate y, 4 s después, el caído vuelve a ver y a moverse (sigue caído). Causa: el jugador quedaba en la acción de muerte y con un fundido a negro; el mod lo pasa a la locomoción y borra el fundido.
+- **El Alien ignora al caído:** mientras dura el caído, el jugador toma la facción del Alien; el Alien se suelta del remate y se va a los conductos, aunque el caído corra. Al revivir se restaura y lo vuelve a cazar. Si los dos caen, game over normal (verificado con el peer).
+- **Avisos dentro del juego:** el mod puede mostrar el diálogo "Warning" del juego con un texto propio. La terminal bloqueada por el guardado exigente lo usa para decir por qué. Pausa el juego hasta el OK. Un aviso que no pause queda pendiente (el cartel de recogidas no se dibujó).
+- Herramientas: `AIMP_TRACE_DMG` (golpes y muertes), `memsrv` `LOCO`, `ACT`, `WD`, `MSG`, `CALL`. REA necesita el JDK 27 (Ghidra 12.2).
+- `mod/dist/winmm.dll` = `b4de9984…`.
+
 **2026-11-18 (locales, corridas 126–133):**
 - **Menú "Coop":** en el menú principal, "Extras" pasa a llamarse "Coop". Su botón es **"Dificultad del coop"** (Normal, Difícil o Pesadilla) y cambia al apretarlo. Normal deja la dificultad del juego tal cual; cada escalón suma otro salto como el de Hard a Nightmare: el Alien acecha más cerca, vuelve antes, hay una amenaza más y sale antes de los conductos. La elige el host y se la manda al cliente (`ui.c`, `diff.c`; verificado en memoria).
 - **Host caído: guarda el cliente.** Con el host caído, la terminal de guardado del cliente se abre. El host revive a su lado y, unos segundos después, recibe ese save: lo escribe con backup de los suyos y lo pone en su checkpoint en memoria (`savesync` en sentido inverso). Verificado de los dos lados con el peer: el game over del host cargó el save del "cliente". Falta probarlo con una terminal real de a dos (`work/windows/instructions.md` 8g).
 - **Guardar desde el mod** (`gamesave.c`): el guardado del juego (`FUN_007a90b0`) escribe el checkpoint que ya está en memoria, no el estado del momento.
-- `mod/dist/winmm.dll` = `3ea5509b…`.
+- `mod/dist/winmm.dll` era `3ea5509b…`; la actual está más arriba.
 
 **2026-11-17, noche (prueba de a dos, corrida 119, y locales 120–122):**
 - **Prueba con dos máquinas:** la copia del save y la partida común andan, y el inventario y la munición se comparten. Arreglado después: el avatar que quedaba agachado, funciones que el mod no reconocía en Windows (ASLR), avisos de guardado vacíos y la escotilla que quedaba ocupada por el avatar. "Armas de a una" se deja de usar: los dos tienen todas las armas y la reserva de munición es común.

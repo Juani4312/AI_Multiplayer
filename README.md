@@ -94,6 +94,6 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 
 ## Estado actual y siguiente paso
 
-- **Último (2026-11-18):** menú "Coop" (antes Extras) con la dificultad del coop, que la elige el host y endurece al Alien sobre la dificultad del juego; con el host caído, el cliente guarda en una terminal y su save pasa al host. Verificado en una máquina con el peer.
-- **Siguiente:** prueba de a dos (`work/windows/instructions.md` 8g, DLL `3ea5509b…`).
+- **Último (2026-11-18, tarde):** con el modo caído, un remate de un enemigo (el agarre del Alien) ya no deja la pantalla negra: después de la animación, el caído recupera la imagen y el control, y el Alien lo ignora mientras está caído (se va a los conductos; al revivir lo vuelve a cazar). Avisos con el diálogo "Warning" del juego (la terminal bloqueada por el guardado exigente dice por qué). Verificado en una máquina con el save `alien`.
+- **Siguiente:** prueba de a dos (`work/windows/instructions.md` 8g, DLL `b4de9984…`).
 - Detalle y pendientes: `work/PROGRESS.md`. Historial de sesiones: `work/HISTORIAL.md`.

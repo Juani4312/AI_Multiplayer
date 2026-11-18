@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-18 tarde (sesión local, corridas 134–137). Papito en modo prueba (`alien`) mientras dure la sesión; al cerrar, `mode.sh play`. Para la próxima prueba de a dos (8g), volver a poner a papito como host con `mode.sh test safezone --cfg "AIMP_NET=host;..."` (la cfg completa está en LOG.md, 2026-11-18 23:00)._
+_Última actualización: 2026-11-18 tarde (sesión local, corridas 134–147). Al cerrar, `mode.sh play`: partida del usuario restaurada y mod desinstalado. Para la próxima prueba de a dos (8g), volver a poner a papito como host con `mode.sh test safezone --cfg "AIMP_NET=host;..."` (la cfg completa está en LOG.md, 2026-11-18 23:00)._
 
 Hecho en la sesión de la tarde (detalle en NOTES.md, "Pantalla negra al caer por un remate"):
 - **pantalla negra al caer** (problema 4 de la corrida 119): reproducida con el save `alien` (el Alien remata al caído). Causa: el remate deja al jugador en la acción de muerte (`Character+0x36C`, vtable rva `0xEAE690`) y un fundido a negro (singleton `0x019D0970`, `+0x1B48`). **Arreglo** (`death.c`, con `AIMP_COOP_DOWNED=1`): 4 s después de un remate, `FUN_00658080` (locomoción del jugador) y opacidad 0: se ve el remate y después el caído vuelve a ver y a moverse. Verificado (corridas 136–137). Mientras dura el caído, su facción pasa a la del Alien: el Alien lo deja de tomar como enemigo, se suelta del remate y se va a los conductos; al revivir se restaura y vuelve a cazarlo (corridas 140–147);
@@ -18,7 +18,8 @@ Hecho en la sesión anterior (2026-11-18, corridas 123–133): dificultad del ju
 - sentir la dificultad del coop jugando con el save `alien` (el efecto solo se verificó en memoria); sumar los sentidos del ALIEN (bloque por plantilla) si hace falta;
 - interacciones del mundo (robot, compuertas): identificar la entidad del robot con la traza de pines de 8g y sincronizar su estado;
 - remates de humanos y androides con el modo caído (la regla los cubre si pasan por `FUN_007d0c10`; falta verlo);
-- avisos que no pausen (compañero caído, copia del save): falta un mensaje no modal (subtítulos, objetivo o `PopupMessage`, que la maneja Flash);
+- avisos que no pausen (compañero caído, copia del save): falta un mensaje no modal (el cartel de recogidas no se dibujó; quedan subtítulos, objetivo o `PopupMessage`, que la maneja Flash);
+- con el caído en la facción del Alien: ver qué hacen los humanos hostiles y los androides (prueba de a dos o un save con humanos);
 - más opciones en el menú Coop (que un botón recorra varias, o habilitar los botones de Extras ocultos en PC: DESIGN_CONFIG_MENU);
 - a futuro: ruido compartido con histéresis, varios Aliens, desangrado (DESIGN_DIFFICULTY); Alien compartido (DESIGN_ALIEN); revivir en checkpoints; avatar mujer.
 
