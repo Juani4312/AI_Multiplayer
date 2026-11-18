@@ -3,18 +3,24 @@
   en Windows (laptop de pruebas). Compatible con PowerShell 5.1 (Windows 10).
 
   Uso, desde la raíz del repo:
-    powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action check
-    powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Net none
-    powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Net join -Peer 100.x.y.z:47811
+    powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action check [-Peer 100.x.y.z:47811]
+    powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Preset host
+    powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Preset join -Peer 100.x.y.z:47811
+    powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action verify      (con el juego abierto)
     powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action collect -Tag primera
     powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action revert
+  También: -Action install -Net none|host|join [-Peer ...] [-Ghost 3] [-Extra AIMP_X=1,AIMP_Y=2] (sin preset).
 
+  -Preset usa la configuración recomendada de mod\dist\aimp-<preset>.cfg; -Extra agrega o reemplaza claves.
   "-ExecutionPolicy Bypass" vale solo para ese proceso: no cambia la configuración del sistema.
-  Todo lo que hace se agrega al final de work\windows\report.md. Los logs van a work\windows\logs\.
+  Todo lo que hace se agrega a un informe: -Report <archivo>; por defecto work\windows\report.md en la laptop de
+  pruebas (papulaptop) e instalacion-informe.md (en la raíz, ignorado por git) en cualquier otra máquina.
   En la carpeta del juego solo escribe winmm.dll y aimp.cfg (y "revert" los saca).
 #>
 param(
-    [ValidateSet('check', 'install', 'collect', 'revert')] [string]$Action = 'check',
+    [ValidateSet('check', 'install', 'verify', 'collect', 'revert')] [string]$Action = 'check',
+    [ValidateSet('', 'host', 'join')] [string]$Preset = '',
+    [string]$Report = '',
     [ValidateSet('none', 'join', 'host')] [string]$Net = 'none',
     [string]$Peer = '',
     [ValidateRange(0, 3)] [int]$Ghost = 0,
@@ -23,7 +29,10 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$Report = Join-Path $PSScriptRoot 'report.md'
+if (-not $Report) {
+    if ($env:COMPUTERNAME -eq 'PAPULAPTOP') { $Report = Join-Path $PSScriptRoot 'report.md' }
+    else { $Report = Join-Path $Root 'instalacion-informe.md' }
+}
 $LogsOut = Join-Path $PSScriptRoot 'logs'
 $ExpectedSha = 'DDE66521798AAE8C39ED4E7A3400F561FCECFFF83619D1426B9E0CEDF5819A90'
 $DistDll = Join-Path $Root 'mod\dist\winmm.dll'
@@ -112,13 +121,18 @@ function Do-Check {
     if ($ts) {
         $ver = (Invoke-Native $ts @('version') | Select-Object -First 1)
         $ip = (Invoke-Native $ts @('ip', '-4') | Select-Object -First 1)
-        $host4 = (Invoke-Native $ts @('ip', '-4', 'papito') | Select-Object -First 1)
-        Out-Report "- Tailscale $ver; IP de esta laptop: $ip; IP de 'papito' (la máquina Linux, host): $host4"
+        Out-Report "- Tailscale $ver; IP de esta máquina: $ip"
         Out-Report '```text'
         (Invoke-Native $ts @('status') | Select-Object -First 10) | ForEach-Object { Out-Report $_ }
         Out-Report '```'
     } else {
-        Out-Report '- Tailscale: **no instalado** (hace falta para la prueba de red).'
+        Out-Report '- Tailscale: **no instalado** (hace falta para jugar por internet sin abrir puertos).'
+    }
+    if ($Peer) {
+        $peerHost = ($Peer -split ':')[0]
+        $ok = Test-Connection -ComputerName $peerHost -Count 2 -Quiet -ErrorAction SilentlyContinue
+        if ($ok) { Out-Report "- El host ($peerHost) responde al ping." }
+        else { Out-Report "- **El host ($peerHost) no responde al ping**: revisar Tailscale (los dos conectados, la máquina compartida) o la IP." }
     }
     $fw = Get-NetFirewallProfile | ForEach-Object { "$($_.Name)=$($_.Enabled)" }
     Out-Report "- Firewall de Windows (perfiles): $($fw -join ', ')"
@@ -139,7 +153,15 @@ function Do-Install {
     if ((Test-Path $target) -and -not (Test-Ours $target)) { throw 'Ya hay un winmm.dll ajeno en la carpeta del juego: no lo piso.' }
     Copy-Item $DistDll $target -Force
     $cfg = @('# aimp.cfg generado por work\windows\aimp_check.ps1')
-    if ($Net -eq 'join') {
+    if ($Preset) {
+        $presetFile = Join-Path $Root "mod\dist\aimp-$Preset.cfg"
+        if (-not (Test-Path $presetFile)) { throw "Falta $presetFile (hacer git pull)." }
+        if ($Preset -eq 'join' -and -not $Peer) { throw 'Con -Preset join hace falta -Peer ip:puerto (la IP de Tailscale del host, puerto 47811).' }
+        foreach ($line in (Get-Content $presetFile)) {
+            if ($line -match '^AIMP_NET_PEER=' -and $Peer) { $line = "AIMP_NET_PEER=$Peer" }
+            $cfg += $line
+        }
+    } elseif ($Net -eq 'join') {
         if (-not $Peer) { throw 'Con -Net join hace falta -Peer ip:puerto (IP de Tailscale de la máquina Linux).' }
         $cfg += 'AIMP_NET=join'
         $cfg += "AIMP_NET_PEER=$Peer"
@@ -148,19 +170,24 @@ function Do-Install {
     }
     if ($Ghost -gt 0) {
         # Fase 4 (experimental): 3 = un NPC existente hace de avatar del otro jugador.
+        $cfg = @($cfg | Where-Object { $_ -notmatch '^AIMP_GHOST=' })
         $cfg += "AIMP_GHOST=$Ghost"
     }
     # Con -File, '-Extra A=1,B=1' llega como un solo string: se separa por comas.
     foreach ($kv in @($Extra | ForEach-Object { $_ -split ',' } | Where-Object { $_ -ne '' })) {
         # Claves adicionales, p. ej. -Extra AIMP_SYNC_USE=1 (fase 5). Solo las AIMP_*.
         if ($kv -notmatch '^AIMP_[A-Z0-9_]+=') { throw "-Extra espera AIMP_CLAVE=valor (vino '$kv')." }
+        # vale la primera aparición de cada clave: se saca la del preset antes de agregarla
+        $key = ($kv -split '=')[0]
+        $cfg = @($cfg | Where-Object { $_ -notmatch "^$key=" })
         $cfg += $kv
     }
     Set-Content -Path (Join-Path $game 'aimp.cfg') -Value $cfg -Encoding ASCII
     Out-Report ''
     Out-Report "## Instalación ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
     Out-Report "- Copiado ``winmm.dll`` (SHA-256 ``$have``) a ``$game``."
-    Out-Report "- ``aimp.cfg``: $(($cfg | Select-Object -Skip 1) -join '; ')$(if ($cfg.Count -eq 1) { '(sin red)' })"
+    Out-Report "- ``aimp.cfg``: $(($cfg | Select-Object -Skip 1 | Where-Object { $_ -notmatch '^#' }) -join '; ')$(if ($cfg.Count -eq 1) { '(sin red)' })"
+    Out-Report '- Siguiente: abrir el juego (hasta el menú principal) y correr `-Action verify`.'
     Out-Report '- Para deshacer: `-Action revert`.'
 }
 
@@ -169,7 +196,7 @@ function Do-Collect {
     Out-Report "## Resultado: $Tag ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
     $log = Join-Path $AimpDir 'aimp.log'
     if (-not (Test-Path $log)) {
-        Out-Report "- **No hay ``$log``**: el mod no cargó. Causas posibles: winmm en KnownDLLs, la DLL no está al lado de AI.exe, o el juego no llegó a arrancar."
+        Out-Report "- **No hay ``$log``**: el mod no cargó. Con el juego abierto, `-Action verify` dice por qué."
     } else {
         New-Item -ItemType Directory -Force -Path $LogsOut | Out-Null
         $dest = Join-Path $LogsOut ("aimp-{0}-{1}.log" -f $Tag, (Get-Date -Format 'yyyyMMdd-HHmmss'))
@@ -201,6 +228,67 @@ function Do-Collect {
     }
 }
 
+# Con el juego abierto: ¿cargó el mod? Si no, por qué (Windows 11: Smart App Control / Integridad de código, o la
+# winmm del sistema ya cargada). AI.exe es de 32 bits: sus módulos solo se ven desde un PowerShell de 32 bits.
+function Do-Verify {
+    Out-Report ''
+    Out-Report "## Verificación ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
+    $os = Get-CimInstance Win32_OperatingSystem
+    Out-Report "- Windows: $($os.Caption) $($os.Version) (build $($os.BuildNumber))"
+    $p = Get-Process -Name AI -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $p) {
+        Out-Report '- **El juego no está abierto.** Abrirlo desde Steam hasta el menú principal y repetir `-Action verify`.'
+        return
+    }
+    $game = Split-Path $p.Path
+    $ours = Join-Path $game 'winmm.dll'
+    Out-Report "- AI.exe abierto (pid $($p.Id)) en ``$game``"
+    if ([Environment]::Is64BitProcess) {
+        $ps32 = Join-Path $env:WINDIR 'SysWOW64\WindowsPowerShell\v1.0\powershell.exe'
+        $loaded = (Invoke-Native $ps32 @('-NoProfile', '-Command', "(Get-Process -Id $($p.Id)).Modules | Where-Object { `$_.ModuleName -eq 'winmm.dll' } | ForEach-Object { `$_.FileName }") | Select-Object -First 1)
+    } else {
+        $loaded = ($p.Modules | Where-Object { $_.ModuleName -eq 'winmm.dll' } | Select-Object -First 1).FileName
+    }
+    Out-Report "- winmm.dll cargada en el juego: ``$loaded``"
+    $logs = @((Join-Path $AimpDir 'aimp.log'), (Join-Path $env:TEMP 'aimp.log')) | Where-Object { Test-Path $_ }
+    $log = $logs | Where-Object { (Get-Item $_).LastWriteTime -ge $p.StartTime.AddSeconds(-5) } | Select-Object -First 1
+    if ($loaded -and ($loaded -ieq $ours)) {
+        Out-Report '- **El mod cargó** (Windows usa la winmm.dll de la carpeta del juego).'
+        if (-not $log) { Out-Report '- **Pero no hay log de esta corrida** en %LOCALAPPDATA%\AI_Multiplayer ni en %TEMP%: revisar permisos de esas carpetas.'; return }
+        Out-Report "- Log: ``$log``"
+        $pat = 'AI_Multiplayer |config:|plataforma:|build|FATAL|ERROR|NET |SESSION|SAVESYNC|UI: '
+        Out-Report '```text'
+        Get-Content $log -TotalCount 12 | ForEach-Object { Out-Report $_ }
+        Out-Report '...'
+        Select-String -Path $log -Pattern $pat | Select-Object -Last 12 | ForEach-Object { Out-Report $_.Line }
+        Out-Report '```'
+        if (Select-String -Path $log -Pattern 'build NO reconocida' -Quiet) { Out-Report '- **Build del juego no reconocida**: el mod queda inactivo. Verificar integridad de los archivos en Steam.' }
+        if (Select-String -Path $log -Pattern 'recibidos [1-9]' -Quiet) { Out-Report '- **Red: hay datos del otro jugador.**' }
+        elseif (Select-String -Path $log -Pattern 'NET ' -Quiet) { Out-Report '- Red: todavía sin datos del otro jugador (¿el otro tiene el juego abierto? ¿IP y Tailscale bien?).' }
+        return
+    }
+    Out-Report '- **El mod NO cargó**: Windows usa otra winmm.dll. Diagnóstico:'
+    if (-not (Test-Path $ours)) { Out-Report "  - **No está** ``$ours``: copiar la DLL (o el antivirus la borró: ver Seguridad de Windows → Historial de protección)."; return }
+    $kd = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs'
+    $inKd = $kd.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' -and "$($_.Value)" -match '^winmm(\.dll)?$' }
+    if ($inKd) { Out-Report '  - winmm está en KnownDLLs: Windows siempre usa la del sistema. El proxy por winmm no puede andar en esta máquina.' }
+    else { Out-Report '  - winmm no está en la lista de KnownDLLs.' }
+    $sac = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy' -ErrorAction SilentlyContinue).VerifiedAndReputablePolicyState
+    $sacTxt = switch ("$sac") { '0' { 'apagado' } '1' { '**ACTIVADO**' } '2' { '**en evaluación**' } default { 'no figura (Windows 10 o sin el dato)' } }
+    Out-Report "  - Smart App Control: $sacTxt"
+    try {
+        $ci = Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -MaxEvents 300 -ErrorAction Stop |
+            Where-Object { $_.TimeCreated -ge $p.StartTime.AddMinutes(-1) -and $_.Message -match 'winmm|Alien Isolation' } | Select-Object -First 5
+        if ($ci) {
+            Out-Report '  - **Integridad de código bloqueó archivos del juego** (causa probable: falta de firma digital):'
+            Out-Report '```text'
+            $ci | ForEach-Object { Out-Report ("{0} id={1}: {2}" -f $_.TimeCreated, $_.Id, (($_.Message -split "`n")[0..2] -join ' | ')) }
+            Out-Report '```'
+        } else { Out-Report '  - Sin eventos de Integridad de código sobre winmm desde que se abrió el juego.' }
+    } catch { Out-Report '  - No se pudo leer el registro de Integridad de código (correr PowerShell como administrador para verlo).' }
+    Out-Report '  - Si no hubo bloqueo: la winmm del sistema probablemente se cargó antes que la del juego (pasa en Windows 11 nuevos). Confirmarlo con Process Monitor (filtros Process Name is AI.exe y Path contains winmm: si nunca busca en la carpeta del juego, es eso). Ver INSTALAR_CON_CLAUDE.md.'
+}
+
 function Do-Revert {
     $game = Find-Game
     if (-not $game) { throw 'Juego no encontrado.' }
@@ -216,10 +304,11 @@ function Do-Revert {
     Out-Report "- Los logs en ``$AimpDir`` quedan (se pueden borrar a mano)."
 }
 
-if (-not (Test-Path $Report)) { Set-Content -Path $Report -Value '# Reporte de pruebas en Windows (laptop)' -Encoding UTF8 }
+if (-not (Test-Path $Report)) { Set-Content -Path $Report -Value '# Informe de instalación del mod AI_Multiplayer (aimp_check.ps1)' -Encoding UTF8 }
 switch ($Action) {
     'check' { Do-Check }
     'install' { Do-Install }
+    'verify' { Do-Verify }
     'collect' { Do-Collect }
     'revert' { Do-Revert }
 }
