@@ -3,22 +3,20 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-18 (sesión local, corridas 123–133). Al cerrar, `mode.sh play`: partida del usuario restaurada y mod desinstalado. Para la próxima prueba de a dos (8g), volver a poner a papito como host con `mode.sh test safezone --cfg "AIMP_NET=host;..."` (la cfg completa está en LOG.md, 2026-11-18)._
+_Última actualización: 2026-11-18 tarde (sesión local, corridas 134–137). Papito en modo prueba (`alien`) mientras dure la sesión; al cerrar, `mode.sh play`. Para la próxima prueba de a dos (8g), volver a poner a papito como host con `mode.sh test safezone --cfg "AIMP_NET=host;..."` (la cfg completa está en LOG.md, 2026-11-18 23:00)._
 
-Hecho en esta sesión (detalle en NOTES.md, 2026-11-18):
-- **dificultad del juego** (`diff.c`, corridas 123–125): `FUN_006f8b00` carga las 5 dificultades al arrancar (orden Easy, Medium, Hard, Nightmare, Novice); bloque del Alien con modificadores aditivos; la partida del usuario es Nightmare;
-- **guardar desde el mod** (`gamesave.c`, corrida 126): `FUN_007a90b0` escribe el checkpoint que ya está en memoria, no el estado del momento (por eso "host caído" usa la opción b);
-- **menú "Coop"** (`ui.c`, corridas 127–128): "Extras" → "Coop"; su botón (Credits, hook de `show_credits_screen` `FUN_0082aa60`) es "Dificultad del coop: Normal/Difícil/Pesadilla", guardada en `opciones.txt`;
-- **dificultad del coop con efecto** (`diff.c`, corrida 129): cada escalón suma un salto Hard→Nightmare sobre las 5 estructuras, desde la copia base; la decide el host (`AIMP_EVT_OPTIONS`);
-- **host caído: guarda el cliente** (`savesync` inverso, `XFER_REV`, corridas 130–133): la terminal del cliente se abre con el host caído; su save pasa al host (backup, archivos y checkpoint en memoria) y el game over del host lo carga. Verificado con el peer de los dos lados; el disparo desde una terminal real, solo en tests;
-- herramientas: `memsrv` `SAVE` y `PUSH`, `AIMP_TRACE_UI_CALLBACKS`, `aimp_peer.py --push-save/--accept-push`;
-- `mod/dist` = `3ea5509b…`; instrucciones 8g al día.
+Hecho en la sesión de la tarde (detalle en NOTES.md, "Pantalla negra al caer por un remate"):
+- **pantalla negra al caer** (problema 4 de la corrida 119): reproducida con el save `alien` (el Alien remata al caído). Causa: el remate deja al jugador en la acción de muerte (`Character+0x36C`, vtable rva `0xEAE690`) y un fundido a negro (singleton `0x019D0970`, `+0x1B48`). **Arreglo** (`death.c`, con `AIMP_COOP_DOWNED=1`): 4 s después de un remate, `FUN_00658080` (locomoción del jugador) y opacidad 0: se ve el remate y después el caído vuelve a ver y a moverse. Verificado (corridas 136–137);
+- `AIMP_TRACE_DMG` (golpes y muertes del jugador), `memsrv LOCO`; REA necesita JDK 27 (Ghidra 12.2);
+- `mod/dist` = `df452eb1…`; instrucciones 8g al día.
+
+Hecho en la sesión anterior (2026-11-18, corridas 123–133): dificultad del juego y del coop (`diff.c`, menú "Coop"), guardar desde el mod (`gamesave.c`), host caído: guarda el cliente (`savesync` inverso).
 
 **Siguiente:**
-- **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `3ea5509b`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, pantalla negra al caer, agachado, escotilla;
+- **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `df452eb1`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
 - sentir la dificultad del coop jugando con el save `alien` (el efecto solo se verificó en memoria); sumar los sentidos del ALIEN (bloque por plantilla) si hace falta;
 - interacciones del mundo (robot, compuertas): identificar la entidad del robot con la traza de pines de 8g y sincronizar su estado;
-- pantalla negra al quedar caído por un enemigo (8g: qué lo mató);
+- remates de humanos y androides con el modo caído (la regla los cubre si pasan por `FUN_007d0c10`; falta verlo);
 - aviso en pantalla del guardado exigente (el prompt de la terminal no tiene texto; alternativa: el diálogo "Overwrite save data?");
 - más opciones en el menú Coop (que un botón recorra varias, o habilitar los botones de Extras ocultos en PC: DESIGN_CONFIG_MENU);
 - a futuro: ruido compartido con histéresis, varios Aliens, desangrado (DESIGN_DIFFICULTY); Alien compartido (DESIGN_ALIEN); revivir en checkpoints; avatar mujer.
