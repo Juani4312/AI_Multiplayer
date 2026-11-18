@@ -6,15 +6,15 @@
 _Última actualización: 2026-11-18 tarde (sesión local, corridas 134–137). Papito en modo prueba (`alien`) mientras dure la sesión; al cerrar, `mode.sh play`. Para la próxima prueba de a dos (8g), volver a poner a papito como host con `mode.sh test safezone --cfg "AIMP_NET=host;..."` (la cfg completa está en LOG.md, 2026-11-18 23:00)._
 
 Hecho en la sesión de la tarde (detalle en NOTES.md, "Pantalla negra al caer por un remate"):
-- **pantalla negra al caer** (problema 4 de la corrida 119): reproducida con el save `alien` (el Alien remata al caído). Causa: el remate deja al jugador en la acción de muerte (`Character+0x36C`, vtable rva `0xEAE690`) y un fundido a negro (singleton `0x019D0970`, `+0x1B48`). **Arreglo** (`death.c`, con `AIMP_COOP_DOWNED=1`): 4 s después de un remate, `FUN_00658080` (locomoción del jugador) y opacidad 0: se ve el remate y después el caído vuelve a ver y a moverse. Verificado (corridas 136–137). El Alien que remató queda retenido en su mitad del remate mientras el jugador está caído (suelto lo remata en bucle) y se suelta al revivir (corridas 140–142);
-- `AIMP_TRACE_DMG` (golpes y muertes del jugador), `memsrv LOCO`, `ACT`, `WD` (retirada del Alien, como `NPC_WithdrawAlien`); REA necesita JDK 27 (Ghidra 12.2);
+- **pantalla negra al caer** (problema 4 de la corrida 119): reproducida con el save `alien` (el Alien remata al caído). Causa: el remate deja al jugador en la acción de muerte (`Character+0x36C`, vtable rva `0xEAE690`) y un fundido a negro (singleton `0x019D0970`, `+0x1B48`). **Arreglo** (`death.c`, con `AIMP_COOP_DOWNED=1`): 4 s después de un remate, `FUN_00658080` (locomoción del jugador) y opacidad 0: se ve el remate y después el caído vuelve a ver y a moverse. Verificado (corridas 136–137). Mientras dura el caído, su facción pasa a la del Alien: el Alien lo deja de tomar como enemigo, se suelta del remate y se va a los conductos; al revivir se restaura y vuelve a cazarlo (corridas 140–147);
+- `AIMP_TRACE_DMG` (golpes y muertes del jugador), `memsrv LOCO`, `ACT`, `WD` (retirada del Alien, como `NPC_WithdrawAlien`), `CALL` (thiscall de prueba); REA necesita JDK 27 (Ghidra 12.2);
 - **avisos dentro del juego** (`ui_message`, `ui.c`, corrida 138): el diálogo "Warning" del juego (`FUN_0077c9e0`, el de "Saving is disabled") con un texto propio por el hook de textos. La terminal bloqueada por el guardado exigente ahora lo avisa ("Coop: no se puede guardar acá: …"). **Pausa el juego local hasta el OK**: usarlo solo después de una acción del jugador. `memsrv MSG <texto>`;
-- `mod/dist` = `9454e2a9…`; instrucciones 8g al día.
+- `mod/dist` = `b4de9984…`; instrucciones 8g al día.
 
 Hecho en la sesión anterior (2026-11-18, corridas 123–133): dificultad del juego y del coop (`diff.c`, menú "Coop"), guardar desde el mod (`gamesave.c`), host caído: guarda el cliente (`savesync` inverso).
 
 **Siguiente:**
-- **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `9454e2a9`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
+- **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `b4de9984`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
 - sentir la dificultad del coop jugando con el save `alien` (el efecto solo se verificó en memoria); sumar los sentidos del ALIEN (bloque por plantilla) si hace falta;
 - interacciones del mundo (robot, compuertas): identificar la entidad del robot con la traza de pines de 8g y sincronizar su estado;
 - remates de humanos y androides con el modo caído (la regla los cubre si pasan por `FUN_007d0c10`; falta verlo);

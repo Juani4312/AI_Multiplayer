@@ -304,11 +304,38 @@ static void send(uint32_t kind, uint32_t player)
         log_printf("DEATH: avisado al otro: %s", kind == COOP_DOWNED ? "caído" : kind == COOP_REVIVED ? "revivido" : "revivir");
 }
 
+/* Facción del caído (corrida 146): Character+0x2E4 es la facción (FUN_007c4780 la cruza con la máscara de relaciones
+ * de [g_root+0x34]; jugador 1, Alien 3). Con la del Alien, el Alien deja de tomar al caído como enemigo: suelto
+ * después del remate se fue a los conductos sin volver a rematarlo. Se pone al caer y se restaura al revivir.
+ * AIMP_COOP_DOWNED_FACTION (3 por defecto; -1 = no tocarla: entonces el atacante queda retenido, corrida 142). */
+#define CHR_FACTION 0x2E4
+static int g_downed_faction;
+static uint32_t g_saved_faction, g_faction_player;
+static void faction_downed(uint32_t player)
+{
+    uint32_t f = 0, nf = (uint32_t)g_downed_faction;
+    if (g_downed_faction < 0 || g_faction_player || !mem_u32(player + CHR_FACTION, &f))
+        return;
+    g_saved_faction = f;
+    g_faction_player = player;
+    mem_write(player + CHR_FACTION, &nf, 4);
+    log_printf("DEATH: facción del caído %u -> %u (la del Alien: deja de ser su enemigo)", f, nf);
+}
+static void faction_restore(const char *why)
+{
+    if (!g_faction_player)
+        return;
+    mem_write(g_faction_player + CHR_FACTION, &g_saved_faction, 4);
+    log_printf("DEATH: %s: facción del jugador restaurada (%u)", why, g_saved_faction);
+    g_faction_player = 0;
+}
+
 /* Los dos caídos: game over normal. Se saca el "no puede morir" y se lo mata como lo hace el juego. */
 static void both_down(uint32_t player)
 {
     uint8_t z = 0;
     log_printf("DEATH: los dos jugadores están caídos: game over");
+    faction_restore("game over");
     mem_write(player + CHR_NO_DEATH, &z, 1);
     uint8_t a = 0, b = 0;
     mem_u8(player + CHR_INVINC_A, &a);
@@ -359,6 +386,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
         g_downed = 0;
         g_held_attacker = 0;
         g_kill_at = 0;
+        g_faction_player = 0; /* el personaje es otro: no hay nada que restaurar */
     }
     if (!g_downed_mode || !player || now - g_last_chk < freq / 10)
         return;
@@ -385,6 +413,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
     if (!g_downed && hp <= 1) {
         g_downed = 1;
         set_flags(player, 1);
+        faction_downed(player);
         log_printf("DEATH: el jugador quedó caído (salud %u de %u): invencible; en coop sigue el compañero", hp, mx);
         send(COOP_DOWNED, player);
         if (g_remote_downed) {
@@ -402,6 +431,8 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
             death_player_to_loco(player, "fin del remate")) {
             clear_fade();
             hold_attacker();
+            if (g_faction_player) /* con la facción del Alien, el atacante se suelta y se va (corrida 146) */
+                release_attacker("fin del remate (atacante)");
             if (g_downed)
                 set_flags(player, 1);
         } else
@@ -411,6 +442,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
         g_revive_pending = 0;
         g_downed = 0;
         release_attacker("revivido (atacante)");
+        faction_restore("revivido");
         set_flags(player, 0);
         if (mx)
             mem_write(player + CHR_HEALTH, &mx, 2);
@@ -430,6 +462,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
         g_revive_time = fa.ftLastWriteTime;
         g_downed = 0;
         release_attacker("revivido (atacante)");
+        faction_restore("revivido");
         set_flags(player, 0);
         if (mx)
             mem_write(player + CHR_HEALTH, &mx, 2);
@@ -499,6 +532,7 @@ void death_install(AimpNet *net)
     }
     g_death_act_ms = aimp_env_int(L"AIMP_COOP_DEATH_ACT_MS", 4000);
     g_withdraw_cfg = aimp_env_int(L"AIMP_COOP_ALIEN_WITHDRAW", 0);
+    g_downed_faction = aimp_env_int(L"AIMP_COOP_DOWNED_FACTION", 3);
     if (aimp_env_str(L"AIMP_COOP_REVIVE_FILE", g_revive_file, MAX_PATH)) {
         WIN32_FILE_ATTRIBUTE_DATA fa;
         if (GetFileAttributesExW(g_revive_file, GetFileExInfoStandard, &fa))
