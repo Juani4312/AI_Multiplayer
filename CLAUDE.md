@@ -14,3 +14,4 @@ Reglas clave (el detalle está en prompt.md):
 - La partida del usuario es una run sin morir: probá siempre con `work/scripts/mode.sh test` (save de prueba) y al terminar `mode.sh play` (restaura su partida y saca el mod). Nunca pruebes sobre `saves/current`.
 - Pedí confirmación antes de instalar, descargar, ejecutar el juego o cambiar configuración.
 - Al cerrar cada bloque de trabajo, actualizá `work/PROGRESS.md` y `work/NOTES.md` y hacé commit y push.
+- Los commits van con la cuenta personal del usuario (la de los commits existentes), nunca con la de la facultad: el repo tiene `user.name`/`user.email` en su config local; verificalo con `git config user.email` antes de commitear.

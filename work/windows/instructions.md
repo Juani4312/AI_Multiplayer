@@ -32,6 +32,8 @@ Sos una sesión de Claude Code en la **laptop de pruebas del usuario (Windows 10
 ## 0. Preparación
 
 1. Repo: si no está clonado, `git clone https://github.com/Juani4312/AI_Multiplayer.git`. Es privado: el usuario se loguea en GitHub. Si ya está, `git pull`.
+   - **Historial reescrito el 2026-11-18** (todos los commits pasaron a la cuenta personal del usuario): si `git pull` dice "refusing to merge unrelated histories" o que las ramas divergieron, la copia es anterior. Re-sincronizar con `git fetch origin` y `git reset --hard origin/main` (lo pidió el usuario; no había nada sin subir en la laptop).
+   - **Commits con la cuenta personal, no la de la facultad:** en este repo, `git config user.name "Juan Ignacio Garces"` y `git config user.email (git log -1 --format=%ae origin/main)` (PowerShell; toma el mail de los commits de papito). Verificar con `git config user.email` antes del primer commit.
    - Sin git: el usuario puede bajar el zip desde GitHub. En ese caso, el reporte se devuelve por Taildrop a `papito` en lugar de por git.
 2. Todo se corre desde la raíz del repo, con PowerShell:
    ```
