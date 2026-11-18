@@ -16,6 +16,8 @@ void death_install(AimpNet *net);
 int death_coop_enabled(void);
 /* 1 si el otro jugador avisó que está caído. */
 int death_remote_is_downed(void);
+/* Host: 1 si está caído o lo revivió el compañero hace menos de 2 min (savesync acepta entonces el save del cliente). */
+int death_push_ok(void);
 void death_remote_event(const AimpEvt *e);
 /* La entidad Checkpoint de los scripts terminó de guardar (pins.c, cualquier thread): en el próximo frame, si el
  * compañero está caído, se lo revive como con la terminal de guardado. */

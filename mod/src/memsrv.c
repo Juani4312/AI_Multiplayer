@@ -11,6 +11,7 @@
  *   TP <x> <y> <z> <yaw>  (solo con AIMP_MEMSRV_TEST=1) teletransporta al jugador 0 (FUN_007c6330)
  *   W <hex> <hexbytes> (solo con AIMP_MEMSRV_TEST=1) escribe hasta 256 bytes en memoria escribible
  *   SAVE <a1> <a2> <a3> <a4>  (solo con AIMP_MEMSRV_TEST=1) llama al guardado del juego (FUN_007a90b0)
+ *   PUSH              (solo con AIMP_MEMSRV_TEST=1) cliente: arma el envío del próximo guardado al host (savesync inverso)
  *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
  *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
  *   KILL <hex>        (solo con AIMP_MEMSRV_TEST=1) mata al personaje como lo hace el juego: FUN_007d0c10 thiscall(chr,
@@ -22,6 +23,7 @@
 #include "game.h"
 #include "log.h"
 #include "gamesave.h"
+#include "savesync.h"
 
 #define IN_MAX  (64 * 1024)
 #define OUT_MAX (4 * 1024 * 1024)
@@ -309,6 +311,11 @@ static void run(char *txt)
             put(line);
             if (ok)
                 log_printf("MEMSRV: W 0x%08x (%u bytes)", a, n);
+        } else if (p[0] == 'P' && p[1] == 'U' && p[2] == 'S' && p[3] == 'H') {
+            /* PUSH: (solo AIMP_MEMSRV_TEST=1) como la terminal de guardado del cliente con el host caído (savesync) */
+            if (g_test)
+                savesync_client_saving();
+            put(g_test ? "PUSH ok\n" : "PUSH NO (AIMP_MEMSRV_TEST)\n");
         } else if (p[0] == 'S' && p[1] == 'A' && p[2] == 'V' && p[3] == 'E' && p[4] == ' ') {
             /* SAVE <a1> <a2> <a3> <a4>: (solo AIMP_MEMSRV_TEST=1) llama al guardado del juego (gamesave.c) */
             q = p + 5;

@@ -125,15 +125,16 @@ def lz_dec(b, raw):
 class SaveXfer:
     """Un extremo de savesync: 'serve' (host) o 'fetch' (cliente)."""
 
-    def __init__(self, role, d, send):
-        self.role, self.dir, self.send = role, d, send
+    def __init__(self, role, d, send, rev=False):
+        # rev: sentido inverso (bit 0x80 en op): el cliente sirve su save al host caído (savesync_new_rev)
+        self.role, self.dir, self.send, self.rev = role, d, send, 0x80 if rev else 0
         self.xid, self.files, self.blob, self.sent_at, self.acked = 0, [], b"", [], []
         self.state, self.last_req, self.got, self.mask, self.t0 = "off", 0.0, None, 0, 0.0
         self.sends = self.resends = 0
         os.makedirs(d, exist_ok=True)
 
     def hdr(self, op, n=0):
-        return struct.pack(XHDR, MAGIC, VERSION, XFER, op, n, self.xid)
+        return struct.pack(XHDR, MAGIC, VERSION, XFER, op | self.rev, n, self.xid)
 
     def local(self):
         out = []
@@ -147,10 +148,10 @@ class SaveXfer:
         """serve: pasa a servir los .ais de d y avisa "guardé" (guardar juntos, XFER_NOTIFY)."""
         self.dir, self.xid, self.blob = d, 0, b""
         self.nseq = (int(time.time() * 1000) << 4 | 2) & 0xFFFFFFFF  # único entre corridas (el cliente descarta repetidos)
-        pkt = struct.pack(XHDR, MAGIC, VERSION, XFER, X_NOTIFY, 0, self.nseq)
+        pkt = struct.pack(XHDR, MAGIC, VERSION, XFER, X_NOTIFY | self.rev, 0, self.nseq)
         for _ in range(3):
             self.send(pkt)
-        print(f"SAVE serve: aviso {self.nseq} (guardé): ahora sirvo {d}")
+        print(f"SAVE serve{' (inverso)' if self.rev else ''}: aviso {self.nseq} (guardé): ahora sirvo {d}")
 
     # host
     def on_host(self, op, xid, data, now):
@@ -204,7 +205,7 @@ class SaveXfer:
             if self.acked[c] or (self.sent_at[c] and now - self.sent_at[c] < 0.25):
                 continue
             chunk = self.blob[c * CHUNK:(c + 1) * CHUNK]
-            self.send(struct.pack(XDATA, MAGIC, VERSION, XFER, X_DATA, 0, self.xid, c, n, total, len(chunk)) + chunk)
+            self.send(struct.pack(XDATA, MAGIC, VERSION, XFER, X_DATA | self.rev, 0, self.xid, c, n, total, len(chunk)) + chunk)
             if self.sent_at[c]:
                 self.resends += 1
             self.sent_at[c] = now
@@ -296,6 +297,8 @@ class SaveXfer:
 
     def tick_client(self, now):
         if self.state == "off":
+            if self.rev:
+                return  # inverso: solo después de un aviso del juego
             self.state = "wait"
             print("SAVE fetch: pidiendo los saves del juego")
         if self.state == "wait" and now - self.last_req > 1.0:
@@ -313,6 +316,9 @@ class SaveXfer:
         if len(data) < 12:
             return
         _, _, _, op, _, xid = struct.unpack_from(XHDR, data)
+        if (op & 0x80) != self.rev:
+            return  # el otro sentido
+        op &= 0x7F
         (self.on_host if self.role == "serve" else self.on_client)(op, xid, data, now)
 
     def tick(self, now):
@@ -343,6 +349,9 @@ def main():
     ap.add_argument("--serve-save", help="con --host: carpeta con .ais que el peer le pasa al juego (AIMP_SAVE_SYNC=1)")
     ap.add_argument("--fetch-save", help="con --join: carpeta donde el peer copia los saves del juego host")
     ap.add_argument("--serve-delay", type=float, default=0.0, help="con --serve-save: segundos antes de contestar el pedido")
+    ap.add_argument("--push-save", help="T:DIR con --join: T s después del jugador, el peer (cliente) le manda DIR al juego host "
+                    "en sentido inverso (host caído, savesync_new_rev)")
+    ap.add_argument("--accept-push", help="DIR con --host: el peer (host) recibe en DIR el save que el juego cliente guarda con el host caído")
     ap.add_argument("--serve-after", action="append", default=[],
                     help="T:DIR (con --serve-save): T segundos después del jugador, sirve DIR y avisa que guardó")
     a = ap.parse_args()
@@ -368,6 +377,12 @@ def main():
         xfer = SaveXfer("serve" if a.serve_save else "fetch", a.serve_save or a.fetch_save,
                         lambda pkt: peer and s.sendto(pkt, peer))
         xfer.ready_at = time.monotonic() + a.serve_delay
+    xrev = None
+    if a.push_save:
+        push_t, push_dir = a.push_save.split(":", 1)
+        xrev = SaveXfer("serve", push_dir, lambda pkt: peer and s.sendto(pkt, peer), rev=True)
+    elif a.accept_push:
+        xrev = SaveXfer("fetch", a.accept_push, lambda pkt: peer and s.sendto(pkt, peer), rev=True)
     seq, t0, last_print, last_send = 0, time.monotonic(), 0.0, 0.0
     got, lost, last_seq, last = 0, 0, None, None
     hist = collections.deque()  # (t, pos, yaw, nivel) del jugador del juego, para --replay
@@ -404,9 +419,11 @@ def main():
                     break
                 except ConnectionResetError:
                     continue
-                if len(data) >= 12 and data[5] == XFER and xfer:
+                if len(data) >= 12 and data[5] == XFER and (xfer or xrev):
                     if struct.unpack_from("<I", data)[0] == MAGIC and addr == peer:
-                        xfer.on_packet(data, now)
+                        for x in (xfer, xrev):
+                            if x:
+                                x.on_packet(data, now)
                     continue
                 if len(data) < SIZE:
                     continue
@@ -455,6 +472,11 @@ def main():
                     pos = (cx + a.radius * math.cos(ang), cy, cz + a.radius * math.sin(ang))
                     s.sendto(pack(seq, a.level, pos, math.atan2(math.cos(ang), -math.sin(ang))), peer)
                 last_send = now
+            if xrev and peer and last is not None:
+                xrev.tick(now)
+                if a.push_save and t_player is not None and now - t_player >= float(push_t) and not getattr(xrev, "pushed", False):
+                    xrev.pushed = True
+                    xrev.notify(push_dir)
             if xfer and peer and last is not None:
                 xfer.tick(now)
                 for sa in a.serve_after:

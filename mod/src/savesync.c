@@ -9,6 +9,8 @@
 #define REQ_MS 1000    /* el cliente repite el pedido */
 #define ACK_MS 30
 #define GIVEUP_MS 30000 /* sin novedades de la transferencia: se abandona */
+#define PUSH_SAVE_MS 90000  /* cliente: si el juego no guardó en este tiempo después de la terminal, se desarma */
+#define PUSH_TOTAL_MS 180000 /* cliente: tope para que el host confirme el save mandado */
 
 enum { ST_OFF, ST_WAIT, ST_XFER, ST_DONE, ST_ERR };
 
@@ -70,10 +72,22 @@ struct SaveSync {
     char host_ckpt_name[XFER_NAME];
     int64_t last_ckpt_chk;
     uint32_t ckpt_writes;
+    /* sentido inverso (XFER_REV) */
+    int rev;
+    SaveSync *other; /* la otra instancia (normal <-> inversa) */
+    int hold;        /* normal, cliente: mandando el save propio al host: no pisar el checkpoint ni re-igualar */
+    int push;        /* inversa, cliente: 0 nada, 1 esperando que el juego guarde, 2 avisado al host */
+    int64_t push_at;
+    int (*accept)(void);
 };
 
-static SaveSync g_game;
+static SaveSync g_game, g_game_rev;
 static int g_game_on;
+
+/* sirve (lee y manda) o recibe (escribe): el host sirve en el sentido normal; el cliente, en el inverso */
+static int serving(const SaveSync *s) { return (s->net->mode == 1) != (s->rev != 0); }
+static const char *who_srv(const SaveSync *s) { return s->rev ? "cliente" : "host"; }
+static const char *who_rcv(const SaveSync *s) { return s->rev ? "host" : "cliente"; }
 
 uint32_t savesync_fnv(const void *p, size_t n)
 {
@@ -221,13 +235,13 @@ int savesync_lz_decompress(const uint8_t *in, uint32_t n, uint8_t *out, uint32_t
 }
 
 /* ---- paquetes ---- */
-static void hdr(XferHdr *h, uint8_t op, uint32_t xid, uint8_t n)
+static void hdr(const SaveSync *s, XferHdr *h, uint8_t op, uint32_t xid, uint8_t n)
 {
     aimp_memset(h, 0, sizeof *h);
     h->magic = AIMP_NET_MAGIC;
     h->version = AIMP_NET_VERSION;
     h->type = AIMP_PKT_XFER;
-    h->op = op;
+    h->op = (uint8_t)(op | (s->rev ? XFER_REV : 0));
     h->n = n;
     h->xid = xid;
 }
@@ -235,7 +249,7 @@ static void hdr(XferHdr *h, uint8_t op, uint32_t xid, uint8_t n)
 static void send_simple(SaveSync *s, uint8_t op, const void *extra, int extra_len)
 {
     uint8_t b[sizeof(XferHdr) + 4 + WINDOW / 8];
-    hdr((XferHdr *)b, op, s->xid, 0);
+    hdr(s, (XferHdr *)b, op, s->xid, 0);
     if (extra_len)
         aimp_memcpy(b + sizeof(XferHdr), extra, (size_t)extra_len);
     net_send_raw(s->net, b, (int)sizeof(XferHdr) + extra_len);
@@ -321,6 +335,8 @@ static void free_blob(SaveSync *s)
     s->mask = 0;
 }
 
+static void load_host_ckpt(SaveSync *s);
+
 static void build_manifest(SaveSync *s, int64_t now)
 {
     s->nfiles = 0;
@@ -342,13 +358,13 @@ static void build_manifest(SaveSync *s, int64_t now)
     }
     s->xid = (GetTickCount() << 4) | 1u;
     s->manifest_at = now;
-    log_printf("SAVESYNC host: manifiesto %08x con %d saves", s->xid, s->nfiles);
+    log_printf("SAVESYNC %s: manifiesto %08x con %d saves", who_srv(s), s->xid, s->nfiles);
 }
 
 static void send_manifest(SaveSync *s)
 {
     uint8_t b[sizeof(XferHdr) + XFER_MAX_FILES * sizeof(XferEntry)];
-    hdr((XferHdr *)b, XFER_MANIFEST, s->xid, (uint8_t)s->nfiles);
+    hdr(s, (XferHdr *)b, XFER_MANIFEST, s->xid, (uint8_t)s->nfiles);
     aimp_memcpy(b + sizeof(XferHdr), s->files, (size_t)s->nfiles * sizeof(XferEntry));
     net_send_raw(s->net, b, (int)(sizeof(XferHdr) + (size_t)s->nfiles * sizeof(XferEntry)));
 }
@@ -374,7 +390,7 @@ static int build_blob(SaveSync *s, uint32_t mask)
             return 0;
         int32_t r = s->st.read(s->st.ctx, e->name, raw, (int32_t)e->size);
         if (r != (int32_t)e->size || savesync_fnv(raw, e->size) != e->hash) {
-            log_printf("SAVESYNC host: %s cambió desde el manifiesto (leídos %d de %u): se rehace", e->name, (int)r, e->size);
+            log_printf("SAVESYNC %s: %s cambió desde el manifiesto (leídos %d de %u): se rehace", who_srv(s), e->name, (int)r, e->size);
             xfree(raw);
             return 0;
         }
@@ -395,7 +411,7 @@ static int build_blob(SaveSync *s, uint32_t mask)
     s->sent_at = xalloc(sizeof(int64_t) * (s->total ? s->total : 1));
     s->mask = mask;
     s->base = s->sends = s->resends = 0;
-    log_printf("SAVESYNC host: %u bytes de saves -> %u comprimidos, %u fragmentos", raw_total, off, s->total);
+    log_printf("SAVESYNC %s: %u bytes de saves -> %u comprimidos, %u fragmentos", who_srv(s), raw_total, off, s->total);
     return s->acked && s->sent_at;
 }
 
@@ -404,7 +420,7 @@ static void host_send(SaveSync *s, int64_t now)
     if (!s->blob || !s->total)
         return;
     if (now - s->last_news > ms_ticks(s, GIVEUP_MS)) {
-        log_printf("SAVESYNC host: el cliente no confirma hace %d s: se abandona la transferencia", GIVEUP_MS / 1000);
+        log_printf("SAVESYNC %s: el %s no confirma hace %d s: se abandona la transferencia", who_srv(s), who_rcv(s), GIVEUP_MS / 1000);
         free_blob(s);
         s->xid = 0;
         return;
@@ -416,7 +432,7 @@ static void host_send(SaveSync *s, int64_t now)
         if (s->acked[c] || (s->sent_at[c] && now - s->sent_at[c] < ms_ticks(s, RTO_MS)))
             continue;
         XferData d;
-        hdr(&d.h, XFER_DATA, s->xid, 0);
+        hdr(s, &d.h, XFER_DATA, s->xid, 0);
         d.chunk = c;
         d.total = s->total;
         d.blob_len = s->blob_len;
@@ -436,6 +452,8 @@ static void host_send(SaveSync *s, int64_t now)
 
 static void host_rx(SaveSync *s, const XferHdr *h, const uint8_t *p, int len, int64_t now)
 {
+    if (s->rev && s->push != 2)
+        return; /* cliente: solo sirve el save que guardó con el host caído */
     if (h->op == XFER_REQ) {
         /* el manifiesto se rehace si no hay una transferencia en curso y tiene más de 5 s */
         if (!s->blob && (!s->xid || now - s->manifest_at > s->freq * 5))
@@ -452,7 +470,7 @@ static void host_rx(SaveSync *s, const XferHdr *h, const uint8_t *p, int len, in
         if (s->blob && s->mask == mask)
             return; /* repetido */
         if (!mask) {
-            log_printf("SAVESYNC host: el cliente ya tiene los mismos saves");
+            log_printf("SAVESYNC %s: el %s ya tiene los mismos saves", who_srv(s), who_rcv(s));
             return;
         }
         char list[400];
@@ -461,7 +479,7 @@ static void host_rx(SaveSync *s, const XferHdr *h, const uint8_t *p, int len, in
         for (int i = 0; i < s->nfiles && n < (int)sizeof list - 20; i++)
             if (mask & (1u << i))
                 n += aimp_snprintf(list + n, sizeof list - (size_t)n, " %s", s->files[i].name);
-        log_printf("SAVESYNC host: el cliente pide%s", list);
+        log_printf("SAVESYNC %s: el %s pide%s", who_srv(s), who_rcv(s), list);
         if (!build_blob(s, mask)) {
             free_blob(s);
             s->xid = 0; /* que el próximo REQ rehaga el manifiesto */
@@ -496,9 +514,21 @@ static void host_rx(SaveSync *s, const XferHdr *h, const uint8_t *p, int len, in
         aimp_memcpy(&wr, p + sizeof *h + 4, 4);
         if (s->blob) {
             double secs = (double)(now - s->xfer_t0) / (double)s->freq;
-            log_printf("SAVESYNC host: el cliente %s (escritos %08x); %u fragmentos, %u envíos, %u reenvíos, %.1f s",
-                       st == 0 ? "copió el save" : "NO pudo copiar el save", wr, s->total, s->sends, s->resends, secs);
+            log_printf("SAVESYNC %s: el %s %s (escritos %08x); %u fragmentos, %u envíos, %u reenvíos, %.1f s", who_srv(s),
+                       s->rev ? "host" : "cliente", st == 0 ? "copió el save" : "NO pudo copiar el save", wr, s->total, s->sends,
+                       s->resends, secs);
             free_blob(s);
+        }
+        if (s->rev && s->push == 2) {
+            /* el host ya tiene el save del cliente (o ya era igual): la partida de referencia vuelve a ser una sola */
+            s->push = 0;
+            if (s->other) {
+                s->other->hold = 0;
+                if (!st)
+                    load_host_ckpt(s->other); /* los saves locales (los propios, ahora también del host) */
+            }
+            log_printf("SAVESYNC cliente: %s", st == 0 ? "el host tiene mi save: se vuelve a seguir al host"
+                                                       : "el host no pudo copiar mi save; se vuelve a seguir al suyo");
         }
         s->xid = 0; /* un WANT atrasado de esta transferencia ya no rearma nada; el próximo REQ hace otro manifiesto */
     }
@@ -567,7 +597,7 @@ static int write_file(const wchar_t *dir, const char *name, const void *p, uint3
 static void load_host_ckpt(SaveSync *s)
 {
     static const char *names[2] = { "CHSV00.ais", "CHSV01.ais" };
-    if (!s->mem_mode || !s->st.ckpt)
+    if ((!s->mem_mode && !s->rev) || !s->st.ckpt)
         return;
     uint8_t *tmp = xalloc(2 * SAVE_CKPT_SIZE);
     if (!tmp)
@@ -597,14 +627,15 @@ static void load_host_ckpt(SaveSync *s)
         char lvl[40];
         aimp_memcpy(lvl, s->host_ckpt + 0x20, sizeof lvl - 1);
         lvl[sizeof lvl - 1] = 0;
-        log_printf("SAVESYNC: checkpoint del host para el game over: %s (%s, tiempo %u)", s->host_ckpt_name, lvl, best);
+        log_printf("SAVESYNC: checkpoint %s para el game over: %s (%s, tiempo %u)", s->rev ? "del cliente" : "del host", s->host_ckpt_name,
+                   lvl, best);
     }
 }
 
 /* Dentro del nivel: si el checkpoint en memoria no es el del host (el juego lo re-serializó al morir o guardar), se pisa. */
 static void ckpt_tick(SaveSync *s, int64_t now)
 {
-    if (!s->mem_mode || !s->have_host_ckpt || !s->st.ckpt || !s->level || now - s->last_ckpt_chk < ms_ticks(s, 250))
+    if (!s->mem_mode || !s->have_host_ckpt || !s->st.ckpt || !s->level || s->hold || now - s->last_ckpt_chk < ms_ticks(s, 250))
         return;
     s->last_ckpt_chk = now;
     uint8_t *p = s->st.ckpt(s->st.ctx);
@@ -717,6 +748,22 @@ static void client_apply(SaveSync *s)
     }
     if (!status)
         load_host_ckpt(s);
+    if (s->rev) {
+        /* host: una sola vez (después, si el host guarda por su cuenta, manda lo suyo) */
+        uint8_t *ck = s->have_host_ckpt && s->level ? s->st.ckpt(s->st.ctx) : NULL;
+        if (!status && ck && aimp_memcmp(ck, "IAAC", 4) == 0) {
+            aimp_memcpy(ck, s->host_ckpt, SAVE_CKPT_SIZE);
+            s->ckpt_writes++;
+        }
+        s->have_host_ckpt = 0;
+        if (status)
+            log_printf("SAVESYNC host: la copia del save del cliente FALLÓ (código %u)", status);
+        else
+            log_printf("SAVESYNC host: save del cliente copiado (%08x)%s", s->written,
+                       ck ? "; también al checkpoint en memoria: el game over y Continue cargan el guardado del cliente" : "");
+        client_finish(s, status);
+        return;
+    }
     if (status)
         log_printf("SAVESYNC: la copia del save del host FALLÓ (código %u)", status);
     else
@@ -735,7 +782,13 @@ static void client_rx(SaveSync *s, const XferHdr *h, const uint8_t *p, int len, 
         s->notify_in = h->xid;
         if (s->state == ST_WAIT || s->state == ST_XFER)
             return; /* ya hay una en curso: trae lo último igual */
-        log_printf("SAVESYNC: el host guardó (aviso %u): se copia su save nuevo%s", h->xid, s->level ? " (dentro del nivel)" : "");
+        if (s->rev && s->accept && !s->accept()) {
+            log_printf("SAVESYNC host: el cliente guardó (aviso %u) pero acá no estaba caído: no se copia su save", h->xid);
+            return;
+        }
+        log_printf(s->rev ? "SAVESYNC host: el cliente guardó con el host caído (aviso %u): se copia su save%s"
+                          : "SAVESYNC: el host guardó (aviso %u): se copia su save nuevo%s",
+                   h->xid, s->level ? " (dentro del nivel)" : "");
         s->state = ST_WAIT;
         s->last_req = 0;
         s->xid = 0;
@@ -763,10 +816,11 @@ static void client_rx(SaveSync *s, const XferHdr *h, const uint8_t *p, int len, 
             }
         }
         s->mask = mask;
-        log_printf("SAVESYNC: manifiesto del host: %d saves; distintos:%s", s->nfiles, mask ? list : " ninguno");
+        log_printf("SAVESYNC: manifiesto del %s: %d saves; distintos:%s", who_srv(s), s->nfiles, mask ? list : " ninguno");
         if (!mask) {
-            log_printf("SAVESYNC: ya tenés los mismos saves que el host");
-            load_host_ckpt(s);
+            log_printf("SAVESYNC: ya tenés los mismos saves que el %s", who_srv(s));
+            if (!s->rev)
+                load_host_ckpt(s);
             client_finish(s, 0);
             return;
         }
@@ -819,11 +873,18 @@ static void rx(void *ctx, const uint8_t *p, int len, int64_t now)
     SaveSync *s = ctx;
     if (len < (int)sizeof(XferHdr))
         return;
-    const XferHdr *h = (const XferHdr *)p;
-    if (s->net->mode == 1)
-        host_rx(s, h, p, len, now);
+    XferHdr hh;
+    aimp_memcpy(&hh, p, sizeof hh);
+    if (((hh.op & XFER_REV) != 0) != (s->rev != 0)) {
+        if (!s->other)
+            return;
+        s = s->other;
+    }
+    hh.op &= (uint8_t)~XFER_REV;
+    if (serving(s))
+        host_rx(s, &hh, p, len, now);
     else if (s->want)
-        client_rx(s, h, p, len, now);
+        client_rx(s, &hh, p, len, now);
 }
 
 /* Firma de las fechas de los .ais: cambia cuando el juego guarda. */
@@ -849,7 +910,7 @@ static void poll_stamps(SaveSync *s, int64_t now)
         s->have_sig = 1;
         s->stamp_sig = h;
         s->nsaves = n;
-        if (s->net->mode == 1 && !s->have_content_sig) {
+        if (serving(s) && !s->rev && !s->have_content_sig) {
             s->content_sig = content_signature(s);
             s->have_content_sig = 1;
         }
@@ -859,7 +920,7 @@ static void poll_stamps(SaveSync *s, int64_t now)
         s->stamp_sig = h;
         s->changed_at = now;
         if (!s->change_pending)
-            log_printf("SAVESYNC: %s: cambiaron los saves (%d)", s->net->mode == 1 ? "host" : "cliente", n);
+            log_printf("SAVESYNC: %s: cambiaron los saves (%d)%s", s->net->mode == 1 ? "host" : "cliente", n, s->rev ? " [inverso]" : "");
         s->change_pending = 1;
     }
 }
@@ -871,12 +932,15 @@ void savesync_tick(SaveSync *s, int64_t now, int64_t freq, uint32_t level)
     AimpNet *n = s->net;
     if (!n || !n->mode)
         return;
-    poll_stamps(s, now);
-    if (n->mode != 1 && s->change_pending && now - s->changed_at >= ms_ticks(s, s->settle_ms)) {
+    if (!(s->rev && !serving(s))) /* host, inverso: sus propios cambios los maneja la instancia normal */
+        poll_stamps(s, now);
+    if (!s->rev && n->mode != 1 && s->change_pending && now - s->changed_at >= ms_ticks(s, s->settle_ms)) {
         /* el juego del cliente reescribió sus saves (al cargar un nivel, al morir, al guardar; corrida 106): con
          * AIMP_SAVE_SYNC=1 los archivos siguen al host, así que se vuelve a sincronizar */
         s->change_pending = 0;
-        if (s->want && n->have_peer && (s->state == ST_DONE || s->state == ST_ERR)) {
+        if (s->hold) {
+            log_printf("SAVESYNC: el juego guardó con el host caído: no se iguala al host, se le manda este save");
+        } else if (s->want && n->have_peer && (s->state == ST_DONE || s->state == ST_ERR)) {
             log_printf("SAVESYNC: el juego reescribió los saves propios: se vuelven a igualar a los del host");
             s->state = ST_WAIT;
             s->last_req = 0;
@@ -885,8 +949,30 @@ void savesync_tick(SaveSync *s, int64_t now, int64_t freq, uint32_t level)
     }
     if (!n->have_peer)
         return;
-    if (n->mode == 1) {
-        if (s->change_pending && now - s->changed_at >= ms_ticks(s, s->settle_ms)) {
+    if (serving(s)) {
+        if (s->rev) {
+            /* cliente, inverso: solo sirve el guardado que armó savesync_push_arm */
+            if (s->push == 1 && s->change_pending && now - s->changed_at >= ms_ticks(s, s->settle_ms)) {
+                s->change_pending = 0;
+                s->push = 2;
+                s->push_at = now;
+                s->notify_seq = (GetTickCount() << 4) | 3u;
+                if (s->notify_seq == s->notify_in)
+                    s->notify_seq += 16;
+                s->notify_left = 3;
+                s->xid = 0;
+                log_printf("SAVESYNC cliente: guardé con el host caído: aviso %u al host para que copie mi save", s->notify_seq);
+            } else if (s->push != 1) {
+                s->change_pending = 0;
+            }
+            if (s->push && now - s->push_at > ms_ticks(s, s->push == 1 ? PUSH_SAVE_MS : PUSH_TOTAL_MS)) {
+                log_printf("SAVESYNC cliente: %s: se vuelve a seguir al host",
+                           s->push == 1 ? "el juego no guardó después de la terminal" : "el host no confirmó mi save");
+                s->push = 0;
+                if (s->other)
+                    s->other->hold = 0;
+            }
+        } else if (s->change_pending && now - s->changed_at >= ms_ticks(s, s->settle_ms)) {
             s->change_pending = 0;
             /* prueba con dos máquinas (2026-11-17): 17 avisos en 23 min y en todos el cliente ya tenía lo mismo (las
              * fechas cambian sin que cambie el contenido); solo se avisa si cambió el contenido */
@@ -908,7 +994,7 @@ void savesync_tick(SaveSync *s, int64_t now, int64_t freq, uint32_t level)
         }
         if (s->notify_left > 0 && !s->blob) {
             uint8_t b[sizeof(XferHdr)];
-            hdr((XferHdr *)b, XFER_NOTIFY, s->notify_seq, 0);
+            hdr(s, (XferHdr *)b, XFER_NOTIFY, s->notify_seq, 0);
             net_send_raw(n, b, sizeof b);
             s->notify_left--;
         }
@@ -923,7 +1009,7 @@ void savesync_tick(SaveSync *s, int64_t now, int64_t freq, uint32_t level)
         send_simple(s, XFER_DONE, e, 8);
         s->done_left--;
     }
-    if (s->state == ST_OFF && n->have_remote) {
+    if (s->state == ST_OFF && n->have_remote && !s->rev) {
         if (level != 0) {
             if (!s->warned_level)
                 log_printf("SAVESYNC: el save del host se copia en el menú principal: salí al menú para traerlo");
@@ -980,6 +1066,46 @@ SaveSync *savesync_new(AimpNet *net, const SaveStore *st, int want, const wchar_
     return s;
 }
 
+SaveSync *savesync_new_rev(SaveSync *fwd, const wchar_t *backup_dir)
+{
+    SaveSync *s = xalloc(sizeof *s);
+    if (!s || !fwd)
+        return s;
+    s->net = fwd->net;
+    s->st = fwd->st;
+    s->rev = 1;
+    s->want = fwd->net->mode == 1; /* en el host, la inversa recibe */
+    if (backup_dir)
+        aimp_wcscpy(s->backup_dir, MAX_PATH, backup_dir);
+    s->freq = fwd->freq;
+    s->poll_ms = fwd->poll_ms;
+    s->settle_ms = fwd->settle_ms;
+    s->other = fwd;
+    fwd->other = s;
+    return s;
+}
+
+void savesync_push_arm(SaveSync *r)
+{
+    if (!r || !r->rev || !serving(r))
+        return;
+    LARGE_INTEGER t;
+    QueryPerformanceCounter(&t);
+    r->push = 1;
+    r->push_at = t.QuadPart;
+    r->change_pending = 0;
+    if (r->other)
+        r->other->hold = 1;
+    log_printf("SAVESYNC cliente: terminal de guardado con el host caído: el próximo guardado se le manda al host");
+}
+
+int savesync_push_state(const SaveSync *r) { return r ? r->push : 0; }
+void savesync_set_accept(SaveSync *r, int (*accept)(void))
+{
+    if (r)
+        r->accept = accept;
+}
+
 int savesync_state(const SaveSync *s) { return s->state; }
 
 int savesync_ui(void)
@@ -1007,6 +1133,10 @@ void savesync_test_drop(SaveSync *s, int every) { s->drop_every = every; }
 uint32_t savesync_ckpt_writes(const SaveSync *s) { return s->ckpt_writes; }
 void savesync_test_poll(SaveSync *s, int poll_ms, int settle_ms)
 {
+    if (s->other && s->other->rev) {
+        s->other->poll_ms = poll_ms;
+        s->other->settle_ms = settle_ms;
+    }
     s->poll_ms = poll_ms;
     s->settle_ms = settle_ms;
 }
@@ -1098,6 +1228,18 @@ void savesync_install(AimpNet *net)
     net->xfer_rx = rx;
     net->xfer_ctx = &g_game;
     g_game_on = 1;
+    if (aimp_env_int(L"AIMP_SAVE_PUSH", 1)) {
+        /* sentido inverso: segunda instancia (estática, como g_game) */
+        g_game_rev.net = net;
+        g_game_rev.st = st;
+        g_game_rev.rev = 1;
+        g_game_rev.want = net->mode == 1;
+        g_game_rev.poll_ms = 2000;
+        g_game_rev.settle_ms = 3000;
+        g_game_rev.other = &g_game;
+        g_game.other = &g_game_rev;
+        log_printf("SAVESYNC: AIMP_SAVE_PUSH=1: con el host caído, el save que haga el cliente en una terminal pasa al host");
+    }
     if (net->mode == 1)
         log_printf("SAVESYNC: host: le pasa sus saves al cliente que los pida (AIMP_SAVE_SYNC=1 en el cliente)");
     else if (want)
@@ -1116,4 +1258,14 @@ void savesync_frame(int64_t now, int64_t freq, uint32_t level)
                    (long long)t);
     }
     savesync_tick(&g_game, now, freq, level);
+    if (g_game.other)
+        savesync_tick(&g_game_rev, now, freq, level);
+}
+
+SaveSync *savesync_game_rev(void) { return g_game.other; }
+
+void savesync_client_saving(void)
+{
+    if (g_game_on && g_game.other && g_game.net->mode == 2)
+        savesync_push_arm(&g_game_rev);
 }

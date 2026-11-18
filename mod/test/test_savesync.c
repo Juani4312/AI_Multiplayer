@@ -116,6 +116,32 @@ static void put_save(MemStore *m, const char *name, uint32_t seed, uint32_t t, c
 }
 static uint8_t g_ckpt[SAVE_CKPT_SIZE];
 static uint8_t *m_ckpt(void *ctx) { return g_ckpt; }
+static uint8_t g_ckpt_h[SAVE_CKPT_SIZE]; /* el del host (sentido inverso) */
+static uint8_t *m_ckpt_h(void *ctx) { return g_ckpt_h; }
+static int g_accept = 1;
+static int accept_push(void) { return g_accept; }
+
+/* Los cuatro extremos (normal e inverso, host y cliente) durante ms milisegundos, o hasta que stop() dé 1. */
+static void run4(AimpNet *h, AimpNet *c, SaveSync **ss, int64_t freq, int ms, int (*stop)(SaveSync **))
+{
+    LARGE_INTEGER t0, now;
+    QueryPerformanceCounter(&t0);
+    AimpPkt st;
+    memset(&st, 0, sizeof st);
+    for (;;) {
+        QueryPerformanceCounter(&now);
+        net_poll(c, now.QuadPart);
+        net_poll(h, now.QuadPart);
+        net_send(c, now.QuadPart, &st);
+        net_send(h, now.QuadPart, &st);
+        for (int i = 0; i < 4; i++)
+            savesync_tick(ss[i], now.QuadPart, freq, 10);
+        if ((now.QuadPart - t0.QuadPart) * 1000 / freq > ms || (stop && stop(ss)))
+            return;
+        Sleep(2);
+    }
+}
+static int push_done(SaveSync **ss) { return savesync_push_state(ss[3]) == 0; }
 
 static int same(MemStore *a, MemStore *b, const char *name)
 {
@@ -494,6 +520,91 @@ int main(void)
         CHECK(g_ckpt[0x100] == 0x11, "en el menú (nivel 0) no se toca");
         net_close(&c);
         net_close(&h);
+    }
+    printf("[host caído: el cliente guarda en la terminal y su save pasa al host]\n");
+    {
+        MemStore h3 = { 0 }, c3 = { 0 };
+        put_save(&h3, "CHSV00.ais", 41, 100, "Production\\SCI_Hospital");
+        put_save(&h3, "CHSV01.ais", 42, 200, "Production\\SCI_Hospital");
+        put(&h3, "PROGRESSION.ais", 10240, 43, 2670);
+        for (int i = 0; i < h3.n; i++)
+            m_write(&c3, h3.f[i].name, h3.f[i].data, h3.f[i].size); /* ya sincronizados */
+        memcpy(g_ckpt_h, find(&h3, "CHSV01.ais")->data, SAVE_CKPT_SIZE);
+        memcpy(g_ckpt, find(&c3, "CHSV01.ais")->data, SAVE_CKPT_SIZE);
+        wchar_t bdir2[MAX_PATH];
+        wcscpy(bdir2, bdir);
+        wcscat(bdir2, L"_host");
+        CreateDirectoryW(bdir2, NULL);
+        AimpNet h, c;
+        open_pair(&h, &c, f.QuadPart, L"47886", L"127.0.0.1:47886");
+        SaveStore sth = { &h3, m_count, m_entry, m_read, m_write, m_stamp, m_ckpt_h },
+                  stc = { &c3, m_count, m_entry, m_read, m_write, m_stamp, m_ckpt };
+        SaveSync *sh = savesync_new(&h, &sth, 0, NULL), *sc = savesync_new(&c, &stc, 1, bdir);
+        SaveSync *rh = savesync_new_rev(sh, bdir2), *rc = savesync_new_rev(sc, NULL);
+        savesync_set_accept(rh, accept_push);
+        savesync_test_poll(sh, 50, 150);
+        savesync_test_poll(sc, 50, 150);
+        SaveSync *ss[4] = { sh, sc, rh, rc };
+        run(&h, &c, sh, sc, f.QuadPart, 0); /* en el menú: ya iguales; el cliente toma el checkpoint del host */
+        run4(&h, &c, ss, f.QuadPart, 400, NULL); /* dentro del nivel: bases de las fechas */
+        int hw0 = h3.writes;
+
+        /* sin armar: un guardado propio del cliente no viaja al host (el cliente vuelve a igualarse al host) */
+        put_save(&c3, "CHSV00.ais", 50, 250, "Production\\SCI_Hospital");
+        run4(&h, &c, ss, f.QuadPart, 1500, NULL);
+        CHECK(h3.writes == hw0 && same(&h3, &c3, "CHSV00.ais"), "sin terminal: el host no recibe nada y el cliente vuelve al save del host");
+
+        /* host caído, el cliente usa la terminal: se arma y el juego guarda (re-serializa su checkpoint y escribe) */
+        savesync_push_arm(rc);
+        CHECK(savesync_push_state(rc) == 1, "armado: esperando que el juego guarde");
+        put_save(&c3, "CHSV00.ais", 60, 300, "Production\\SCI_HospitalUpper");
+        memcpy(g_ckpt, find(&c3, "CHSV00.ais")->data, SAVE_CKPT_SIZE);
+        run4(&h, &c, ss, f.QuadPart, 600, NULL);
+        CHECK(memcmp(g_ckpt, find(&c3, "CHSV00.ais")->data, SAVE_CKPT_SIZE) == 0,
+              "mientras se manda, el cliente no pisa su checkpoint nuevo con el del host");
+        run4(&h, &c, ss, f.QuadPart, 10000, push_done);
+        CHECK(savesync_push_state(rc) == 0, "el host confirmó (estado %d)", savesync_push_state(rc));
+        CHECK(same(&h3, &c3, "CHSV00.ais") && same(&h3, &c3, "CHSV01.ais") && same(&h3, &c3, "PROGRESSION.ais"),
+              "el host tiene el save del cliente");
+        CHECK(memcmp(g_ckpt_h, find(&c3, "CHSV00.ais")->data, SAVE_CKPT_SIZE) == 0,
+              "el checkpoint en memoria del host es el guardado del cliente (game over)");
+        run4(&h, &c, ss, f.QuadPart, 1500, NULL); /* el host avisa que cambió; el cliente ve que ya son iguales */
+        CHECK(memcmp(g_ckpt, find(&c3, "CHSV00.ais")->data, SAVE_CKPT_SIZE) == 0 && same(&h3, &c3, "CHSV00.ais"),
+              "después, el cliente sigue con su guardado como checkpoint (es el del host ahora)");
+        {
+            wchar_t pat[MAX_PATH], sub[MAX_PATH] = L"", p1[MAX_PATH];
+            wcscpy(pat, bdir2);
+            wcscat(pat, L"\\*");
+            WIN32_FIND_DATAW fd;
+            HANDLE fh = FindFirstFileW(pat, &fd);
+            if (fh != INVALID_HANDLE_VALUE) {
+                do
+                    if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && fd.cFileName[0] != L'.') {
+                        wcscpy(sub, bdir2);
+                        wcscat(sub, L"\\");
+                        wcscat(sub, fd.cFileName);
+                    }
+                while (FindNextFileW(fh, &fd));
+                FindClose(fh);
+            }
+            wcscpy(p1, sub);
+            wcscat(p1, L"\\CHSV00.ais");
+            WIN32_FILE_ATTRIBUTE_DATA a1;
+            CHECK(sub[0] && GetFileAttributesExW(p1, GetFileExInfoStandard, &a1), "backup de los saves propios del host");
+            DeleteFileW(p1);
+            RemoveDirectoryW(sub);
+        }
+
+        /* el host no estaba caído: no acepta */
+        g_accept = 0;
+        int hw1 = h3.writes;
+        savesync_push_arm(rc);
+        put_save(&c3, "CHSV01.ais", 70, 400, "Production\\SCI_HospitalUpper");
+        run4(&h, &c, ss, f.QuadPart, 1500, NULL);
+        CHECK(h3.writes == hw1 && !same(&h3, &c3, "CHSV01.ais"), "si el host no estaba caído, no copia el save del cliente");
+        net_close(&c);
+        net_close(&h);
+        RemoveDirectoryW(bdir2);
     }
     RemoveDirectoryW(bdir);
 

@@ -11,6 +11,7 @@
 #include "net.h"
 #include "sync.h"
 #include "diff.h"
+#include "death.h"
 
 HMODULE g_aimp_self;
 uintptr_t g_aimp_exe;
@@ -217,6 +218,20 @@ int main(void)
         __asm__ volatile("mov %%esp, %0" : "=r"(esp1));
         CHECK(cli.have_remote && g_uses == before && esp0 == esp1,
               "con el host conectado, el cliente no abre la terminal (el original no corre) y el stack queda balanceado");
+        /* host caído: el cliente sí guarda (y su save pasa al host, savesync inverso) */
+        SetEnvironmentVariableW(L"AIMP_COOP_DOWNED", L"1");
+        death_install(&cli);
+        AimpEvt de;
+        memset(&de, 0, sizeof de);
+        de.kind = AIMP_EVT_COOP;
+        CoopEvt dv = { COOP_DOWNED, { 0, 0, 0 }, 0 };
+        memcpy(de.data, &dv, sizeof dv);
+        de.size = sizeof dv;
+        death_remote_event(&de);
+        before = g_uses;
+        ((UseFn)(void *)(img + AIMP_RVA_USE_PRODUCER))(g_use_this, NULL, payload, 0);
+        CHECK(death_remote_is_downed() && g_uses == before + 1, "con el host caído, el cliente abre la terminal de guardado");
+        SetEnvironmentVariableW(L"AIMP_COOP_DOWNED", NULL);
     }
 
     printf("[dificultad del coop: escalones sobre la base y la elección del host]\n");
@@ -268,7 +283,7 @@ int main(void)
     CHECK(memcmp(g_enq_data, use_local, 8) == 0 && memcmp(g_enq_data + 8, "\x2f\xf7\x22\xb2\x09\x9d\x5b\x9b", 8) == 0 &&
               memcmp(g_enq_data + 16, use_local + 16, 4) == 0,
           "objetivo y flag del otro, personaje = jugador local");
-    CHECK(g_uses == 4, "aplicar no vuelve a pasar por el productor (no hay eco)"); /* 3 de arriba + la terminal sin host */
+    CHECK(g_uses == 5, "aplicar no vuelve a pasar por el productor (no hay eco)"); /* 3 de arriba + la terminal sin host + con el host caído */
     in.level = 9;
     in.seq = 8;
     cli.in[cli.in_tail] = in;

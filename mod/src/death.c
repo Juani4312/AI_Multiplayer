@@ -103,6 +103,8 @@ static wchar_t g_revive_file[MAX_PATH];
 static FILETIME g_revive_time;
 
 int death_is_downed(void) { return g_downed; }
+static DWORD g_revived_at;
+int death_push_ok(void) { return g_downed || (g_revived_at && GetTickCount() - g_revived_at < 120000); }
 
 static void set_flags(uint32_t chr, int downed)
 {
@@ -173,6 +175,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
             mem_f32(player + CHR_POS + 12, &g_revive_pos[3]);
             g_tp((void *)player, NULL, g_revive_pos, g_revive_yaw, 0);
         }
+        g_revived_at = GetTickCount() | 1;
         log_printf("DEATH: revivido por el compañero (salud %u), junto a él en (%.2f, %.2f, %.2f)", mx, (double)g_revive_pos[0],
                    (double)g_revive_pos[1], (double)g_revive_pos[2]);
         send(COOP_REVIVED, player);

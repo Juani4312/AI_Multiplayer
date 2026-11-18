@@ -105,6 +105,7 @@ int game_init(void)
     throw_install(probe_net()); /* opcional: AIMP_TRACE_THROW=1 / AIMP_SYNC_THROW=1 / AIMP_THROW_ECHO=ms (hallazgo 17) */
     session_install(probe_net()); /* con AIMP_NET: ¿misma partida en las dos máquinas? */
     savesync_install(probe_net()); /* con AIMP_NET: el host sirve sus saves; AIMP_SAVE_SYNC=1 en el cliente los copia */
+    savesync_set_accept(savesync_game_rev(), death_push_ok); /* host: el save del cliente solo si estaba caído */
     diff_install(probe_net()); /* dificultad del coop (menú Coop); AIMP_TRACE_DIFF=1: traza */
     ui_install(); /* con AIMP_NET: estado del coop en los textos del menú (AIMP_UI_TEXT=0 lo apaga) */
     gamesave_install(); /* guardar desde el mod; AIMP_TRACE_SAVE=1: traza */
