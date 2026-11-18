@@ -17,5 +17,9 @@ void ui_install(void);
 /* Menú del mod (AIMP_MOD_MENU=1, por defecto): "Extras" se llama "Coop" y su botón cambia la dificultad del coop.
  * 0 Normal (la del juego), 1 Difícil, 2 Pesadilla. Se guarda en %LOCALAPPDATA%\AI_Multiplayer\opciones.txt. */
 int ui_coop_difficulty(void);
+/* Aviso dentro del juego con el diálogo "Warning" del juego (FUN_0077c9e0, botón OK). Se muestra en el próximo frame
+ * con jugador (ui_frame, thread principal). El texto es UTF-8. Pausa el juego local hasta que se acepta. */
+void ui_message(const char *utf8);
+void ui_frame(int have_player);
 
 #endif

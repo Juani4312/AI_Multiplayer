@@ -14,6 +14,7 @@
  *   PUSH              (solo con AIMP_MEMSRV_TEST=1) cliente: arma el envío del próximo guardado al host (savesync inverso)
  *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
  *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
+ *   MSG <texto>       (solo con AIMP_MEMSRV_TEST=1) aviso en pantalla con el diálogo "Warning" del juego
  *   LOCO              (solo con AIMP_MEMSRV_TEST=1) el jugador 0 vuelve a la locomoción (FUN_00658080; sale del remate)
  *   KILL <hex>        (solo con AIMP_MEMSRV_TEST=1) mata al personaje como lo hace el juego: FUN_007d0c10 thiscall(chr,
  *                     atacante = 0), ret 4; daño igual a su salud (Character+0x33C). La llama ACT_PLAYER_DEATH (FUN_00668120).
@@ -26,6 +27,7 @@
 #include "gamesave.h"
 #include "savesync.h"
 #include "death.h"
+#include "ui.h"
 
 #define IN_MAX  (64 * 1024)
 #define OUT_MAX (4 * 1024 * 1024)
@@ -241,6 +243,11 @@ static void run(char *txt)
                 log_printf("MEMSRV: KILL 0x%08x (salud %u)", chr, hp);
                 ((KillFn)(void *)f)((void *)chr, NULL, 0);
             }
+        } else if (p[0] == 'M' && p[1] == 'S' && p[2] == 'G' && p[3] == ' ') {
+            /* MSG <texto>: (solo AIMP_MEMSRV_TEST=1) aviso en pantalla con el diálogo del juego (ui_message) */
+            if (g_test)
+                ui_message(p + 4);
+            put(g_test ? "MSG ok\n" : "MSG NO\n");
         } else if (p[0] == 'L' && p[1] == 'O' && p[2] == 'C' && p[3] == 'O') {
             /* LOCO: (solo AIMP_MEMSRV_TEST=1) el jugador 0 vuelve a la locomoción (sale de la acción de muerte) */
             uint32_t pl = player0();

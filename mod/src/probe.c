@@ -17,6 +17,7 @@
 #include "throw.h"
 #include "memsrv.h"
 #include "death.h"
+#include "ui.h"
 #include "inv.h"
 #include "weapons.h"
 #include "session.h"
@@ -636,6 +637,7 @@ void probe_after_run(uintptr_t mm_this, uint32_t ret, int64_t run_ticks, int64_t
     ctrl_frame(now, g_freq); /* AIMP_TRACE_CTRL (solo mira) */
     memsrv_frame(now, g_freq); /* AIMP_MEMSRV_FILE (solo lee) */
     death_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0); /* AIMP_COOP_DOWNED */
+    ui_frame(g_cur.pl && g_cur.pl_ok); /* avisos en pantalla (ui_message) */
     inv_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0, g_cur.level_cur); /* AIMP_TRACE_INV / AIMP_SYNC_INV */
     session_frame(now, g_freq, g_cur.pl && g_cur.pl_ok ? g_cur.pl : 0, g_cur.level_cur); /* huella de la partida */
     diff_frame(now, g_freq); /* dificultad del coop: el host la manda (diff.c) */

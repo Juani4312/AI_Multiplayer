@@ -21,6 +21,7 @@
 #include "session.h"
 #include "weapons.h"
 #include "death.h"
+#include "ui.h"
 #include "diff.h"
 #include "savesync.h"
 #include "inv.h"
@@ -152,6 +153,9 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_use
             const char *why = save_blocked(pl);
             if (why) {
                 log_printf("SYNC   terminal de guardado bloqueada: %s", why);
+                char m[200];
+                aimp_snprintf(m, sizeof m, "Coop: no se puede guardar acá: %s.", why);
+                ui_message(m);
                 return;
             }
             if (g_net && g_net->mode == 2 && death_remote_is_downed())

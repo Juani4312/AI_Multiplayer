@@ -304,7 +304,7 @@ Pasos:
 
 Reportar: los tiempos de la copia (líneas `SAVESYNC` con su hora) y si "Continue" cargó el mismo lugar que el host.
 
-### 8g. Segunda prueba de a dos: load y game over (2026-11-17; DLL actual `df452eb1…`, 2026-11-18)
+### 8g. Segunda prueba de a dos: load y game over (2026-11-17; DLL actual `ceea5bb5…`, 2026-11-18)
 
 Arreglos después de la primera prueba conjunta (8e/8f):
 - **Agachado:** al pararse caminando, el avatar quedaba agachado. Ahora siempre recibe la animación de parado.
@@ -320,7 +320,7 @@ Configuración en la laptop (`git pull` y reinstalar):
 ```
 powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Net join -Peer 100.126.161.126:47811 -Ghost 3 -Extra AIMP_GHOST_WALK=1,AIMP_SYNC_USE=1,AIMP_SYNC_THROW=1,AIMP_SYNC_PICKUP=1,AIMP_SYNC_PINS=1,AIMP_TRACE_PINS=1,AIMP_TRACE_PINS_MAX=300000,AIMP_TRACE_USE=1,AIMP_SYNC_INV=1,AIMP_COOP_DOWNED=1,AIMP_COOP_SAVE_RULE=1,AIMP_SAVE_SYNC=1
 ```
-**Guardado exigente** (`AIMP_COOP_SAVE_RULE=1`, nuevo): en coop guarda solo el host, y solo si el otro está a menos de 6 m o caído. En la laptop, la terminal de guardado no se abre (en el log: `SYNC   terminal de guardado bloqueada: en coop guarda el host (salvo que esté caído)`). Probar: el host intenta guardar lejos de la laptop (no se abre) y cerca (se abre).
+**Guardado exigente** (`AIMP_COOP_SAVE_RULE=1`, nuevo): en coop guarda solo el host, y solo si el otro está a menos de 6 m o caído. En la laptop, la terminal de guardado no se abre: aparece un cartel "Warning" del juego con el motivo ("Coop: no se puede guardar acá: …"; se cierra con OK) y en el log `SYNC   terminal de guardado bloqueada: …`. Probar: el host intenta guardar lejos de la laptop (no se abre) y cerca (se abre).
 
 **Host caído: guarda la laptop** (nuevo, `AIMP_SAVE_PUSH=1` por defecto): con el host (papito) caído, la terminal de la laptop **sí** se abre. Al guardar ("Yes"), el host revive al lado de la laptop y, unos 5 s después, recibe ese save: lo escribe en sus archivos (con backup de los suyos en `save_backup`) y en su checkpoint en memoria. Probar: papito cae (que lo agarre un enemigo o le peguen), la laptop guarda en una terminal; después los dos caen → game over → "Load Current Save" carga el guardado de la laptop. En el log de la laptop: `SAVESYNC cliente: el host tiene mi save`; en el de papito: `SAVESYNC host: save del cliente copiado`.
 

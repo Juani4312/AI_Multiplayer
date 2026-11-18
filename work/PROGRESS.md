@@ -8,16 +8,17 @@ _Última actualización: 2026-11-18 tarde (sesión local, corridas 134–137). P
 Hecho en la sesión de la tarde (detalle en NOTES.md, "Pantalla negra al caer por un remate"):
 - **pantalla negra al caer** (problema 4 de la corrida 119): reproducida con el save `alien` (el Alien remata al caído). Causa: el remate deja al jugador en la acción de muerte (`Character+0x36C`, vtable rva `0xEAE690`) y un fundido a negro (singleton `0x019D0970`, `+0x1B48`). **Arreglo** (`death.c`, con `AIMP_COOP_DOWNED=1`): 4 s después de un remate, `FUN_00658080` (locomoción del jugador) y opacidad 0: se ve el remate y después el caído vuelve a ver y a moverse. Verificado (corridas 136–137);
 - `AIMP_TRACE_DMG` (golpes y muertes del jugador), `memsrv LOCO`; REA necesita JDK 27 (Ghidra 12.2);
-- `mod/dist` = `df452eb1…`; instrucciones 8g al día.
+- **avisos dentro del juego** (`ui_message`, `ui.c`, corrida 138): el diálogo "Warning" del juego (`FUN_0077c9e0`, el de "Saving is disabled") con un texto propio por el hook de textos. La terminal bloqueada por el guardado exigente ahora lo avisa ("Coop: no se puede guardar acá: …"). **Pausa el juego local hasta el OK**: usarlo solo después de una acción del jugador. `memsrv MSG <texto>`;
+- `mod/dist` = `ceea5bb5…`; instrucciones 8g al día.
 
 Hecho en la sesión anterior (2026-11-18, corridas 123–133): dificultad del juego y del coop (`diff.c`, menú "Coop"), guardar desde el mod (`gamesave.c`), host caído: guarda el cliente (`savesync` inverso).
 
 **Siguiente:**
-- **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `df452eb1`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
+- **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `ceea5bb5`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
 - sentir la dificultad del coop jugando con el save `alien` (el efecto solo se verificó en memoria); sumar los sentidos del ALIEN (bloque por plantilla) si hace falta;
 - interacciones del mundo (robot, compuertas): identificar la entidad del robot con la traza de pines de 8g y sincronizar su estado;
 - remates de humanos y androides con el modo caído (la regla los cubre si pasan por `FUN_007d0c10`; falta verlo);
-- aviso en pantalla del guardado exigente (el prompt de la terminal no tiene texto; alternativa: el diálogo "Overwrite save data?");
+- avisos que no pausen (compañero caído, copia del save): falta un mensaje no modal (subtítulos, objetivo o `PopupMessage`, que la maneja Flash);
 - más opciones en el menú Coop (que un botón recorra varias, o habilitar los botones de Extras ocultos en PC: DESIGN_CONFIG_MENU);
 - a futuro: ruido compartido con histéresis, varios Aliens, desangrado (DESIGN_DIFFICULTY); Alien compartido (DESIGN_ALIEN); revivir en checkpoints; avatar mujer.
 
