@@ -1,6 +1,8 @@
 # AI_Multiplayer — coop mod para Alien: Isolation
 
-> **¿Estás en Windows (la laptop de pruebas del usuario)?** Entonces no sigas este archivo: tu tarea está en `work/windows/instructions.md`.
+> **¿Estás en Windows?** Entonces no sigas este archivo. Mirá el nombre de la máquina (`hostname`):
+> - si es `papulaptop` (la laptop de pruebas del usuario): tu tarea está en `work/windows/instructions.md`;
+> - si es otra (la PC del amigo que se une a jugar): tu tarea está en `work/windows/amigo.md`.
 
 Antes de hacer nada en una sesión nueva, leé en este orden:
 1. `work/PROGRESS.md`: estado actual y siguiente paso.
