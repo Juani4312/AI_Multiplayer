@@ -14,5 +14,8 @@
  * (el título y la descripción del menú principal se piden una sola vez al cargar, antes de la red: no sirven).
  * AIMP_UI_TEXT=0 lo apaga. */
 void ui_install(void);
+/* Menú del mod (AIMP_MOD_MENU=1, por defecto): "Extras" se llama "Coop" y su botón cambia la dificultad del coop.
+ * 0 Normal (la del juego), 1 Difícil, 2 Pesadilla. Se guarda en %LOCALAPPDATA%\AI_Multiplayer\opciones.txt. */
+int ui_coop_difficulty(void);
 
 #endif
