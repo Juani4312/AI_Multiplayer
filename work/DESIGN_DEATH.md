@@ -46,7 +46,12 @@ Corrida 95 (`safezone`): caído y revivido del compañero (avatar en pose), `KIL
    - o cuando pasa un checkpoint o completa un objetivo;
    - el caído aparece al lado del compañero (teletransporte, como el avatar).
 4. ~~**Si caen los dos:**~~ hecho (corrida 95). game over normal. Se saca `+0x4253` y se llama a `FUN_007d0c10` sobre el jugador, y los dos recargan su save. Con `AIMP_SAVE_SYNC=1` el cliente recarga el checkpoint del host (corrida 115). Después de la recarga el estado de caídos se reinicia y el modo caído vuelve (corrida 116; antes quedaba apagado).
-5. **Remate del Alien:** el agarre (`ACT_PLAYER_DEATH`) es una animación sincronizada. Con la salud recortada no se sabe si la animación termina bien o deja al jugador trabado. Hace falta una partida con el Alien.
+5. ~~**Remate del Alien:**~~ resuelto (corridas 134–137, save `alien`). Con la salud recortada, el remate dejaba la cámara congelada y la **pantalla negra para siempre** (lo mismo que vio el usuario en la corrida 119 con un `RIOT_GUARD`):
+   - el remate construye en el slot de acción del jugador (`Character+0x36C`) la acción de muerte (vtable rva `0xEAE690`; arranque `FUN_00675f10`: saca la invencibilidad, llama a `FUN_007d0c10` y prende `+0x298/299/29C/2A9/2BC`);
+   - además un fundido a negro en el singleton `0x019D0970` (`+0x1B48` opacidad 1,0);
+   - **arreglo (`death.c`):** si matan al jugador local estando en una acción que no es la locomoción, a los 4 s (`AIMP_COOP_DEATH_ACT_MS`) se llama a `FUN_00658080` (vuelve a la locomoción del jugador: destruye la acción de muerte, cuyo destructor `FUN_0065b630` apaga los flags) y se pone la opacidad en 0. Se ve el remate entero, después vuelve la imagen y el caído camina (capturas `run136-*`, `run137-*`);
+   - el Alien quedó a 2,5 m y no lo volvió a rematar en más de un minuto (caído = invencible).
+   - Falta: probar remates de humanos y androides (otras acciones; la regla es general: todos llaman a `FUN_007d0c10`).
 6. **Host:** el host no necesita estar vivo. Su proceso sigue simulando el mundo aunque esté caído. Solo se corta si cierra el juego.
 
 ## Herramientas nuevas para esto

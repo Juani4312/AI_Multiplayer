@@ -14,6 +14,7 @@
  *   PUSH              (solo con AIMP_MEMSRV_TEST=1) cliente: arma el envío del próximo guardado al host (savesync inverso)
  *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
  *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
+ *   LOCO              (solo con AIMP_MEMSRV_TEST=1) el jugador 0 vuelve a la locomoción (FUN_00658080; sale del remate)
  *   KILL <hex>        (solo con AIMP_MEMSRV_TEST=1) mata al personaje como lo hace el juego: FUN_007d0c10 thiscall(chr,
  *                     atacante = 0), ret 4; daño igual a su salud (Character+0x33C). La llama ACT_PLAYER_DEATH (FUN_00668120).
  * La primera línea de la respuesta es "# <seq>": el número de pedido (sube en cada lectura del archivo).
@@ -24,6 +25,7 @@
 #include "log.h"
 #include "gamesave.h"
 #include "savesync.h"
+#include "death.h"
 
 #define IN_MAX  (64 * 1024)
 #define OUT_MAX (4 * 1024 * 1024)
@@ -97,6 +99,16 @@ static void chars(void)
                 aimp_snprintf(line, sizeof line, "N %u 0x%08x\n", i, c);
                 put(line);
             }
+}
+
+/* Jugador 0 del CharacterManager (o 0). */
+static uint32_t player0(void)
+{
+    uint32_t pl = 0, root = 0, cm = 0, arr = 0, n = 0;
+    if (mem_u32(g_aimp_exe + AIMP_RVA_G_ROOT, &root) && root && mem_u32(root + ROOT_CHARMGR, &cm) && cm &&
+        mem_u32(cm + CM_NPLAYERS, &n) && n && mem_u32(cm + CM_PLAYERS, &arr) && arr)
+        mem_u32(arr, &pl);
+    return pl;
 }
 
 /* ¿Está en las listas del CharacterManager? (KILL solo sobre personajes vivos de esta partida) */
@@ -229,6 +241,11 @@ static void run(char *txt)
                 log_printf("MEMSRV: KILL 0x%08x (salud %u)", chr, hp);
                 ((KillFn)(void *)f)((void *)chr, NULL, 0);
             }
+        } else if (p[0] == 'L' && p[1] == 'O' && p[2] == 'C' && p[3] == 'O') {
+            /* LOCO: (solo AIMP_MEMSRV_TEST=1) el jugador 0 vuelve a la locomoción (sale de la acción de muerte) */
+            uint32_t pl = player0();
+            int ok = g_test && pl && death_player_to_loco(pl, "memsrv LOCO");
+            put(ok ? "LOCO ok\n" : "LOCO NO\n");
         } else if (p[0] == 'L' && p[1] == 'O' && p[2] == 'A' && p[3] == 'D' && (p[4] == 'F' || p[4] == 'N')) {
             /* LOADF <hex> <ruta> / LOADN <hex> <largo> <ruta>: (solo AIMP_MEMSRV_TEST=1) copia el archivo (o sus primeros
              * <largo> bytes) a esa dirección, si todo el rango es memoria escribible. Experimento de la copia en memoria
@@ -305,7 +322,8 @@ static void run(char *txt)
                 n++;
             MEMORY_BASIC_INFORMATION mi;
             int ok = g_test && n && VirtualQuery((void *)(uintptr_t)a, &mi, sizeof mi) && mi.State == MEM_COMMIT &&
-                     !(mi.Protect & PAGE_GUARD) && ((mi.Protect & 0xFF) == PAGE_READWRITE || (mi.Protect & 0xFF) == PAGE_EXECUTE_READWRITE) &&
+                     !(mi.Protect & PAGE_GUARD) && ((mi.Protect & 0xFF) == PAGE_READWRITE || (mi.Protect & 0xFF) == PAGE_EXECUTE_READWRITE ||
+                                                                (mi.Protect & 0xFF) == PAGE_WRITECOPY || (mi.Protect & 0xFF) == PAGE_EXECUTE_WRITECOPY) &&
                      (uintptr_t)a + n <= (uintptr_t)mi.BaseAddress + mi.RegionSize && mem_write(a, buf, n);
             aimp_snprintf(line, sizeof line, "W 0x%08x %u %s\n", a, n, ok ? "ok" : "NO");
             put(line);
