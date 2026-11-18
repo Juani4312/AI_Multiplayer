@@ -30,7 +30,8 @@ Los dos jugadores **tienen que tener exactamente este hash**, los mismos datos d
 
 ## Estructura
 
-- `mod/`: el mod. C sin CRT, CMake, cross-compilado con mingw-w64 (i686). `mod/README.md` tiene la referencia completa: compilación, tests, variables y log.
+- `INSTALACION.md`: instalación, configuración y referencia de parámetros (para jugar).
+- `mod/`: el mod. C sin CRT, CMake, cross-compilado con mingw-w64 (i686). `mod/README.md` tiene la referencia técnica: compilación, tests, variables y log.
 - `mod/dist/winmm.dll`: la DLL compilada, para usar sin toolchain (por ejemplo, en Windows), con su `SHA256SUMS`.
 - `saves/`: partidas guardadas para probar en zonas concretas (`safezone`: sala del transit de HAB_ShoppingCentre, sin enemigos). Se cargan con `work/scripts/saves.sh load <nombre>`.
 - `work/CONTINGENCIAS.md`: limitaciones conocidas y lo que se probó sin éxito (Amanda sin modelo en tercera persona, el civil sin agachado, dónde cae el arrojable…), con lo que haría falta para resolverlas.
@@ -41,26 +42,11 @@ Los dos jugadores **tienen que tener exactamente este hash**, los mismos datos d
 - `work/evidence/runtime/`: los logs de cada corrida (`runNN-*.log`) y capturas en `shots/` (locales, ignorados por git).
 - `game/` y `work/evidence/`: locales, ignorados por git.
 
-## Cómo jugar (experimental)
+## Instalación
 
-1. **Instalar el mod** en cada máquina: `winmm.dll` al lado de `AI.exe`, más un `aimp.cfg` (en la carpeta del juego o en `%LOCALAPPDATA%\AI_Multiplayer\`).
-   - **Linux (Proton):** `work/scripts/runtime_setup.sh install --cfg "CLAVE=valor;..."` copia la DLL, configura el override `winmm=n,b` y hace backup. `revert` lo deshace. Con `--cfg "AIMP_GHOST=0"` el mod queda instalado pero pasivo: el juego anda normal.
-   - **Windows:** `work\windows\aimp_check.ps1 -Action install …`, o a mano con `mod\dist\winmm.dll`. Ver `work/windows/instructions.md`.
-2. **Red:** las dos máquinas en la misma red de [Tailscale](https://tailscale.com). Uno hace de host y el otro se une a su IP de Tailscale.
-3. **`aimp.cfg`** (una clave por línea):
+Todo el detalle está en **[`INSTALACION.md`](INSTALACION.md)**: requisitos, instalar en Windows y en Linux (Proton), el archivo `aimp.cfg`, la red con Tailscale, las configuraciones recomendadas para host y para el que se une, cómo arrancar una partida de a dos, la referencia de todos los parámetros y problemas comunes.
 
-   | Quién | Claves |
-   |-------|--------|
-   | Host | `AIMP_NET=host`, `AIMP_GHOST=3`, `AIMP_SYNC_USE=1`, `AIMP_SYNC_THROW=1` |
-   | El que se une | `AIMP_NET=join`, `AIMP_NET_PEER=<IP de Tailscale del host>:47811`, `AIMP_GHOST=3`, `AIMP_SYNC_USE=1`, `AIMP_SYNC_THROW=1` |
-
-   Recomendado: `AIMP_GHOST_WALK=1` en las dos (el avatar títere, con animación). Para jugar la partida del host: `AIMP_SAVE_SYNC=1` en el que se une, con el juego en el menú principal (sin probar en el juego; ver "Último trabajo"). Opcional y sin probar con dos máquinas: `AIMP_SYNC_PINS=1` en las dos (los disparadores de zona los decide el host).
-
-4. Los dos cargan la misma partida, en el mismo nivel. Unos 8 s después, cada uno ve a un civil del nivel parado donde está el otro jugador. Lo que uno aprieta (por ejemplo, el botón para llamar al transit) también pasa en la otra máquina, y lo que tira (una bengala, un noisemaker) aparece en la otra con la misma curva.
-
-**Con una sola cuenta de Steam en dos PCs,** una de las dos tiene que estar en modo sin conexión.
-
-Todo queda en `%LOCALAPPDATA%\AI_Multiplayer\aimp.log` (en Proton, dentro del prefix). Si el juego se cae, el log registra la excepción, la dirección y el stack.
+Resumen: `winmm.dll` (de `mod/dist/`) al lado de `AI.exe` en las dos máquinas (en Proton, además, `WINEDLLOVERRIDES="winmm=n,b" %command%`), un `aimp.cfg` con `AIMP_NET=host` en uno y `AIMP_NET=join` + `AIMP_NET_PEER=<IP del host>:47811` en el otro, y las dos máquinas en la misma red de Tailscale. Log: `%LOCALAPPDATA%\AI_Multiplayer\aimp.log`.
 
 ## Limitaciones conocidas
 

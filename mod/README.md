@@ -60,6 +60,8 @@ log, en lugar de crashear sin explicación.
 
 ## Instalar
 
+Para jugar, la guía completa (con la red, las configuraciones recomendadas y todos los parámetros) es [`INSTALACION.md`](../INSTALACION.md). Abajo, lo mínimo.
+
 ### Linux (Proton), automatizado
 
 `work/scripts/runtime_setup.sh install [--cfg "AIMP_X=1;AIMP_Y=2"]` copia la DLL y agrega al registro del prefix `AppDefaults\AI.exe\DllOverrides: winmm=native,builtin`, que equivale a la opción de lanzamiento pero no toca la config de Steam. Guarda un backup de `user.reg` antes de la primera edición. `runtime_setup.sh revert` deshace todo; `status` muestra el estado. Se niega a correr con el juego abierto.
