@@ -14,8 +14,11 @@
  *                    acción que no es la locomoción (el agarre del Alien, vtable rva 0xEAE690), a los
  *                    AIMP_COOP_DEATH_ACT_MS (4000; -1 = nunca) se lo devuelve a la locomoción (FUN_00658080) y se borra el
  *                    fundido de pantalla (singleton 0x019D0970, +0x1B48): si no, la pantalla queda negra para siempre.
- *                    El atacante queda retenido en su mitad del remate mientras el jugador esté caído (suelto, lo vuelve
- *                    a rematar cada ~4,5 s) y se lo suelta al revivir (FUN_0065bdd0, acción por defecto).
+ *                    Mientras el jugador está caído, su facción (Character+0x2E4) pasa a la del Alien
+ *                    (AIMP_COOP_DOWNED_FACTION, 3; se restaura al revivir y antes del game over): el Alien y los demás
+ *                    dejan de tomarlo como enemigo, y el atacante se suelta enseguida (FUN_0065bdd0, acción por defecto)
+ *                    y se va. Con AIMP_COOP_DOWNED_FACTION=-1 el atacante queda retenido en su mitad del remate hasta
+ *                    que el jugador revive (suelto sin la facción, lo vuelve a rematar cada ~4,5 s).
  *                    AIMP_COOP_ALIEN_WITHDRAW=1 (experimental): además, el Alien se retira al soltarlo (NPC_WithdrawAlien).
  *   AIMP_TRACE_DMG=1 golpes sobre el jugador (FUN_007caac0: daño, atacante, flags, pila) y llamadas a matar (líneas DMG). */
 void death_install(AimpNet *net);
