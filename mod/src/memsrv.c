@@ -15,6 +15,7 @@
  *   V <rva>           objetos con esa vtable: direcciones (alineadas a 4) que contienen exe+rva ("V 0x<addr>", "V fin <n>")
  *   F <hexbytes>      dónde está esa secuencia de bytes (4 a 64) en la memoria escribible ("F 0x<addr>", "F fin <n>")
  *   MSG <texto>       (solo con AIMP_MEMSRV_TEST=1) aviso en pantalla con el diálogo "Warning" del juego
+ *   TIP <ms> <texto>  (solo con AIMP_MEMSRV_TEST=1) aviso sin pausa con el cartel de consejos del HUD
  *   CALL <rva> <ecx> <n> [args]  (solo con AIMP_MEMSRV_TEST=1) thiscall de prueba con n (0..4) argumentos
  *   ACT <hex>         (solo con AIMP_MEMSRV_TEST=1) el personaje vuelve a su acción por defecto (FUN_0065bdd0)
  *   WD <hex>          (solo con AIMP_MEMSRV_TEST=1) el Alien se retira (como NPC_WithdrawAlien)
@@ -246,6 +247,17 @@ static void run(char *txt)
                 log_printf("MEMSRV: KILL 0x%08x (salud %u)", chr, hp);
                 ((KillFn)(void *)f)((void *)chr, NULL, 0);
             }
+        } else if (p[0] == 'T' && p[1] == 'I' && p[2] == 'P' && p[3] == ' ') {
+            /* TIP <ms> <texto>: (solo AIMP_MEMSRV_TEST=1) aviso sin pausa con el cartel de consejos (ui_toast) */
+            const char *q = p + 4;
+            int ms = 0;
+            while (*q >= '0' && *q <= '9')
+                ms = ms * 10 + (*q++ - '0');
+            while (*q == ' ')
+                q++;
+            if (g_test)
+                ui_toast(q, ms);
+            put(g_test ? "TIP ok\n" : "TIP NO\n");
         } else if (p[0] == 'M' && p[1] == 'S' && p[2] == 'G' && p[3] == ' ') {
             /* MSG <texto>: (solo AIMP_MEMSRV_TEST=1) aviso en pantalla con el diálogo del juego (ui_message) */
             if (g_test)

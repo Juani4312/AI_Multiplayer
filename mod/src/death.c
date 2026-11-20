@@ -4,6 +4,7 @@
 #include "hook.h"
 #include "log.h"
 #include "ghost.h"
+#include "ui.h"
 
 #define AIMP_RVA_UI_OPEN 0x0041F8F0u
 static const uint8_t UI_OPEN_PROLOGUE[7] = { 0x6A, 0xFF, 0x68, 0x48, 0x2E, 0x13, 0x01 };
@@ -55,6 +56,14 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_ui_
 static int g_downed_mode, g_downed_cfg, g_downed, g_remote_downed, g_revive_pending;
 static volatile LONG g_checkpoint_hit;
 static AimpNet *g_net;
+/* Avisos sin pausa (cartel de consejos del HUD, ui_toast). AIMP_COOP_TOASTS=0 los apaga. */
+static int g_toasts = 1;
+static void toast(const char *utf8)
+{
+    if (g_toasts && g_net)
+        ui_toast(utf8, 7000);
+}
+
 static float g_revive_pos[4] __attribute__((aligned(16)));
 static float g_revive_yaw;
 typedef void(__attribute__((fastcall)) * TeleportFn)(void *self, void *edx, const float *pos, float yaw, uint32_t p3);
@@ -416,6 +425,8 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
         faction_downed(player);
         log_printf("DEATH: el jugador quedó caído (salud %u de %u): invencible; en coop sigue el compañero", hp, mx);
         send(COOP_DOWNED, player);
+        if (!g_remote_downed)
+            toast("Coop: caíste. Tu compañero te revive usando una terminal de guardado.");
         if (g_remote_downed) {
             both_down(player);
             return;
@@ -454,6 +465,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
         log_printf("DEATH: revivido por el compañero (salud %u), junto a él en (%.2f, %.2f, %.2f)", mx, (double)g_revive_pos[0],
                    (double)g_revive_pos[1], (double)g_revive_pos[2]);
         send(COOP_REVIVED, player);
+        toast("Coop: tu compañero te revivió.");
     }
     WIN32_FILE_ATTRIBUTE_DATA fa;
     if (g_downed && g_revive_file[0] && GetFileAttributesExW(g_revive_file, GetFileExInfoStandard, &fa) &&
@@ -479,12 +491,16 @@ void death_remote_event(const AimpEvt *e)
     aimp_memcpy(&ev, e->data, sizeof ev);
     if (ev.kind == COOP_DOWNED) {
         log_printf("DEATH: el otro jugador quedó caído%s", g_downed ? "; acá también: game over" : "");
+        if (!g_downed)
+            toast("Coop: tu compañero cayó. Usá una terminal de guardado para revivirlo.");
         g_remote_downed = 1;
         ghost_set_remote_downed(1);
         if (g_downed && g_last_player)
             both_down(g_last_player);
     } else if (ev.kind == COOP_REVIVED) {
         log_printf("DEATH: el otro jugador revivió");
+        if (g_remote_downed)
+            toast("Coop: tu compañero se levantó.");
         g_remote_downed = 0;
         ghost_set_remote_downed(0);
     } else if (ev.kind == COOP_REVIVE) {
@@ -516,6 +532,7 @@ void death_install(AimpNet *net)
 {
     g_net = net;
     g_downed_mode = g_downed_cfg = aimp_env_int(L"AIMP_COOP_DOWNED", 0);
+    g_toasts = aimp_env_int(L"AIMP_COOP_TOASTS", 1);
     {
         uint8_t t[sizeof AIMP_CHR_TELEPORT_PROLOGUE], k[sizeof KILL_PROLOGUE];
         if (mem_read(g_aimp_exe + AIMP_RVA_CHR_TELEPORT, t, sizeof t) && aimp_code_cmp(t, AIMP_CHR_TELEPORT_PROLOGUE, sizeof t) == 0)
