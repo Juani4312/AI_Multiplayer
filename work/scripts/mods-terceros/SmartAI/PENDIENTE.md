@@ -1,4 +1,8 @@
-# Smart AI — instalación pendiente (sin README)
+# Smart AI — instalación deducida (sin README)
+
+**2026-11-20:** a pedido del usuario ("poneme los mods que descargue") ya tiene `toggle.sh` con la instalación deducida de
+abajo (115 archivos, sin las 6 variantes). Probado: activar → los 115 son los del mod; desactivar → los 115 originales
+vuelven idénticos (hash). Si el mod no se comporta como se espera, confirmar la instalación en su página de Nexus.
 
 El comprimido (`Smart AI-9-1-0-1561684922.rar`) no trae instrucciones. Contenido: `Alien_Isolation_Insane_Mod_FIX/`
 con `ALIENCONFIGS/` (19), `BEHAVIOR/` (85), `BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML` y `CHR_INFO/ATTRIBUTES/` (16):
@@ -13,6 +17,4 @@ configuraciones del Alien (`ALIENCONFIGS`), que son la base que escala la dificu
 verificado (remates, caído con la facción del Alien, retirada) se hizo con la IA original. Además, en una partida de a
 dos los dos tienen que tener la misma IA o las simulaciones divergen.
 
-Para habilitarlo: confirmar la instalación (página del mod en Nexus) y crear `toggle.sh` como el de `../NoHUD-crosshair/`
-con `MOD_INTERFIERE=1` y un par `origen|destino` por archivo (por ejemplo
-`"Alien_Isolation_Insane_Mod_FIX/BEHAVIOR/ALIEN_BEHAVE.XML|DATA/BEHAVIOR/ALIEN_BEHAVE.XML"`).
+`toggle.sh` tiene `MOD_INTERFIERE=1`: `mods-desarrollo.sh desactivar` (y `mode.sh test`) lo apagan.

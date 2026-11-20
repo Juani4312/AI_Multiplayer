@@ -7,7 +7,7 @@ Nada de esta carpeta lo carga el juego: un mod está activo solo cuando su `togg
 |---------|----------|------------------------|--------|
 | `NoHUD-crosshair/` | `UI.PAK` sin HUD (con mira) → `DATA/UI.PAK` | **sí**: el coop usa el HUD, los diálogos y el menú | con `toggle.sh` |
 | `QuietXeno/` | sonidos del Alien más bajos → `DATA/SOUND/ALIEN.BNK` | no (solo audio) | con `toggle.sh` |
-| `SmartAI/` | IA del Alien/androides/humanos → `DATA/{ALIENCONFIGS,BEHAVIOR,…}` | **sí, mucho** | **pendiente**: sin README (`PENDIENTE.md`) |
+| `SmartAI/` | IA del Alien/androides/humanos → `DATA/{ALIENCONFIGS,BEHAVIOR,…}` (115 archivos) | **sí, mucho** | con `toggle.sh`; instalación **deducida** (sin README: ver `PENDIENTE.md`) |
 | `AIMovieFix/` | arreglo de videos (`xinput1_3.dll`) | solo con la variante `xinput1_3` del coop | **pendiente**: ya instalado como `d3d11.dll` (`PENDIENTE.md`) |
 
 ## Scripts
