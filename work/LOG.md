@@ -247,3 +247,4 @@
 - 03:12 (2026-11-20) Pedido del usuario: la run sin morir a saves/run-sin-morir-2026-11-20.tar.gz (verificada idéntica a current y al remote) y juego sin partidas (saves.sh vaciar, nuevo: borra los .ais, deja input.cfg, backup previo). Para volver: saves.sh load run-sin-morir-2026-11-20.
 - 03:20 (2026-11-20) El juego no abre: sale solo en el primer frame del Frontend (sin excepción). Descartados mods y save (corridas de diagnóstico); sospecha: pack de texturas x2. Estado del usuario restaurado.
 - 03:25 (2026-11-20) Causa: el pack de texturas reemplazó la carpeta PRODUCTION entera (solo trae 70 archivos). Lo arregló el usuario; las texturas las maneja él.
+- 03:40 (2026-11-20) Pedido del usuario: chequear la instalación antes de trabajar. work/scripts/check_install.sh (solo lee: juego abierto, modo, mod coop, mods de terceros, partida cargada, DLLs, niveles completos); CLAUDE.md lo pone como paso 0.
