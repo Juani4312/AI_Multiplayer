@@ -6,6 +6,11 @@ Lo que se hizo en cada sesión, del más nuevo al más viejo. Antes estaba al fi
 - Evidencia de cada corrida: `work/NOTES.md`.
 - Log cronológico corto: `work/LOG.md`.
 
+**2026-11-20, madrugada (local, corrida 148):**
+- **El mod también entra por `xinput1_3.dll`:** en la PC del amigo (Windows 11 25H2) el juego carga la `winmm.dll` del sistema y el mod ni arranca. Ahora el mismo mod sale también como `xinput1_3.dll` (la DLL del mando, que el juego carga desde su carpeta y de la que no depende ninguna DLL del sistema). Si están las dos, arranca una sola vez; si hay otra `xinput1_3.dll` (MovieFix), se puede encadenar.
+- Verificado con un test bajo wine y en el juego (Proton): carga, hooks y mando por la variante. Falta probarla en Windows 11.
+- Instaladores: `aimp_check.ps1 -Proxy xinput1_3` (Windows; `verify` la sugiere si la winmm no cargó) y `runtime_setup.sh --proxy xinput1_3` (Linux). `INSTALAR_CON_CLAUDE.md` la pone como primer paso cuando el mod no carga.
+
 **2026-11-18, tarde (locales, corridas 134–147, save `alien`):**
 - **Pantalla negra al caer por un remate (el problema de la prueba de a dos):** cuando un enemigo remata al jugador (el agarre del Alien), con el modo caído la pantalla quedaba negra para siempre. Ahora se ve el remate y, 4 s después, el caído vuelve a ver y a moverse (sigue caído). Causa: el jugador quedaba en la acción de muerte y con un fundido a negro; el mod lo pasa a la locomoción y borra el fundido.
 - **El Alien ignora al caído:** mientras dura el caído, el jugador toma la facción del Alien; el Alien se suelta del remate y se va a los conductos, aunque el caído corra. Al revivir se restaura y lo vuelve a cazar. Si los dos caen, game over normal (verificado con el peer).

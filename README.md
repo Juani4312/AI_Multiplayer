@@ -81,5 +81,6 @@ Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, P
 ## Estado actual y siguiente paso
 
 - **Último (2026-11-18, tarde):** con el modo caído, un remate de un enemigo (el agarre del Alien) ya no deja la pantalla negra: después de la animación, el caído recupera la imagen y el control, y el Alien lo ignora mientras está caído (se va a los conductos; al revivir lo vuelve a cazar). Avisos con el diálogo "Warning" del juego (la terminal bloqueada por el guardado exigente dice por qué). Verificado en una máquina con el save `alien`.
-- **Siguiente:** prueba de a dos (`work/windows/instructions.md` 8g, DLL `b4de9984…`).
+- **2026-11-20:** en un Windows 11 25H2 el juego no carga la `winmm.dll` del mod. Nueva variante que entra por `xinput1_3.dll` (`mod/dist/xinput1_3.dll`, `-Proxy xinput1_3` en el instalador), verificada en el juego con Proton; falta probarla en ese Windows.
+- **Siguiente:** que el amigo pruebe la variante (`INSTALAR_CON_CLAUDE.md`, sección 2) y la prueba de a dos (`work/windows/instructions.md` 8g, DLL `cf1e7575…`).
 - Detalle y pendientes: `work/PROGRESS.md`. Historial de sesiones: `work/HISTORIAL.md`.

@@ -23,6 +23,7 @@ run() { # nombre exe [overrides]
 }
 fail=0
 cp "$BUILD/winmm.dll" "$BUILD/test/winmm.dll"
+cp "$BUILD/xinput1_3.dll" "$BUILD/test/xinput1_3.dll"
 run test_core test_core.exe || fail=1
 run test_probe test_probe.exe || fail=1
 run test_net test_net.exe || fail=1
@@ -37,5 +38,8 @@ run test_autopad test_autopad.exe || fail=1
 run test_host test_host.exe "winmm=n,b" || fail=1
 echo "-- log del proxy en test_host ($TMP/test_host.log):"
 cat "$TMP/test_host.log"
+run test_host_xinput test_host_xinput.exe "xinput1_3=n,b;winmm=n,b" || fail=1
+echo "-- log del proxy en test_host_xinput ($TMP/test_host_xinput.log):"
+cat "$TMP/test_host_xinput.log"
 if [ "$fail" -eq 0 ]; then echo "RESULTADO: todos los tests OK"; else echo "RESULTADO: HAY FALLAS"; fi
 exit "$fail"

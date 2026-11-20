@@ -1,0 +1,14 @@
+; Exports del proxy xinput1_3.dll: ver xinput_exports.inc (mismos nombres y ordinales).
+LIBRARY "xinput1_3.dll"
+EXPORTS
+    XInputGetState = aimp_s_XInputGetState @2
+    XInputSetState = aimp_s_XInputSetState @3
+    XInputGetCapabilities = aimp_s_XInputGetCapabilities @4
+    XInputEnable = aimp_s_XInputEnable @5
+    XInputGetDSoundAudioDeviceGuids = aimp_s_XInputGetDSoundAudioDeviceGuids @6
+    XInputGetBatteryInformation = aimp_s_XInputGetBatteryInformation @7
+    XInputGetKeystroke = aimp_s_XInputGetKeystroke @8
+    aimp_ord100 = aimp_s_ord100 @100 NONAME
+    aimp_ord101 = aimp_s_ord101 @101 NONAME
+    aimp_ord102 = aimp_s_ord102 @102 NONAME
+    aimp_ord103 = aimp_s_ord103 @103 NONAME

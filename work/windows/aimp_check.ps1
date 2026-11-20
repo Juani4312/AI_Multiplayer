@@ -9,17 +9,20 @@
     powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action verify      (con el juego abierto)
     powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action collect -Tag primera
     powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action revert
+  -Proxy xinput1_3 (con install): instala la variante del mod que entra por xinput1_3.dll en vez de winmm.dll, para
+  máquinas donde Windows no carga la winmm de la carpeta del juego (verify lo sugiere). Se instala una sola variante.
   También: -Action install -Net none|host|join [-Peer ...] [-Ghost 3] [-Extra AIMP_X=1,AIMP_Y=2] (sin preset).
 
   -Preset usa la configuración recomendada de mod\dist\aimp-<preset>.cfg; -Extra agrega o reemplaza claves.
   "-ExecutionPolicy Bypass" vale solo para ese proceso: no cambia la configuración del sistema.
   Todo lo que hace se agrega a un informe: -Report <archivo>; por defecto work\windows\report.md en la laptop de
   pruebas (papulaptop) e instalacion-informe.md (en la raíz, ignorado por git) en cualquier otra máquina.
-  En la carpeta del juego solo escribe winmm.dll y aimp.cfg (y "revert" los saca).
+  En la carpeta del juego solo escribe winmm.dll (o xinput1_3.dll) y aimp.cfg (y "revert" los saca).
 #>
 param(
     [ValidateSet('check', 'install', 'verify', 'collect', 'revert')] [string]$Action = 'check',
     [ValidateSet('', 'host', 'join')] [string]$Preset = '',
+    [ValidateSet('winmm', 'xinput1_3')] [string]$Proxy = 'winmm',
     [string]$Report = '',
     [ValidateSet('none', 'join', 'host')] [string]$Net = 'none',
     [string]$Peer = '',
@@ -35,7 +38,8 @@ if (-not $Report) {
 }
 $LogsOut = Join-Path $PSScriptRoot 'logs'
 $ExpectedSha = 'DDE66521798AAE8C39ED4E7A3400F561FCECFFF83619D1426B9E0CEDF5819A90'
-$DistDll = Join-Path $Root 'mod\dist\winmm.dll'
+$Proxies = @('winmm', 'xinput1_3')   # las DLL por las que puede entrar el mod
+$DistDll = Join-Path $Root "mod\dist\$Proxy.dll"
 $DistSums = Join-Path $Root 'mod\dist\SHA256SUMS'
 $AimpDir = Join-Path $env:LOCALAPPDATA 'AI_Multiplayer'
 $Mark = 'AI_Multiplayer'   # texto que está dentro de nuestra DLL
@@ -107,10 +111,12 @@ function Do-Check {
     }
     $dlls = Get-ChildItem $game -Filter *.dll | ForEach-Object { "$($_.Name) ($($_.Length) B)" }
     Out-Report "- DLLs en la carpeta del juego: $($dlls -join ', ')"
-    foreach ($f in 'winmm.dll', 'aimp.cfg') {
+    foreach ($f in 'winmm.dll', 'xinput1_3.dll', 'aimp.cfg') {
         $p = Join-Path $game $f
-        if (Test-Path $p) { Out-Report "- Ya hay ``$f`` en la carpeta del juego$(if ($f -eq 'winmm.dll') { if (Test-Ours $p) { ' (es el mod)' } else { ' (**AJENO**)' } })" }
+        if (Test-Path $p) { Out-Report "- Ya hay ``$f`` en la carpeta del juego$(if ($f -like '*.dll') { if (Test-Ours $p) { ' (es el mod)' } else { ' (**AJENO**)' } })" }
     }
+    $xs = Join-Path $env:WINDIR 'SysWOW64\xinput1_3.dll'
+    Out-Report "- xinput1_3 del sistema (32 bits, la necesita la variante -Proxy xinput1_3): $(if (Test-Path $xs) { 'está' } else { '**no está** (instalar DirectX de _CommonRedist del juego)' })"
     $kd = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs'
     $vals = $kd.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' } | ForEach-Object { "$($_.Name)=$($_.Value)" }
     $hit = $vals | Where-Object { $_ -match '(^|=)winmm(\.dll)?$' -or $_ -match '^winmm=' }
@@ -146,11 +152,19 @@ function Do-Install {
     $sha = (Get-FileHash (Join-Path $game 'AI.exe') -Algorithm SHA256).Hash
     if ($sha -ne $ExpectedSha) { throw "AI.exe no es la build esperada ($sha)." }
     if (-not (Test-Path $DistDll)) { throw "Falta $DistDll (hacer git pull)." }
-    $expect = ((Get-Content $DistSums | Where-Object { $_ -match 'winmm\.dll' }) -split '\s+')[0].ToUpper()
+    $expect = ((Get-Content $DistSums | Where-Object { $_ -match "\s$([regex]::Escape($Proxy))\.dll$" }) -split '\s+')[0].ToUpper()
     $have = (Get-FileHash $DistDll -Algorithm SHA256).Hash
-    if ($have -ne $expect) { throw "El SHA-256 de mod\dist\winmm.dll ($have) no coincide con SHA256SUMS ($expect)." }
-    $target = Join-Path $game 'winmm.dll'
-    if ((Test-Path $target) -and -not (Test-Ours $target)) { throw 'Ya hay un winmm.dll ajeno en la carpeta del juego: no lo piso.' }
+    if ($have -ne $expect) { throw "El SHA-256 de mod\dist\$Proxy.dll ($have) no coincide con SHA256SUMS ($expect)." }
+    $target = Join-Path $game "$Proxy.dll"
+    if ((Test-Path $target) -and -not (Test-Ours $target)) { throw "Ya hay un $Proxy.dll ajeno en la carpeta del juego (¿otro mod?): no lo piso." }
+    if ($Proxy -eq 'xinput1_3' -and -not (Test-Path (Join-Path $env:WINDIR 'SysWOW64\xinput1_3.dll'))) {
+        throw 'Falta la xinput1_3.dll del sistema (SysWOW64): instalar DirectX desde la carpeta _CommonRedist del juego.'
+    }
+    $removed = @()
+    foreach ($px in $Proxies) {   # una sola variante del mod a la vez
+        $other = Join-Path $game "$px.dll"
+        if ($px -ne $Proxy -and (Test-Ours $other)) { Remove-Item $other; $removed += "$px.dll" }
+    }
     Copy-Item $DistDll $target -Force
     $cfg = @('# aimp.cfg generado por work\windows\aimp_check.ps1')
     if ($Preset) {
@@ -185,7 +199,8 @@ function Do-Install {
     Set-Content -Path (Join-Path $game 'aimp.cfg') -Value $cfg -Encoding ASCII
     Out-Report ''
     Out-Report "## Instalación ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
-    Out-Report "- Copiado ``winmm.dll`` (SHA-256 ``$have``) a ``$game``."
+    Out-Report "- Copiado ``$Proxy.dll`` (SHA-256 ``$have``) a ``$game``."
+    if ($removed) { Out-Report "- Borrada la otra variante del mod: $($removed -join ', ')." }
     Out-Report "- ``aimp.cfg``: $(($cfg | Select-Object -Skip 1 | Where-Object { $_ -notmatch '^#' }) -join '; ')$(if ($cfg.Count -eq 1) { '(sin red)' })"
     Out-Report '- Siguiente: abrir el juego (hasta el menú principal) y correr `-Action verify`.'
     Out-Report '- Para deshacer: `-Action revert`.'
@@ -217,7 +232,7 @@ function Do-Collect {
     }
     $since = (Get-Date).AddHours(-3)
     $ev = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since } -ErrorAction SilentlyContinue |
-        Where-Object { $_.Message -match 'AI\.exe|winmm' -and $_.LevelDisplayName -match 'Error|Crítico|Critical' } | Select-Object -First 5
+        Where-Object { $_.Message -match 'AI\.exe|winmm|xinput1_3' -and $_.LevelDisplayName -match 'Error|Crítico|Critical' } | Select-Object -First 5
     if ($ev) {
         Out-Report '- Eventos de error de las últimas 3 h que mencionan AI.exe o winmm (Visor de eventos):'
         Out-Report '```text'
@@ -241,19 +256,24 @@ function Do-Verify {
         return
     }
     $game = Split-Path $p.Path
-    $ours = Join-Path $game 'winmm.dll'
-    Out-Report "- AI.exe abierto (pid $($p.Id)) en ``$game``"
+    # La variante instalada: la DLL del mod que está en la carpeta (winmm si no hay ninguna).
+    $px = ($Proxies | Where-Object { Test-Ours (Join-Path $game "$_.dll") } | Select-Object -First 1)
+    if (-not $px) { $px = 'winmm' }
+    $ours = Join-Path $game "$px.dll"
+    Out-Report "- AI.exe abierto (pid $($p.Id)) en ``$game``; variante del mod: ``$px.dll``"
     if ([Environment]::Is64BitProcess) {
         $ps32 = Join-Path $env:WINDIR 'SysWOW64\WindowsPowerShell\v1.0\powershell.exe'
-        $loaded = (Invoke-Native $ps32 @('-NoProfile', '-Command', "(Get-Process -Id $($p.Id)).Modules | Where-Object { `$_.ModuleName -eq 'winmm.dll' } | ForEach-Object { `$_.FileName }") | Select-Object -First 1)
+        $loaded = @(Invoke-Native $ps32 @('-NoProfile', '-Command', "(Get-Process -Id $($p.Id)).Modules | Where-Object { `$_.ModuleName -eq '$px.dll' } | ForEach-Object { `$_.FileName }"))
     } else {
-        $loaded = ($p.Modules | Where-Object { $_.ModuleName -eq 'winmm.dll' } | Select-Object -First 1).FileName
+        $loaded = @($p.Modules | Where-Object { $_.ModuleName -eq "$px.dll" } | ForEach-Object { $_.FileName })
     }
-    Out-Report "- winmm.dll cargada en el juego: ``$loaded``"
+    # Con el mod cargado hay dos módulos con ese nombre: el del juego (el mod) y el del sistema (la real).
+    $loadedOurs = $loaded | Where-Object { $_ -ieq $ours } | Select-Object -First 1
+    Out-Report "- $px.dll cargadas en el juego: $(if ($loaded) { ($loaded | ForEach-Object { "``$_``" }) -join ', ' } else { 'ninguna' })"
     $logs = @((Join-Path $AimpDir 'aimp.log'), (Join-Path $env:TEMP 'aimp.log')) | Where-Object { Test-Path $_ }
     $log = $logs | Where-Object { (Get-Item $_).LastWriteTime -ge $p.StartTime.AddSeconds(-5) } | Select-Object -First 1
-    if ($loaded -and ($loaded -ieq $ours)) {
-        Out-Report '- **El mod cargó** (Windows usa la winmm.dll de la carpeta del juego).'
+    if ($loadedOurs) {
+        Out-Report "- **El mod cargó** (Windows usa la $px.dll de la carpeta del juego)."
         if (-not $log) { Out-Report '- **Pero no hay log de esta corrida** en %LOCALAPPDATA%\AI_Multiplayer ni en %TEMP%: revisar permisos de esas carpetas.'; return }
         Out-Report "- Log: ``$log``"
         $pat = 'AI_Multiplayer |config:|plataforma:|build|FATAL|ERROR|NET |SESSION|SAVESYNC|UI: '
@@ -267,37 +287,43 @@ function Do-Verify {
         elseif (Select-String -Path $log -Pattern 'NET ' -Quiet) { Out-Report '- Red: todavía sin datos del otro jugador (¿el otro tiene el juego abierto? ¿IP y Tailscale bien?).' }
         return
     }
-    Out-Report '- **El mod NO cargó**: Windows usa otra winmm.dll. Diagnóstico:'
+    Out-Report "- **El mod NO cargó**: Windows usa otra $px.dll. Diagnóstico:"
     if (-not (Test-Path $ours)) { Out-Report "  - **No está** ``$ours``: copiar la DLL (o el antivirus la borró: ver Seguridad de Windows → Historial de protección)."; return }
     $kd = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\KnownDLLs'
-    $inKd = $kd.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' -and "$($_.Value)" -match '^winmm(\.dll)?$' }
-    if ($inKd) { Out-Report '  - winmm está en KnownDLLs: Windows siempre usa la del sistema. El proxy por winmm no puede andar en esta máquina.' }
-    else { Out-Report '  - winmm no está en la lista de KnownDLLs.' }
+    $inKd = $kd.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' -and "$($_.Value)" -match "^$px(\.dll)?$" }
+    if ($inKd) { Out-Report "  - $px está en KnownDLLs: Windows siempre usa la del sistema. El proxy por $px no puede andar en esta máquina." }
+    else { Out-Report "  - $px no está en la lista de KnownDLLs." }
     $sac = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy' -ErrorAction SilentlyContinue).VerifiedAndReputablePolicyState
     $sacTxt = switch ("$sac") { '0' { 'apagado' } '1' { '**ACTIVADO**' } '2' { '**en evaluación**' } default { 'no figura (Windows 10 o sin el dato)' } }
     Out-Report "  - Smart App Control: $sacTxt"
     try {
         $ci = Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -MaxEvents 300 -ErrorAction Stop |
-            Where-Object { $_.TimeCreated -ge $p.StartTime.AddMinutes(-1) -and $_.Message -match 'winmm|Alien Isolation' } | Select-Object -First 5
+            Where-Object { $_.TimeCreated -ge $p.StartTime.AddMinutes(-1) -and $_.Message -match 'winmm|xinput1_3|Alien Isolation' } | Select-Object -First 5
         if ($ci) {
             Out-Report '  - **Integridad de código bloqueó archivos del juego** (causa probable: falta de firma digital):'
             Out-Report '```text'
             $ci | ForEach-Object { Out-Report ("{0} id={1}: {2}" -f $_.TimeCreated, $_.Id, (($_.Message -split "`n")[0..2] -join ' | ')) }
             Out-Report '```'
-        } else { Out-Report '  - Sin eventos de Integridad de código sobre winmm desde que se abrió el juego.' }
+        } else { Out-Report "  - Sin eventos de Integridad de código sobre $px desde que se abrió el juego." }
     } catch { Out-Report '  - No se pudo leer el registro de Integridad de código (correr PowerShell como administrador para verlo).' }
-    Out-Report '  - Si no hubo bloqueo: la winmm del sistema probablemente se cargó antes que la del juego (pasa en Windows 11 nuevos). Confirmarlo con Process Monitor (filtros Process Name is AI.exe y Path contains winmm: si nunca busca en la carpeta del juego, es eso). Ver INSTALAR_CON_CLAUDE.md.'
+    if ($px -eq 'winmm') {
+        Out-Report '  - Si no hubo bloqueo: la winmm del sistema probablemente se cargó antes que la del juego (pasa en Windows 11 nuevos). **Probar la variante xinput1_3**: cerrar el juego, `-Action install -Proxy xinput1_3` (con el mismo -Preset/-Peer) y repetir `-Action verify`. Ver INSTALAR_CON_CLAUDE.md.'
+    } else {
+        Out-Report '  - Si no hubo bloqueo: confirmar con Process Monitor (filtros Process Name is AI.exe y Path contains xinput1_3: ¿busca la DLL en la carpeta del juego?) y dejar la evidencia en el informe. Ver INSTALAR_CON_CLAUDE.md.'
+    }
 }
 
 function Do-Revert {
     $game = Find-Game
     if (-not $game) { throw 'Juego no encontrado.' }
-    $target = Join-Path $game 'winmm.dll'
     Out-Report ''
     Out-Report "## Reversión ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
-    if (Test-Path $target) {
-        if (Test-Ours $target) { Remove-Item $target; Out-Report '- Borrado `winmm.dll` (era el mod).' }
-        else { Out-Report '- **El winmm.dll de la carpeta del juego no es el mod: no lo toco.**' }
+    foreach ($px in $Proxies) {
+        $target = Join-Path $game "$px.dll"
+        if (Test-Path $target) {
+            if (Test-Ours $target) { Remove-Item $target; Out-Report "- Borrado ``$px.dll`` (era el mod)." }
+            else { Out-Report "- El $px.dll de la carpeta del juego no es el mod: no lo toco." }
+        }
     }
     $cfg = Join-Path $game 'aimp.cfg'
     if (Test-Path $cfg) { Remove-Item $cfg; Out-Report '- Borrado `aimp.cfg`.' }

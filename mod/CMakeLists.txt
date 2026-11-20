@@ -5,7 +5,7 @@ project(aimp C)
 #   cmake -S mod -B mod/build -DCMAKE_TOOLCHAIN_FILE=$PWD/mod/cmake/toolchain-i686-w64-mingw32.cmake
 #   (la ruta del toolchain tiene que ser absoluta: CMake la resuelve desde el directorio de build)
 #   cmake --build mod/build
-# Salida: mod/build/winmm.dll (el proxy) y los tests en mod/build/test/.
+# Salida: mod/build/winmm.dll y mod/build/xinput1_3.dll (el proxy, en sus dos variantes) y los tests en mod/build/test/.
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows" OR NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "Hay que compilar para Windows i686 (usar cmake/toolchain-i686-w64-mingw32.cmake)")
@@ -33,10 +33,12 @@ set(AIMP_C_FLAGS
   -mincoming-stack-boundary=2
 )
 
-add_library(aimp_winmm SHARED
+# El mod se compila dos veces sobre los mismos objetos: como winmm.dll (la de siempre) y como
+# xinput1_3.dll (variante para máquinas donde Windows no carga la winmm de la carpeta del juego).
+# Solo cambian proxy.c (la tabla de exports) y el .def.
+add_library(aimp_core OBJECT
   src/dllmain.c
   src/cfg.c
-  src/proxy.c
   src/game.c
   src/hook.c
   src/probe.c
@@ -64,18 +66,29 @@ add_library(aimp_winmm SHARED
   src/fmt.c
   src/rt.c
   src/crt.c
-  src/winmm.def
 )
-set_target_properties(aimp_winmm PROPERTIES OUTPUT_NAME winmm PREFIX "" SUFFIX ".dll")
-target_compile_options(aimp_winmm PRIVATE ${AIMP_C_FLAGS})
-add_dependencies(aimp_winmm aimp_githash)
-target_include_directories(aimp_winmm PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_link_options(aimp_winmm PRIVATE
+target_compile_options(aimp_core PRIVATE ${AIMP_C_FLAGS})
+add_dependencies(aimp_core aimp_githash)
+target_include_directories(aimp_core PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+set(AIMP_LINK_OPTIONS
   -nostdlib -nostartfiles -static-libgcc -s
   -Wl,-e,_DllMainCRTStartup@12
   -Wl,--dynamicbase -Wl,--nxcompat
 )
+
+add_library(aimp_winmm SHARED $<TARGET_OBJECTS:aimp_core> src/proxy.c src/winmm.def)
+set_target_properties(aimp_winmm PROPERTIES OUTPUT_NAME winmm PREFIX "" SUFFIX ".dll")
+target_compile_options(aimp_winmm PRIVATE ${AIMP_C_FLAGS})
+target_link_options(aimp_winmm PRIVATE ${AIMP_LINK_OPTIONS})
 target_link_libraries(aimp_winmm PRIVATE kernel32 gcc)
+
+add_library(aimp_xinput SHARED $<TARGET_OBJECTS:aimp_core> src/proxy.c src/xinput1_3.def)
+set_target_properties(aimp_xinput PROPERTIES OUTPUT_NAME xinput1_3 PREFIX "" SUFFIX ".dll")
+target_compile_options(aimp_xinput PRIVATE ${AIMP_C_FLAGS})
+target_compile_definitions(aimp_xinput PRIVATE AIMP_PROXY_XINPUT)
+target_link_options(aimp_xinput PRIVATE ${AIMP_LINK_OPTIONS})
+target_link_libraries(aimp_xinput PRIVATE kernel32 gcc)
 
 # ---- Tests (se corren con wine; ver README) ----
 # test_host: importa winmm.dll como AI.exe (por nombre) y la usa. Con el proxy al lado
@@ -83,6 +96,12 @@ target_link_libraries(aimp_winmm PRIVATE kernel32 gcc)
 add_executable(test_host test/test_host.c)
 target_link_libraries(test_host PRIVATE winmm)
 set_target_properties(test_host PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
+
+# test_host_xinput: importa XINPUT1_3.dll como AI.exe (ordinales 2, 3 y 4) con la variante al lado,
+# y carga además la winmm del mod: el mod tiene que arrancar una sola vez.
+add_executable(test_host_xinput test/test_host_xinput.c)
+target_link_libraries(test_host_xinput PRIVATE xinput1_3)
+set_target_properties(test_host_xinput PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 # test_core: prueba hook.c sobre una función con el mismo prólogo que ModeManager::Run,
 # y el formateador (fmt.c) contra el snprintf del CRT.

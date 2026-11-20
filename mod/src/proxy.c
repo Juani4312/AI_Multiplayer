@@ -1,18 +1,34 @@
-/* Proxy de winmm.dll.
+/* Proxy de winmm.dll (o de xinput1_3.dll, con AIMP_PROXY_XINPUT).
  *
  * Cada export del proxy es un stub "jmp [puntero]". El puntero arranca apuntando a
- * un thunk de "no resuelto" y proxy_init() lo reemplaza por la función de la winmm
+ * un thunk de "no resuelto" y proxy_init() lo reemplaza por la función de la DLL
  * real. La lista de exports sale de winmm_exports.inc (generada por
- * tools/gen_winmm_exports.py); el .def con los mismos nombres la publica.
+ * tools/gen_winmm_exports.py) o de xinput_exports.inc (a mano); el .def con los mismos
+ * nombres la publica.
+ *
+ * La DLL real es la de la carpeta de sistema, salvo que AIMP_PROXY_REAL (aimp.cfg o
+ * variable de entorno) nombre otra: una ruta absoluta, o un nombre de archivo en la carpeta
+ * del proxy. Sirve para encadenar otro mod que use la misma DLL (MovieFix trae su
+ * xinput1_3.dll: se renombra, p. ej. a xinput1_3_moviefix.dll, y se pone ese nombre).
  */
 #include "proxy.h"
 #include "log.h"
+
+#ifdef AIMP_PROXY_XINPUT
+#define PROXY_INC "xinput_exports.inc"
+#define PROXY_NAME "xinput1_3"
+#define PROXY_FILEW L"xinput1_3.dll"
+#else
+#define PROXY_INC "winmm_exports.inc"
+#define PROXY_NAME "winmm"
+#define PROXY_FILEW L"winmm.dll"
+#endif
 
 /* 1) Punteros a las funciones reales. */
 #define X(n, o) extern void aimp_f_##n(void); void *aimp_p_##n = (void *)aimp_f_##n;
 #define W(n, o) X(n, o)
 #define O(o) extern void aimp_f_ord##o(void); void *aimp_p_ord##o = (void *)aimp_f_ord##o;
-#include "winmm_exports.inc"
+#include PROXY_INC
 #undef X
 #undef W
 #undef O
@@ -26,7 +42,7 @@
 #define X(n, o) AIMP_STUB(#n, #o)
 #define W(n, o) AIMP_STUB(#n, #o)
 #define O(o) AIMP_STUB("ord" #o, #o)
-#include "winmm_exports.inc"
+#include PROXY_INC
 #undef X
 #undef W
 #undef O
@@ -43,7 +59,7 @@ static const ExportInfo k_exports[] = {
 #define X(n, o) { o, 0, #n, &aimp_p_##n },
 #define W(n, o) { o, 1, #n, &aimp_p_##n },
 #define O(o) { o, 0, NULL, &aimp_p_ord##o },
-#include "winmm_exports.inc"
+#include PROXY_INC
 #undef X
 #undef W
 #undef O
@@ -53,6 +69,7 @@ static const ExportInfo k_exports[] = {
 static HMODULE g_real;
 
 HMODULE proxy_real(void) { return g_real; }
+const char *proxy_name(void) { return PROXY_NAME; }
 
 /* Llamada a un export que la winmm real no tiene (o la real no se cargó).
  * No vuelve: el stack del llamador no se puede reparar sin conocer la firma. */
@@ -64,8 +81,8 @@ __attribute__((used, noreturn, force_align_arg_pointer)) void aimp_unresolved(ui
         if (k_exports[i].ord == ord)
             name = k_exports[i].name ? k_exports[i].name : "(solo ordinal)";
     aimp_snprintf(msg, sizeof msg,
-                  "Se llamó a winmm!%s (ordinal %u), que la winmm real no tiene o no se cargó. "
-                  "Se cierra el juego. Log: %s",
+                  "Se llamó a " PROXY_NAME "!%s (ordinal %u), que la " PROXY_NAME
+                  " real no tiene o no se cargó. Se cierra el juego. Log: %s",
                   name, (unsigned)ord, log_path_utf8());
     log_printf("FATAL: %s", msg);
     HMODULE u = GetModuleHandleW(L"user32.dll");
@@ -73,27 +90,52 @@ __attribute__((used, noreturn, force_align_arg_pointer)) void aimp_unresolved(ui
         typedef int(WINAPI * MsgBoxA)(HWND, LPCSTR, LPCSTR, UINT);
         MsgBoxA mb = (MsgBoxA)(void *)GetProcAddress(u, "MessageBoxA");
         if (mb)
-            mb(NULL, msg, "AI_Multiplayer (proxy winmm)", MB_ICONERROR | MB_OK);
+            mb(NULL, msg, "AI_Multiplayer (proxy " PROXY_NAME ")", MB_ICONERROR | MB_OK);
     }
     TerminateProcess(GetCurrentProcess(), 0xA1A1);
     for (;;)
         Sleep(1000);
 }
 
-int proxy_init(void)
+/* Ruta de la DLL real: AIMP_PROXY_REAL o <sistema>\<nombre>. */
+static int real_path(wchar_t *path, size_t cap, int *chained)
 {
-    wchar_t path[MAX_PATH + 32];
-    char p8[MAX_PATH * 3];
-    UINT n = GetSystemDirectoryW(path, MAX_PATH);
+    wchar_t v[MAX_PATH];
+    *chained = 0;
+    if (aimp_env_str(L"AIMP_PROXY_REAL", v, MAX_PATH) && v[0]) {
+        *chained = 1;
+        int abs = (v[0] && v[1] == L':') || v[0] == L'\\' || v[0] == L'/';
+        if (abs)
+            return aimp_wcscpy(path, cap, v) > 0;
+        DWORD len = GetModuleFileNameW(g_aimp_self, path, (DWORD)cap);
+        if (!len || len >= cap)
+            return 0;
+        while (len && path[len - 1] != L'\\' && path[len - 1] != L'/')
+            len--;
+        path[len] = 0;
+        aimp_wcscat(path, cap, v);
+        return 1;
+    }
+    UINT n = GetSystemDirectoryW(path, (UINT)cap);
     if (n == 0 || n >= MAX_PATH) {
         log_printf("proxy: GetSystemDirectoryW falló (%u)", (unsigned)GetLastError());
         return 0;
     }
-    aimp_wcscat(path, MAX_PATH + 32, L"\\winmm.dll");
+    aimp_wcscat(path, cap, L"\\" PROXY_FILEW);
+    return 1;
+}
+
+int proxy_init(void)
+{
+    wchar_t path[MAX_PATH + 32];
+    char p8[MAX_PATH * 3];
+    int chained;
+    if (!real_path(path, MAX_PATH + 32, &chained))
+        return 0;
     g_real = LoadLibraryW(path);
     if (!g_real) {
-        log_printf("proxy: no se pudo cargar %s (error %u)", aimp_utf8(p8, sizeof p8, path),
-                   (unsigned)GetLastError());
+        log_printf("proxy: no se pudo cargar %s (error %u)%s", aimp_utf8(p8, sizeof p8, path),
+                   (unsigned)GetLastError(), chained ? " (AIMP_PROXY_REAL)" : "");
         return 0;
     }
     if (g_real == g_aimp_self) {
@@ -103,8 +145,8 @@ int proxy_init(void)
     }
     wchar_t got[MAX_PATH];
     GetModuleFileNameW(g_real, got, MAX_PATH);
-    log_printf("proxy: winmm real = %s (0x%08x)", aimp_utf8(p8, sizeof p8, got),
-               (unsigned)(uintptr_t)g_real);
+    log_printf("proxy: " PROXY_NAME " real = %s (0x%08x)%s", aimp_utf8(p8, sizeof p8, got),
+               (unsigned)(uintptr_t)g_real, chained ? ", encadenada por AIMP_PROXY_REAL" : "");
 
     unsigned ok = 0, miss = 0, miss_win = 0;
     char missing[1024];
@@ -122,10 +164,14 @@ int proxy_init(void)
         miss++;
         if (e->win_only)
             miss_win++;
-        if (mk + 40 < sizeof missing)
-            mk += (size_t)aimp_snprintf(missing + mk, sizeof missing - mk, " %s", e->name ? e->name : "#ord");
+        if (mk + 40 < sizeof missing) {
+            if (e->name)
+                mk += (size_t)aimp_snprintf(missing + mk, sizeof missing - mk, " %s", e->name);
+            else
+                mk += (size_t)aimp_snprintf(missing + mk, sizeof missing - mk, " #%u", (unsigned)e->ord);
+        }
     }
-    log_printf("proxy: %u exports resueltos, %u ausentes en la winmm real (%u de ellos son solo de Windows)",
+    log_printf("proxy: %u exports resueltos, %u ausentes en la " PROXY_NAME " real (%u de ellos son solo de Windows)",
                ok, miss, miss_win);
     if (miss)
         log_printf("proxy: ausentes:%s", missing);

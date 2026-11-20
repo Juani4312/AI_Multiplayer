@@ -38,7 +38,17 @@ cmake --build mod/build
 mod/test/run_tests.sh          # tests con wine en un prefix descartable
 ```
 
-Salida: `mod/build/winmm.dll` (~53 KB). Se compila **sin CRT**: el único import es `KERNEL32.dll`.
+Salida: `mod/build/winmm.dll` y `mod/build/xinput1_3.dll`. Se compila **sin CRT**: el único import es `KERNEL32.dll`.
+
+Las dos DLL son el mismo mod (objetos comunes, `aimp_core` en CMake); solo cambian la tabla de exports y el
+`.def`. `xinput1_3.dll` es la variante para máquinas donde Windows no carga la `winmm.dll` de la carpeta del
+juego (Windows 11 25H2, 2026-11-18). Reglas:
+- si se cargan las dos en el mismo proceso, el mod arranca solo en la primera (mutex `Local\AIMP_mod_<pid>`);
+  la otra queda como proxy puro, sin log ni hooks;
+- la DLL real es la de la carpeta de sistema, salvo `AIMP_PROXY_REAL` (ver la tabla de variables), que
+  permite encadenar otro mod con el mismo nombre de DLL;
+- exports de la variante: `src/xinput_exports.inc` y `src/xinput1_3.def` (a mano: ordinales 2–8 con nombre
+  y 100–103 solo por ordinal, como la xinput1_3 de Proton; `AI.exe` importa 2, 3 y 4 por ordinal).
 
 La lista de exports (`src/winmm_exports.inc`, `src/winmm.def`) la genera
 `tools/gen_winmm_exports.py`. Es la unión de la winmm de Proton 9 y de los nombres de la import
@@ -56,7 +66,9 @@ log, en lugar de crashear sin explicación.
 - `test_probe`: la sonda contra una imagen de `AI.exe` simulada, con los objetos del juego en los
   offsets de `src/game.h`;
 - `test_host`: un .exe que importa `winmm.dll` como `AI.exe`. Carga el proxy, el proxy carga la real y
-  las llamadas se reenvían.
+  las llamadas se reenvían;
+- `test_host_xinput`: lo mismo con la variante `xinput1_3.dll` (por nombre y por ordinal, como `AI.exe`);
+  después carga también la `winmm.dll` del mod y verifica que el mod arrancó una sola vez.
 
 ## Instalar
 
@@ -102,6 +114,7 @@ Las variables se pueden poner también en un archivo `aimp.cfg` (líneas `AIMP_X
 |----------|---------|-----|
 | `AIMP_LOG` | `%LOCALAPPDATA%\AI_Multiplayer\aimp.log` | ruta del log. En Proton se puede usar `Z:/home/...` |
 | `AIMP_NOHOOK` | 0 | 1 = proxy puro, sin hooks (modo seguro) |
+| `AIMP_PROXY_REAL` | (la de sistema) | DLL real a la que reenvía el proxy: ruta absoluta, o nombre de archivo en la carpeta del proxy. Para encadenar otro mod que use el mismo nombre (p. ej. `xinput1_3_moviefix.dll`) |
 | `AIMP_SAMPLE_MS` | 250 | cada cuánto se toma una foto completa del estado (eventos `EV`) |
 | `AIMP_STATUS_MS` | 1000 | cada cuánto se escribe el resumen (`ST`) |
 | `AIMP_DUMP_KEY` | `0x78` (F9) | tecla de volcado completo de estructuras |
