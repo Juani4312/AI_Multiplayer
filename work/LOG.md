@@ -246,3 +246,4 @@
 - 03:10 (2026-11-20) Con las instrucciones de las capturas del usuario: Smart AI reinstalado con los 121 archivos; AIMovieFix con toggle.sh (xinput1_3.dll a la raíz); los videos del remaster ya estaban. Los cuatro activos.
 - 03:12 (2026-11-20) Pedido del usuario: la run sin morir a saves/run-sin-morir-2026-11-20.tar.gz (verificada idéntica a current y al remote) y juego sin partidas (saves.sh vaciar, nuevo: borra los .ais, deja input.cfg, backup previo). Para volver: saves.sh load run-sin-morir-2026-11-20.
 - 03:20 (2026-11-20) El juego no abre: sale solo en el primer frame del Frontend (sin excepción). Descartados mods y save (corridas de diagnóstico); sospecha: pack de texturas x2. Estado del usuario restaurado.
+- 03:25 (2026-11-20) Causa: el pack de texturas reemplazó la carpeta PRODUCTION entera (solo trae 70 archivos). Lo arregló el usuario; las texturas las maneja él.
