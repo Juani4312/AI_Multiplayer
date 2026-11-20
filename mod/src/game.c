@@ -17,6 +17,7 @@
 #include "gamesave.h"
 #include "hook.h"
 #include "log.h"
+#include "proxy.h"
 #include "autopad.h"
 #include "pins.h"
 #include "probe.h"
@@ -83,7 +84,7 @@ int game_init(void)
     GetModuleFileNameW(NULL, exe, MAX_PATH);
     log_printf("EXE: %s, base 0x%08x", aimp_utf8(p8, sizeof p8, exe), (unsigned)g_aimp_exe);
     if (!check_build()) {
-        log_printf("build NO reconocida: el mod queda solo como proxy de winmm (sin hooks)");
+        log_printf("build NO reconocida: el mod queda solo como proxy de %s (sin hooks)", proxy_name());
         return 0;
     }
     log_printf("build reconocida (AI.exe dde66521...19a90, buildid 4940658)");

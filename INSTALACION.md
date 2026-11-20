@@ -51,6 +51,7 @@ Con los scripts es un comando, y verifican todo:
 - **Con otra build del juego** el mod no hace nada: queda como proxy de `winmm` y el juego anda normal (el log dice qué no coincidió).
 - **Una sola cuenta de Steam en dos PCs:** Steam no deja correr el juego en dos máquinas a la vez con la misma cuenta. Una de las dos tiene que estar en **modo sin conexión**.
 - **Otros mods:** ReShade (`dxgi.dll`), `d3d11.dll` y MovieFix (`xinput1_3.dll`) no molestan. El mod usa `winmm.dll`, así que no puede convivir con otro mod que también la use.
+- **Variante `xinput1_3.dll`:** el mismo mod, compilado para entrar por `xinput1_3.dll` (`mod/dist/xinput1_3.dll`). Es para las máquinas donde Windows no carga la `winmm.dll` de la carpeta del juego (visto en Windows 11 25H2). Se instala una sola de las dos (si están las dos, el mod arranca una vez y la otra solo reenvía). Si ya hay otra `xinput1_3.dll` en la carpeta (MovieFix trae una), se renombra y se encadena con `AIMP_PROXY_REAL=<nombre nuevo>` en `aimp.cfg`. Instalación: `aimp_check.ps1 -Action install -Proxy xinput1_3 …` (Windows) o `runtime_setup.sh install --proxy xinput1_3 …` (Linux).
 - **Red:** [Tailscale](https://tailscale.com) (gratis) en las dos máquinas. Evita abrir puertos en el router.
 
 ## 2. Conseguir la DLL
@@ -103,7 +104,8 @@ Parámetros de `aimp_check.ps1`:
 
 | Parámetro | Valores | Qué hace |
 |-----------|---------|----------|
-| `-Action` | `check`, `install`, `verify`, `collect`, `revert` | `check`: chequeos sin tocar nada (con `-Peer`, además hace ping al host). `install`: copia `mod\dist\winmm.dll` (verifica su hash) y escribe `aimp.cfg` en la carpeta del juego. `verify`: con el juego abierto, si cargó y por qué no. `collect`: copia `aimp.log` a `work\windows\logs\`. `revert`: saca `winmm.dll` y `aimp.cfg` |
+| `-Action` | `check`, `install`, `verify`, `collect`, `revert` | `check`: chequeos sin tocar nada (con `-Peer`, además hace ping al host). `install`: copia `mod\dist\winmm.dll` (verifica su hash) y escribe `aimp.cfg` en la carpeta del juego. `verify`: con el juego abierto, si cargó y por qué no. `collect`: copia `aimp.log` a `work\windows\logs\`. `revert`: saca la DLL del mod y `aimp.cfg` |
+| `-Proxy` | `winmm` (por defecto), `xinput1_3` | con `install`: por qué DLL entra el mod. `xinput1_3` es la variante para cuando `verify` dice que Windows no cargó la `winmm` |
 | `-Preset` | `host`, `join` | la configuración recomendada (`mod\dist\aimp-host.cfg` o `aimp-join.cfg`); `join` necesita `-Peer` |
 | `-Peer` | `ip:puerto` | la IP de Tailscale del host y el puerto 47811 (`AIMP_NET_PEER`) |
 | `-Extra` | `CLAVE=valor,CLAVE=valor` | claves extra o que reemplazan a las del preset ([referencia](#9-referencia-de-parámetros)) |
@@ -365,7 +367,7 @@ Solo agregan líneas al log; no cambian el juego. Útiles para reportar un probl
 | Síntoma | Causa probable | Qué hacer |
 |---------|----------------|-----------|
 | No aparece `aimp.log` | el mod no cargó | Windows: `winmm.dll` al lado de `AI.exe` (no en una subcarpeta) y que `winmm` no esté en KnownDLLs; `aimp_check.ps1 -Action verify` con el juego abierto dice por qué. Proton: falta `WINEDLLOVERRIDES="winmm=n,b"` (o `runtime_setup.sh install`) |
-| Windows 11: archivos bien, pero sin log | el juego usa la `winmm.dll` del sistema: la bloqueó Smart App Control / Integridad de código, o Windows ya la tenía cargada | ver la sección 2 de [`INSTALAR_CON_CLAUDE.md`](INSTALAR_CON_CLAUDE.md). Visto en Windows 11 25H2; en Windows 10 anda |
+| Windows 11: archivos bien, pero sin log | el juego usa la `winmm.dll` del sistema: Windows ya la tenía cargada, o la bloqueó Smart App Control / Integridad de código | probar la variante `xinput1_3` (`aimp_check.ps1 -Action install -Proxy xinput1_3 …`); si tampoco, la sección 2 de [`INSTALAR_CON_CLAUDE.md`](INSTALAR_CON_CLAUDE.md). Visto en Windows 11 25H2; en Windows 10 anda |
 | El log dice `build NO reconocida` | otra versión del juego | verificar el SHA-256 de `AI.exe` (sección 1); el mod queda inactivo a propósito |
 | El juego avisa por Steam Cloud al abrir | los saves cambiaron (los copió el mod) | elegir los archivos **locales** |
 | `NET … sin datos del otro jugador` | no se ven por red | revisar IP y puerto en `AIMP_NET_PEER`, que Tailscale esté conectado en los dos, y el firewall de Windows |

@@ -304,7 +304,7 @@ Pasos:
 
 Reportar: los tiempos de la copia (líneas `SAVESYNC` con su hora) y si "Continue" cargó el mismo lugar que el host.
 
-### 8g. Segunda prueba de a dos: load y game over (2026-11-17; DLL actual `b4de9984…`, 2026-11-18)
+### 8g. Segunda prueba de a dos: load y game over (2026-11-17; DLL actual `cf1e7575…`, 2026-11-20)
 
 Arreglos después de la primera prueba conjunta (8e/8f):
 - **Agachado:** al pararse caminando, el avatar quedaba agachado. Ahora siempre recibe la animación de parado.
@@ -314,6 +314,7 @@ Arreglos después de la primera prueba conjunta (8e/8f):
 - **Mensajes en el menú:** en Play Game, la línea de abajo muestra el estado del coop ("esperando al host… no entres todavía", "partida del host copiada. Ya podés entrar"). "Continue Game" dice "esperá al host", "esperá, copiando" o "partida del host". No hace falta mirar el log para saber cuándo entrar.
 - **Conductos:** entrar a un conducto ya no se replica. Antes el avatar del otro "entraba" y la escotilla quedaba ocupada: en la laptop no aparecía la "E".
 - **Pantalla negra al caer por un remate (2026-11-18, DLL `df452eb1…`):** cuando un enemigo "remata" (el agarre del Alien, y los de humanos o androides), con el modo caído la pantalla quedaba negra para siempre. Ahora, 4 s después del remate, el caído recupera el control y la imagen (sigue caído). Mientras está caído, el Alien (y en principio los demás enemigos) lo ignora: después del remate se va. Al revivir lo vuelve a cazar. En el log: `DEATH: remate al jugador…` y `DEATH: fundido de pantalla: … -> 0`. Si pasa, anotar qué enemigo fue.
+- **Variante `xinput1_3.dll` (2026-11-20, DLL `cf1e7575…`):** el mod se compila también como `xinput1_3.dll` para máquinas donde Windows 11 no carga la `winmm.dll` del juego. En esta laptop (Windows 10) se sigue usando la `winmm.dll`: no hace falta nada. Esta DLL solo cambia eso respecto de `b4de9984` (mismo protocolo).
 - **Armas de a una: se deja de usar.** Los dos tienen todas las armas y la munición de reserva es compartida (inventario compartido). Instalar **sin** `AIMP_SYNC_WEAPONS`.
 
 Configuración en la laptop (`git pull` y reinstalar):

@@ -3,18 +3,21 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-18 tarde (sesión local, corridas 134–147). **Papito quedó como host en modo prueba (`safezone`) para jugar con el amigo: al terminar, `mode.sh play`.** Para la próxima prueba de a dos (8g), volver a poner a papito como host con `mode.sh test safezone --cfg "AIMP_NET=host;..."` (la cfg completa está en LOG.md, 2026-11-18 23:00)._
+_Última actualización: 2026-11-20 madrugada (sesión local, corrida 148)._
 
-Hecho en la sesión de la tarde (detalle en NOTES.md, "Pantalla negra al caer por un remate"):
-- **pantalla negra al caer** (problema 4 de la corrida 119): reproducida con el save `alien` (el Alien remata al caído). Causa: el remate deja al jugador en la acción de muerte (`Character+0x36C`, vtable rva `0xEAE690`) y un fundido a negro (singleton `0x019D0970`, `+0x1B48`). **Arreglo** (`death.c`, con `AIMP_COOP_DOWNED=1`): 4 s después de un remate, `FUN_00658080` (locomoción del jugador) y opacidad 0: se ve el remate y después el caído vuelve a ver y a moverse. Verificado (corridas 136–137). Mientras dura el caído, su facción pasa a la del Alien: el Alien lo deja de tomar como enemigo, se suelta del remate y se va a los conductos; al revivir se restaura y vuelve a cazarlo (corridas 140–147);
-- `AIMP_TRACE_DMG` (golpes y muertes del jugador), `memsrv LOCO`, `ACT`, `WD` (retirada del Alien, como `NPC_WithdrawAlien`), `CALL` (thiscall de prueba); REA necesita JDK 27 (Ghidra 12.2);
-- **avisos dentro del juego** (`ui_message`, `ui.c`, corrida 138): el diálogo "Warning" del juego (`FUN_0077c9e0`, el de "Saving is disabled") con un texto propio por el hook de textos. La terminal bloqueada por el guardado exigente ahora lo avisa ("Coop: no se puede guardar acá: …"). **Pausa el juego local hasta el OK**: usarlo solo después de una acción del jugador. `memsrv MSG <texto>`;
-- `mod/dist` = `b4de9984…`; instrucciones 8g al día.
+Hecho el 2026-11-20 (detalle en NOTES.md, "Variante `xinput1_3.dll`"):
+- la prueba con el amigo no llegó a hacerse: su Windows 11 25H2 carga la `winmm` del sistema y el mod no arranca (papito estuvo 72 min de host sin datos);
+- **variante `xinput1_3.dll` del mod** (plan B): mismos objetos, otra tabla de exports; `AIMP_PROXY_REAL` para encadenar otro mod con el mismo nombre (MovieFix); si están las dos DLL, el mod arranca una vez. `test_host_xinput` OK y **corrida 148 en el juego (Proton): carga, hooks y mando OK**;
+- `runtime_setup.sh`/`mode.sh` con `--proxy xinput1_3` (aparta la `xinput1_3.dll` de MovieFix, que en Proton no se usa, y la devuelve); `aimp_check.ps1 -Proxy xinput1_3` (sin probar: no hay PowerShell acá); `INSTALAR_CON_CLAUDE.md` sección 2: primero probar la variante;
+- `mod/dist`: `winmm.dll` `cf1e7575…` y `xinput1_3.dll` `7eb96b3e…` (mismo protocolo que `b4de9984`).
+
+Hecho el 2026-11-18 a la tarde (corridas 134–147): pantalla negra al caer por un remate resuelta (`death.c`: locomoción + fundido 0 + facción del Alien mientras dura el caído), avisos con el diálogo "Warning" del juego (`ui_message`), `AIMP_TRACE_DMG`, `memsrv LOCO/ACT/WD/CALL`; REA necesita JDK 27.
 
 Hecho en la sesión anterior (2026-11-18, corridas 123–133): dificultad del juego y del coop (`diff.c`, menú "Coop"), guardar desde el mod (`gamesave.c`), host caído: guarda el cliente (`savesync` inverso).
 
 **Siguiente:**
-- **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `b4de9984`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
+- **el amigo:** que su Claude Code siga `INSTALAR_CON_CLAUDE.md` sección 2 (instalar con `-Proxy xinput1_3` y `verify`); si carga, papito como host con la misma DLL de `mod/dist` (`mode.sh test safezone --cfg …`, cfg en LOG.md 2026-11-18 23:00). Si tampoco carga: el informe de ProcMon/Integridad de código;
+- **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `cf1e7575`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
 - sentir la dificultad del coop jugando con el save `alien` (el efecto solo se verificó en memoria); sumar los sentidos del ALIEN (bloque por plantilla) si hace falta;
 - interacciones del mundo (robot, compuertas): identificar la entidad del robot con la traza de pines de 8g y sincronizar su estado;
 - remates de humanos y androides con el modo caído (la regla los cubre si pasan por `FUN_007d0c10`; falta verlo);

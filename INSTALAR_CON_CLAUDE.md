@@ -33,8 +33,8 @@ powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action che
 |-----|----------|-------|
 | Juego encontrado | carpeta de Steam con `AI.exe` | ¿Está instalado por Steam? Versiones de otras tiendas no están soportadas |
 | SHA-256 de `AI.exe` | `DDE66521…19A90` | Parar. Steam → Propiedades → Archivos instalados → Verificar integridad. Si sigue distinto, no es la build soportada |
-| `winmm` en KnownDLLs | no está | Parar: en esa máquina el mod no puede cargar. Anotarlo |
-| `winmm.dll` ajeno en la carpeta | no hay | No pisarlo: preguntar qué es |
+| `winmm` en KnownDLLs | no está | Usar la variante `-Proxy xinput1_3` (sección 2) |
+| `winmm.dll` ajeno en la carpeta | no hay | No pisarlo: preguntar qué es (u otra variante: sección 2) |
 | Ping al host (si se une) | responde | Revisar Tailscale y la IP |
 
 ```powershell
@@ -58,7 +58,22 @@ Para deshacer: `-Action revert`.
 
 ## 2. Windows: el mod no carga (el juego usa la `winmm.dll` del sistema)
 
-Visto en Windows 11 25H2 (compilación 26200): con los archivos bien copiados y los hashes correctos, `AI.exe` carga `C:\WINDOWS\SYSTEM32\WINMM.dll` y no la del juego. No aparece `aimp.log` (ni en `%LOCALAPPDATA%\AI_Multiplayer` ni en `%TEMP%`). En Windows 10 la misma DLL carga bien. Hay dos causas posibles; averiguá cuál antes de tocar nada.
+Visto en Windows 11 25H2 (compilación 26200): con los archivos bien copiados y los hashes correctos, `AI.exe` carga `C:\WINDOWS\SYSTEM32\WINMM.dll` y no la del juego. No aparece `aimp.log` (ni en `%LOCALAPPDATA%\AI_Multiplayer` ni en `%TEMP%`). En Windows 10 la misma DLL carga bien.
+
+**Primero, probá la variante `xinput1_3`.** Es el mismo mod, pero entra por `xinput1_3.dll` (la DLL del mando, que el juego también carga desde su carpeta y de la que no depende ninguna DLL del sistema). Pedile confirmación al usuario, con el juego cerrado:
+
+```powershell
+# borra la winmm.dll del mod y copia mod\dist\xinput1_3.dll (verifica su hash); mismo -Preset/-Peer que antes
+powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action install -Proxy xinput1_3 -Preset join -Peer 100.x.y.z:47811
+# el usuario abre el juego hasta el menú, y:
+powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action verify
+```
+
+- Si ya hay un `xinput1_3.dll` **ajeno** en la carpeta del juego (otro mod, p. ej. MovieFix), el script no lo pisa. Preguntale al usuario. El mod puede encadenarlo: renombrarlo (p. ej. a `xinput1_3_moviefix.dll`) y agregar `AIMP_PROXY_REAL=xinput1_3_moviefix.dll` al `aimp.cfg` (con `-Extra`).
+- Si `verify` dice **"El mod cargó"**: listo, seguí con la sección 4 (conexión). Anotá en el informe que esa máquina usa la variante `xinput1_3`. La causa era B (abajo).
+- Si tampoco carga: es A, o algo nuevo. Seguí con el diagnóstico de abajo, mirando `xinput1_3` en lugar de `winmm`.
+
+Hay dos causas posibles:
 
 **A. Smart App Control / Integridad de código bloquea la DLL** (no tiene firma digital).
 - `verify` como administrador muestra los eventos de `Microsoft-Windows-CodeIntegrity/Operational` que nombran `winmm.dll` (IDs 3033, 3034, 3077, 3089…) y el estado de Smart App Control (`HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy`, `VerifiedAndReputablePolicyState`: 0 apagado, 1 activado, 2 evaluación).
@@ -69,7 +84,7 @@ Visto en Windows 11 25H2 (compilación 26200): con los archivos bien copiados y 
 - Prueba definitiva: **Process Monitor** de Sysinternals (pedir permiso para bajarlo: https://learn.microsoft.com/sysinternals/downloads/procmon). Filtros `Process Name is AI.exe` y `Path contains winmm`; abrir el juego hasta el menú; detener la captura.
   - Si **nunca** aparece un acceso a `…\Alien Isolation\winmm.dll`: es B.
   - Si aparece esa ruta y después la de `SysWOW64`: la buscó y la descartó (apunta a A).
-- **Qué hacer:** del lado de esa máquina no hay arreglo. Hace falta una variante del mod que entre por otra DLL que el juego carga desde su carpeta (candidata: `xinput1_3.dll`). Dejá la evidencia en el informe para quien desarrolla el mod.
+- **Qué hacer:** la variante `xinput1_3` de arriba. Si tampoco anda, dejá la evidencia (ProcMon) en el informe para quien desarrolla el mod.
 
 ## 3. Linux (Proton)
 

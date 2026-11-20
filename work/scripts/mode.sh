@@ -3,10 +3,13 @@
 # Pedido del usuario (2026-11-17): su partida es una run sin morir; las pruebas nunca se hacen sobre ella.
 #
 #   mode.sh status               en qué modo está y qué save hay cargado
-#   mode.sh test [save] [--cfg "AIMP_X=1;..."]
+#   mode.sh test [save] [--cfg "AIMP_X=1;..."] [--proxy xinput1_3]
 #                                pasa a prueba: guarda la partida del usuario en saves/current.tar.gz (solo si
 #                                el modo actual es "juego"), carga el save de prueba (safezone por defecto; otro
-#                                si hace falta Alien o enemigos) e instala el mod (pasivo, o con la cfg dada)
+#                                si hace falta Alien o enemigos) e instala el mod (pasivo, o con la cfg dada).
+#                                --proxy xinput1_3: la variante que entra por xinput1_3.dll; aparta la
+#                                xinput1_3.dll de MovieFix (en Proton no se carga: AI.exe no tiene override de
+#                                xinput1_3) y "play" la devuelve
 #   mode.sh play                 vuelve al juego: carga saves/current.tar.gz (lo que pasó en la prueba se
 #                                descarta), y desinstala el mod (sin winmm.dll, sin override, sin aimp.cfg)
 #
@@ -24,10 +27,11 @@ status)
   echo "modo: $(cur)" ;;
 test)
   shift
-  save=safezone; cfg="AIMP_GHOST=0"
+  save=safezone; cfg="AIMP_GHOST=0"; px=()
   while [ $# -gt 0 ]; do
     case "$1" in
       --cfg) cfg="$2"; shift 2 ;;
+      --proxy) px=(--proxy "$2" --apartar-ajena); shift 2 ;;
       *) save="$1"; shift ;;
     esac
   done
@@ -40,9 +44,9 @@ test)
     echo "ya en prueba ($m): saves/current.tar.gz no se toca"
   fi
   "$SAVES" load "$save"
-  "$SETUP" install --cfg "$cfg" >/dev/null
+  "$SETUP" install "${px[@]}" --cfg "$cfg" >/dev/null
   echo "test $save" > "$ST"
-  echo "modo: prueba con $save; mod instalado ($cfg)" ;;
+  echo "modo: prueba con $save; mod instalado (${px[1]:-winmm}; $cfg)" ;;
 play)
   m=$(cur)
   if [ "$m" != play ]; then
