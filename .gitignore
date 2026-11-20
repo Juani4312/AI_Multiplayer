@@ -2,6 +2,8 @@
 game/
 *.exe
 *.dll
+# excepción: las DLL del mod (compiladas por nosotros) para instalar sin toolchain
+!mod/dist/*.dll
 *.pak
 *.PAK
 
