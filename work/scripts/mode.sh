@@ -13,6 +13,9 @@
 #   mode.sh play                 vuelve al juego: carga saves/current.tar.gz (lo que pasó en la prueba se
 #                                descarta), y desinstala el mod (sin winmm.dll, sin override, sin aimp.cfg)
 #
+# Mods de terceros: si existe <juego>/mods/mods-desarrollo.sh, "test" apaga los que interfieren con el coop
+# (UI.PAK sin HUD, IA modificada…) y "play" vuelve a prender los que apagó. Ver <juego>/mods/instructions.md.
+#
 # Estado en saves/.mode (local, no se commitea): "play" o "test <save>". Sin archivo se asume "play" (la
 # partida cargada es la del usuario). Con el juego cerrado. saves.sh load deja además un backup en saves/backups/.
 set -euo pipefail
@@ -21,6 +24,10 @@ ST="$ROOT/saves/.mode"
 SAVES="$ROOT/work/scripts/saves.sh"
 SETUP="$ROOT/work/scripts/runtime_setup.sh"
 cur() { [ -f "$ST" ] && cat "$ST" || echo play; }
+mods_dev() { # desactivar|reactivar
+  local g; g="$("$SETUP" gamedir 2>/dev/null || true)"
+  if [ -n "$g" ] && [ -x "$g/mods/mods-desarrollo.sh" ]; then "$g/mods/mods-desarrollo.sh" "$1"; fi
+}
 if pgrep -x AI.exe >/dev/null; then echo "el juego está abierto: cerralo antes (pkill -x AI.exe)"; exit 1; fi
 case "${1:-status}" in
 status)
@@ -44,6 +51,7 @@ test)
     echo "ya en prueba ($m): saves/current.tar.gz no se toca"
   fi
   "$SAVES" load "$save"
+  mods_dev desactivar
   "$SETUP" install "${px[@]}" --cfg "$cfg" >/dev/null
   echo "test $save" > "$ST"
   echo "modo: prueba con $save; mod instalado (${px[1]:-winmm}; $cfg)" ;;
@@ -55,6 +63,7 @@ play)
     echo "ya en modo juego: la partida no se toca"
   fi
   "$SETUP" revert >/dev/null
+  mods_dev reactivar
   echo play > "$ST"
   echo "modo: juego (partida del usuario, mod desinstalado)" ;;
 *)
