@@ -10,12 +10,15 @@ Hecho el 2026-11-20 (detalle en NOTES.md, "Variante `xinput1_3.dll`"):
 - **variante `xinput1_3.dll` del mod** (plan B): mismos objetos, otra tabla de exports; `AIMP_PROXY_REAL` para encadenar otro mod con el mismo nombre (MovieFix); si están las dos DLL, el mod arranca una vez. `test_host_xinput` OK y **corrida 148 en el juego (Proton): carga, hooks y mando OK**;
 - `runtime_setup.sh`/`mode.sh` con `--proxy xinput1_3` (aparta la `xinput1_3.dll` de MovieFix, que en Proton no se usa, y la devuelve); `aimp_check.ps1 -Proxy xinput1_3` (sin probar: no hay PowerShell acá); `INSTALAR_CON_CLAUDE.md` sección 2: primero probar la variante;
 - `mod/dist`: `winmm.dll` `cf1e7575…` y `xinput1_3.dll` `7eb96b3e…` (mismo protocolo que `b4de9984`).
+- **aviso sin pausa** (`ui_toast`, cartel de consejos del HUD; caído/revivido en `death.c`): escrito, **sin probar en el juego**;
+- **mods de terceros** en `<juego>/mods/` (`instructions.md` ahí; copia en `work/scripts/mods-terceros/`): `mode.sh test` apaga los que interfieren y `play` los reactiva. SmartAI y AIMovieFix pendientes (sin README).
 
 Hecho el 2026-11-18 a la tarde (corridas 134–147): pantalla negra al caer por un remate resuelta (`death.c`: locomoción + fundido 0 + facción del Alien mientras dura el caído), avisos con el diálogo "Warning" del juego (`ui_message`), `AIMP_TRACE_DMG`, `memsrv LOCO/ACT/WD/CALL`; REA necesita JDK 27.
 
 Hecho en la sesión anterior (2026-11-18, corridas 123–133): dificultad del juego y del coop (`diff.c`, menú "Coop"), guardar desde el mod (`gamesave.c`), host caído: guarda el cliente (`savesync` inverso).
 
 **Siguiente:**
+- probar el aviso sin pausa en el juego (`memsrv TIP 7000 texto`; después caído con el peer);
 - **el amigo:** que su Claude Code siga `INSTALAR_CON_CLAUDE.md` sección 2 (instalar con `-Proxy xinput1_3` y `verify`); si carga, papito como host con la misma DLL de `mod/dist` (`mode.sh test safezone --cfg …`, cfg en LOG.md 2026-11-18 23:00). Si tampoco carga: el informe de ProcMon/Integridad de código;
 - **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `cf1e7575`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
 - sentir la dificultad del coop jugando con el save `alien` (el efecto solo se verificó en memoria); sumar los sentidos del ALIEN (bloque por plantilla) si hace falta;

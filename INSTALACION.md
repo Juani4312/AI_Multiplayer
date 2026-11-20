@@ -305,6 +305,7 @@ Hay más ajustes finos del avatar (`AIMP_GHOST_WALK_*`, `AIMP_GHOST_CROUCH_*`) d
 | `AIMP_COOP_DOWNED` | 0 | 1 = el jugador no muere: queda "caído" con 1 de salud e invencible, y el otro sigue. Si caen los dos, game over normal. Lo revive el compañero guardando en una terminal o pasando un checkpoint |
 | `AIMP_COOP_DEATH_ACT_MS` | 4000 | si a uno lo remata un enemigo (el agarre del Alien), cuánto se deja correr la animación antes de devolverle el control y la imagen. -1 = nunca (la pantalla queda negra) |
 | `AIMP_COOP_DOWNED_FACTION` | 3 | facción que toma el caído (3 = la del Alien): así el Alien lo ignora y se va. -1 = no tocarla (el enemigo que remató queda quieto hasta que reviva) |
+| `AIMP_COOP_TOASTS` | 1 | con `AIMP_COOP_DOWNED=1` y red: avisos que no pausan (el cartel de consejos del juego) cuando uno cae o revive ("tu compañero cayó…"). 0 = sin avisos |
 | `AIMP_COOP_ALIEN_WITHDRAW` | 0 | 1 = el Alien se retira a los conductos cuando se lo suelta **(experimental)** |
 
 ### 9.6 Dificultad y menú del mod

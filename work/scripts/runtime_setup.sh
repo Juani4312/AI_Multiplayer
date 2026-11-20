@@ -10,6 +10,7 @@
 #                      mueve al backup y "revert" la devuelve. Sin esta opción no la toca y no instala;
 #                    --preset: la configuración recomendada de mod/dist/aimp-<preset>.cfg (join necesita --peer);
 #                    --cfg: claves extra (o, sin --preset, toda la config). Sin ninguna de las dos, borra el aimp.cfg.
+#   runtime_setup.sh gamedir    (imprime la carpeta del juego detectada)
 #   runtime_setup.sh verify     (con el juego abierto o recién cerrado: ¿cargó el mod? ¿hay red?)
 #   runtime_setup.sh revert
 #
@@ -177,6 +178,7 @@ verify() {
 
 case "${1:-status}" in
   status) status ;;
+  gamedir) echo "$GAME" ;;
   install)
     guard_idle
     proxy=winmm; apartar=0; rest=()
