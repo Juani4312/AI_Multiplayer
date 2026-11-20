@@ -20,6 +20,9 @@ int ui_coop_difficulty(void);
 /* Aviso dentro del juego con el diálogo "Warning" del juego (FUN_0077c9e0, botón OK). Se muestra en el próximo frame
  * con jugador (ui_frame, thread principal). El texto es UTF-8. Pausa el juego local hasta que se acepta. */
 void ui_message(const char *utf8);
+/* Aviso que NO pausa: el cartel de consejos del HUD (overlay de tutorial), ms milisegundos (<= 0: 6000, lo del juego).
+ * Se muestra en el próximo frame con jugador. Uno a la vez: uno nuevo reemplaza al anterior. */
+void ui_toast(const char *utf8, int ms);
 void ui_frame(int have_player);
 
 #endif

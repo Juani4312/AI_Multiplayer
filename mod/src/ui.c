@@ -100,8 +100,62 @@ void ui_message(const char *utf8)
     log_printf("UI: aviso en pantalla pedido: %s", utf8);
 }
 
+/* Aviso que no pausa: el overlay de consejos del HUD ("tutorial overlay", pantalla "pickupOverlay"), el mismo que
+ * usa el juego para AI_UI_TIP_COMPONENTS (FUN_0079bb20, 0x79BBA0):
+ *   FUN_00810420 thiscall([VA 0x174A78C], "pickupOverlay") -> pantalla, ret 4 (busca la pantalla por nombre, con lock)
+ *   FUN_00833a20 thiscall(pantalla, const char *clave, float ms), ret 8: pone el texto (Flash
+ *     "set_tutorial_overlay_message", que lo traduce con TranslateString: el hook de textos devuelve el del mod), la
+ *     duración en +0x404 y pide mostrarlo; el HUD (FUN_0084bbe0) descuenta +0x404 con dt*1000 y lo oculta al llegar a 0.
+ * El juego usa 6000 ms (float en 0x12F4818). */
+#define AIMP_RVA_UI_FIND_SCREEN 0x00410420u
+#define AIMP_RVA_UI_TIP 0x00433A20u
+#define AIMP_RVA_UI_SCREENS 0x0134A78Cu
+#define TIP_KEY "AI_AIMP_COOP_TIP"
+static const uint8_t UI_FIND_SCREEN_PROLOGUE[9] = { 0x83, 0xEC, 0x08, 0x53, 0x55, 0x56, 0x8B, 0xF1, 0x57 };
+static const uint8_t UI_TIP_PROLOGUE[8] = { 0x8B, 0x44, 0x24, 0x04, 0x56, 0x50, 0x8B, 0xF1 };
+typedef void *(__attribute__((fastcall)) * UiFindScreenFn)(void *mgr, void *edx, const char *name);
+typedef void(__attribute__((fastcall)) * UiTipFn)(void *screen, void *edx, const char *key, float ms);
+static wchar_t g_tip[300];
+static volatile LONG g_tip_pending;
+static volatile LONG g_tip_ms;
+
+void ui_toast(const char *utf8, int ms)
+{
+    int n = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, g_tip, (int)(sizeof g_tip / sizeof g_tip[0]) - 1);
+    g_tip[n > 0 ? n : 0] = 0;
+    InterlockedExchange(&g_tip_ms, ms > 0 ? ms : 6000);
+    InterlockedExchange(&g_tip_pending, 1);
+    log_printf("UI: aviso sin pausa pedido (%d ms): %s", ms, utf8);
+}
+
+static void tip_frame(void)
+{
+    uint8_t a[sizeof UI_FIND_SCREEN_PROLOGUE], b[sizeof UI_TIP_PROLOGUE];
+    uintptr_t ff = g_aimp_exe + AIMP_RVA_UI_FIND_SCREEN, ft = g_aimp_exe + AIMP_RVA_UI_TIP;
+    uint32_t mgr = 0;
+    InterlockedExchange(&g_tip_pending, 0);
+    if (!mem_read(ff, a, sizeof a) || aimp_code_cmp(a, UI_FIND_SCREEN_PROLOGUE, sizeof a) != 0 ||
+        !mem_read(ft, b, sizeof b) || aimp_code_cmp(b, UI_TIP_PROLOGUE, sizeof b) != 0) {
+        log_printf("UI: los prólogos de FUN_00810420/FUN_00833a20 no coinciden: no hay aviso sin pausa");
+        return;
+    }
+    if (!mem_u32(g_aimp_exe + AIMP_RVA_UI_SCREENS, &mgr) || !mgr) {
+        log_printf("UI: sin administrador de pantallas: el aviso sin pausa no se muestra");
+        return;
+    }
+    void *scr = ((UiFindScreenFn)(void *)ff)((void *)(uintptr_t)mgr, NULL, "pickupOverlay");
+    if (!scr) {
+        log_printf("UI: no está la pantalla pickupOverlay: el aviso sin pausa no se muestra");
+        return;
+    }
+    ((UiTipFn)(void *)ft)(scr, NULL, TIP_KEY, (float)g_tip_ms);
+    log_printf("UI: aviso sin pausa mostrado (pantalla 0x%08x, %d ms)", (unsigned)(uintptr_t)scr, (int)g_tip_ms);
+}
+
 void ui_frame(int have_player)
 {
+    if (g_tip_pending && have_player)
+        tip_frame();
     if (!g_msg_pending || !have_player)
         return;
     uint8_t pr[sizeof UI_WARNING_PROLOGUE];
@@ -175,6 +229,8 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static const wchar_
         return orig;
     if (streq(key, MSG_KEY))
         return g_msg[0] ? g_msg : orig;
+    if (streq(key, TIP_KEY))
+        return g_tip[0] ? g_tip : orig;
     int k = -1;
     for (int i = 0; i < K_N; i++)
         if (streq(key, g_keys[i])) {
