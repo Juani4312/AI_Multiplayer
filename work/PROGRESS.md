@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-20 03:05 (sesión local, corrida 148). **Papito quedó en modo juego con los mods de terceros activos (NoHUD, QuietXeno, SmartAI, MovieFix):** para probar el coop, `mode.sh test …` los apaga solo._
+_Última actualización: 2026-11-20 03:05 (sesión local, corrida 148). **Papito quedó en modo juego con los mods de terceros activos (NoHUD, QuietXeno, SmartAI, MovieFix) y sin partidas:** la run sin morir está en `saves/run-sin-morir-2026-11-20.tar.gz` (volver: `saves.sh load run-sin-morir-2026-11-20`). Para probar el coop, `mode.sh test …` apaga los mods solo._
 
 Hecho el 2026-11-20 (detalle en NOTES.md, "Variante `xinput1_3.dll`"):
 - la prueba con el amigo no llegó a hacerse: su Windows 11 25H2 carga la `winmm` del sistema y el mod no arranca (papito estuvo 72 min de host sin datos);

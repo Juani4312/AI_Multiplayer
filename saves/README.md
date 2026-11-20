@@ -5,6 +5,7 @@ Cada archivo `<nombre>.tar.gz` es una copia completa de los saves del juego en u
 | Nombre | Dónde | Para qué | Fecha |
 |--------|-------|----------|-------|
 | `current` | **La partida real del usuario** (run sin morir, para el logro). La actualiza `mode.sh test` cada vez que se pasa de juego a prueba. | **No es de prueba:** nunca se carga para probar. | Se actualiza sola |
+| `run-sin-morir-2026-11-20` | **La run sin morir del usuario** (copia exacta del 2026-11-20, antes de dejar el juego sin partidas para probar mods de terceros). | **No es de prueba:** solo se carga para que el usuario vuelva a la run (`saves.sh load run-sin-morir-2026-11-20`). | 2026-11-20 (partida del 2026-11-17) |
 | `safezone` | HAB_ShoppingCentre, sala de espera del transit (jugador en −109,7; 20,5; −9,6). Objetivo: "Return to the Marshal Bureau". | Zona segura, sin enemigos cerca: un humano armado ("Riot Pistol", tipo 4) y tres civiles ("Dave", tipo 6) a unos 60 m; no hay Alien cargado (corrida 76). Es la partida que se usó en las corridas 20–82. | Save del 2026-11-14 04:39 (guardado en el repo el 2026-11-16) |
 | `airport` | HAB_Airport, terminal de vuelo (M11, "Save 1 M11 - Spaceflight Terminal"): es `safezone` con su `CHSV00` copiado sobre `CHSV01`. | Otro nivel para probar la copia de saves (corridas 103, 113–115 lo usaron como "save del host"). No hay NPCs (censo, corrida 117). | 2026-11-17 |
 | `alien` | SCI_HospitalLower, inicio de la misión 6 "Outbreak" ("Save 2 M6 - San Cristobal Medical Facility"), cargado con Load Game → Load Mission Save → Mission 6 desde `airport`. | **Tiene el Alien:** el censo muestra `NPCs[0] = "BackstageAlien"` (tipo 1) en (−12,79; −7,25; −9,94), con el jugador en (−3,42; −12,25; −3,15) (corrida 117). Para DESIGN_ALIEN. | 2026-11-17 |
@@ -28,6 +29,7 @@ Con el juego cerrado:
 work/scripts/saves.sh list
 work/scripts/saves.sh load safezone     # backup local del estado actual en saves/backups/ y carga
 work/scripts/saves.sh save <nombre>     # guarda los saves actuales con ese nombre
+work/scripts/saves.sh vaciar            # sin partidas (borra los .ais, deja input.cfg), con backup previo
 ```
 
 Después, en el juego, "Continue Game".

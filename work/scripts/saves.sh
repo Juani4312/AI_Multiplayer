@@ -8,6 +8,8 @@
 #   saves.sh save <nombre>      guarda los saves actuales del juego como saves/<nombre>.tar.gz
 #   saves.sh load <nombre>      reemplaza los saves del juego por saves/<nombre>.tar.gz
 #                               (antes hace un backup local en saves/backups/, ignorado por git)
+#   saves.sh vaciar             deja el juego sin partidas (borra los .ais; conserva input.cfg, los controles),
+#                               con el mismo backup previo. En el juego: Start Game (partida nueva)
 #
 # Con el juego cerrado. Para `load`, mejor también con Steam cerrado: Steam Cloud sincroniza al abrir
 # y cerrar el juego, y con los archivos cambiados puede preguntar qué versión conservar (elegir la local).
@@ -36,6 +38,14 @@ load)
   find "$REMOTE" -maxdepth 1 -type f \( -name '*.ais' -o -name 'input.cfg' \) -delete
   tar -C "$REMOTE" -xzf "$f"
   echo "cargado: $n (en el juego: Continue Game)" ;;
+vaciar)
+  pgrep -x steam >/dev/null && echo "aviso: Steam está abierto; si al abrir el juego pregunta por Steam Cloud, elegir los archivos locales"
+  mkdir -p "$DIR/backups"
+  b="$DIR/backups/antes-de-vaciar-$(date +%Y%m%d-%H%M%S).tar.gz"
+  tar -C "$REMOTE" -czf "$b" .
+  echo "backup del estado actual: ${b#"$ROOT"/}"
+  find "$REMOTE" -maxdepth 1 -type f -name '*.ais' -delete
+  echo "vacío: sin partidas (queda $(ls "$REMOTE" | tr '\n' ' '))" ;;
 *)
-  sed -n '2,15p' "$0"; exit 1 ;;
+  sed -n '2,18p' "$0"; exit 1 ;;
 esac
