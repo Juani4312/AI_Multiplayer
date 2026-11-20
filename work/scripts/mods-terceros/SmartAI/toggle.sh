@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Smart AI (Nexus 9, "Alien_Isolation_Insane_Mod_FIX"). SIN README: instalación deducida (2026-11-20, ver PENDIENTE.md):
-# cada archivo va a la ruta de igual nombre dentro de DATA/ (115 de 121 coinciden con archivos que ya existen ahí). No se
-# copian las 6 variantes del autor que no existen en el juego (CANTEEN_old.BML y *_noconflict.XML).
+# Smart AI (Nexus 9): "This is ONLY the AI from 'Insane Mod' by Nightek1". Instalación según la página del mod
+# (captura del usuario, 2026-11-20): "Extract files inside DATA directory of Alien Isolation folder".
+# El comprimido trae todo dentro de Alien_Isolation_Insane_Mod_FIX/; lo que va a DATA/ es su contenido (ALIENCONFIGS,
+# BEHAVIOR, BINARY_BEHAVIOR, CHR_INFO): extraer la carpeta envoltorio tal cual dejaría DATA/Alien_Isolation_Insane_Mod_FIX/,
+# que el juego no lee. Son los 121 archivos: 115 pisan originales y 6 son nuevos (CANTEEN_old.BML, *_noconflict.XML).
 # Uso: toggle.sh [on|off|status|info]   (sin argumento: alterna). Lógica común: ../_lib/toggle-lib.sh
 MOD_DIR="$(cd "$(dirname "$0")" && pwd)"
 MOD_NOMBRE="Smart AI"
@@ -15,12 +17,18 @@ MOD_ARCHIVOS=(
   "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/BACKSTAGEHOLD_VCLOSE.BML|DATA/ALIENCONFIGS/BACKSTAGEHOLD_VCLOSE.BML"
   "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/BACSTAGEHOLD_CLOSE.BML|DATA/ALIENCONFIGS/BACSTAGEHOLD_CLOSE.BML"
   "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/CANTEEN.BML|DATA/ALIENCONFIGS/CANTEEN.BML"
+  "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/CANTEEN_old.BML|DATA/ALIENCONFIGS/CANTEEN_old.BML"
   "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/CREWEXPENDABLE_VENT.BML|DATA/ALIENCONFIGS/CREWEXPENDABLE_VENT.BML"
   "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/DEFAULT.BML|DATA/ALIENCONFIGS/DEFAULT.BML"
+  "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/DEFAULT_noconflict.XML|DATA/ALIENCONFIGS/DEFAULT_noconflict.XML"
   "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/INTENSE.BML|DATA/ALIENCONFIGS/INTENSE.BML"
+  "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/INTENSE_noconflict.XML|DATA/ALIENCONFIGS/INTENSE_noconflict.XML"
   "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/MILD.BML|DATA/ALIENCONFIGS/MILD.BML"
+  "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/MILD_noconflict.XML|DATA/ALIENCONFIGS/MILD_noconflict.XML"
   "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/MODERATE.BML|DATA/ALIENCONFIGS/MODERATE.BML"
   "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/MODERATELY_INTENSE.BML|DATA/ALIENCONFIGS/MODERATELY_INTENSE.BML"
+  "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/MODERATELY_INTENSE_noconflict.XML|DATA/ALIENCONFIGS/MODERATELY_INTENSE_noconflict.XML"
+  "Alien_Isolation_Insane_Mod_FIX/ALIENCONFIGS/MODERATE_noconflict.XML|DATA/ALIENCONFIGS/MODERATE_noconflict.XML"
   "Alien_Isolation_Insane_Mod_FIX/BEHAVIOR/ALIEN_ALL_SEARCH_VARIANTS.XML|DATA/BEHAVIOR/ALIEN_ALL_SEARCH_VARIANTS.XML"
   "Alien_Isolation_Insane_Mod_FIX/BEHAVIOR/ALIEN_AMBUSH.XML|DATA/BEHAVIOR/ALIEN_AMBUSH.XML"
   "Alien_Isolation_Insane_Mod_FIX/BEHAVIOR/ALIEN_ATTACK_CORE_CHECKS.XML|DATA/BEHAVIOR/ALIEN_ATTACK_CORE_CHECKS.XML"
