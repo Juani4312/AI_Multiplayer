@@ -11,7 +11,7 @@ Hecho el 2026-11-20 (detalle en NOTES.md, "Variante `xinput1_3.dll`"):
 - `runtime_setup.sh`/`mode.sh` con `--proxy xinput1_3` (aparta la `xinput1_3.dll` de MovieFix, que en Proton no se usa, y la devuelve); `aimp_check.ps1 -Proxy xinput1_3` (sin probar: no hay PowerShell acá); `INSTALAR_CON_CLAUDE.md` sección 2: primero probar la variante;
 - `mod/dist`: `winmm.dll` `cf1e7575…` y `xinput1_3.dll` `7eb96b3e…` (mismo protocolo que `b4de9984`).
 - **aviso sin pausa** (`ui_toast`, cartel de consejos del HUD; caído/revivido en `death.c`): escrito, **sin probar en el juego**;
-- **mods de terceros** en `<juego>/mods/` (`instructions.md` ahí; copia en `work/scripts/mods-terceros/`): `mode.sh test` apaga los que interfieren y `play` los reactiva. SmartAI y AIMovieFix pendientes (sin README).
+- **mods de terceros** en `<juego>/mods/` (`instructions.md` ahí; viven solo en la carpeta del juego, no en el repo): `mode.sh test` apaga los que interfieren y `play` los reactiva. SmartAI y AIMovieFix pendientes (sin README).
 
 Hecho el 2026-11-18 a la tarde (corridas 134–147): pantalla negra al caer por un remate resuelta (`death.c`: locomoción + fundido 0 + facción del Alien mientras dura el caído), avisos con el diálogo "Warning" del juego (`ui_message`), `AIMP_TRACE_DMG`, `memsrv LOCO/ACT/WD/CALL`; REA necesita JDK 27.
 

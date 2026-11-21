@@ -250,3 +250,4 @@
 - 03:40 (2026-11-20) Pedido del usuario: chequear la instalación antes de trabajar. work/scripts/check_install.sh (solo lee: juego abierto, modo, mod coop, mods de terceros, partida cargada, DLLs, niveles completos); CLAUDE.md lo pone como paso 0.
 - 17:19 (2026-11-21) Pedido del usuario: herramientas de formatos. CathodeLib (submódulo) + cathode-dump (scripts de niveles con el pid del mod: 83–96 % verificado; UI; BML) y JPEXS FFDec; work/tools/README.md.
 - 17:25 (2026-11-21) Pedido del usuario: borrados QuietXeno y SmartAI (apagados y verificados antes); instalados y activos StalkerAlien (Default) y MildlyInsaneAI (sin README, deducido). instructions.md y work/scripts/mods-terceros/ al día.
+- 17:42 (2026-11-21) Pedido del usuario: los mods no van en el repo. Se sacó work/scripts/mods-terceros/ (los scripts viven solo en <juego>/mods/); CLAUDE.md paso 0: chequear mods y partida cargados antes de trabajar.
