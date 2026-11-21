@@ -34,6 +34,12 @@
  * AIMP_EVT_PIN. En el cliente, todo disparo que cumple una regla se bloquea (no se llama al original)
  * salvo el que inyecta el mod al aplicar un evento del host (y solo ese: lo que dispara en cadena y
  * cumple una regla también se bloquea, porque el host lo manda aparte).
+ * AIMP_SYNC_PINS_SHARED = "pid:pin,..." (hex; 2026-11-21, corrida 152): pines compartidos en los dos sentidos. El disparo
+ * natural de uno de esos (pid, pin) lo manda el que lo hizo (host o cliente) y el otro lo reinyecta; no se bloquea nada y
+ * lo reinyectado no se vuelve a mandar. Para "usar" que el avatar no puede hacer (arquetipo Archetypes\Gameplay\Use: el
+ * RPC 0x26 con el NPC como actor no dispara nada, corrida 119). Por defecto, el robot barredor de HAB_ShoppingCentre
+ * (Shopping_Center_1/Use_ActivateSweeper/UI_Icon_1.start; FIRE verificado en la corrida 152). Los pids salen de
+ * work/tools/cathode-dump.sh (columna pid). No van acá los usos que mueven al jugador (soplete, palancas, mapas).
  */
 #include "death.h"
 #include "pins.h"
@@ -118,6 +124,10 @@ static AimpNet *g_net;
 static int g_sync; /* 0 apagada, 1 host (manda), 2 cliente (bloquea y aplica) */
 static Rule g_rules[RULES_MAX];
 static int g_nrules;
+#define SHARED_MAX 64
+static uint32_t g_sh_pid[SHARED_MAX], g_sh_pin[SHARED_MAX];
+static int g_nshared;
+static const char k_default_shared[] = "44be5383:830c2104";
 static CRITICAL_SECTION g_out_cs;
 static PinEvt g_out[OUT_MAX];
 static uint32_t g_nout, g_out_drop;
@@ -231,6 +241,14 @@ static uint32_t path_id(uint32_t outer, uint32_t *depth)
     return x;
 }
 
+static int shared_match(uint32_t pid, uint32_t pin)
+{
+    for (int i = 0; i < g_nshared; i++)
+        if (g_sh_pid[i] == pid && g_sh_pin[i] == pin)
+            return 1;
+    return 0;
+}
+
 static int rule_match(uint32_t type, uint32_t pin)
 {
     for (int i = 0; i < g_nrules; i++)
@@ -283,6 +301,8 @@ static int note(uint32_t ent, void *ctx, const uint32_t *pinp, void *msg, double
         else
             send = 1;
     }
+    if (g_sync && outer && !injected && !block && shared_match(pid, pin))
+        send = 1; /* compartido: lo manda el que lo disparó, sea host o cliente */
     uint32_t frame = *(volatile uint32_t *)(g_aimp_exe + AIMP_RVA_FRAME_COUNTER);
     int other = GetCurrentThreadId() != g_aimp_main_tid;
     EnterCriticalSection(&g_cs);
@@ -427,6 +447,29 @@ static void parse_rules(const char *s)
 /* Reglas por defecto: las raíces de zona de la corrida 19.
  *   PlayerTriggerBox (2f3efad3): on_entered (af66ad73), on_exited (b357f479)
  *   TriggerVolumeFilter (f86133d4): on_event_entered (98678b2b), on_event_exited (4dace76a), triggered (0ff02876) */
+static void parse_shared(const char *s)
+{
+    g_nshared = 0;
+    for (const char *p = s; *p && g_nshared < SHARED_MAX;) {
+        while (*p == ' ' || *p == ',')
+            p++;
+        if (!*p)
+            break;
+        uint32_t pid = parse_hex(&p), pin = 0;
+        if (*p == ':') {
+            p++;
+            pin = parse_hex(&p);
+        }
+        if (pid && pin) {
+            g_sh_pid[g_nshared] = pid;
+            g_sh_pin[g_nshared] = pin;
+            g_nshared++;
+        }
+        while (*p && *p != ',')
+            p++;
+    }
+}
+
 static const char k_default_rules[] = "2f3efad3:af66ad73,2f3efad3:b357f479,f86133d4:98678b2b,f86133d4:4dace76a,f86133d4:0ff02876";
 
 int pins_install_at(void *target, AimpNet *net)
@@ -460,6 +503,13 @@ int pins_install_at(void *target, AimpNet *net)
         else
             aimp_snprintf(l8, sizeof l8, "%s", k_default_rules);
         parse_rules(l8);
+        char s8[1024];
+        if (aimp_env_str(L"AIMP_SYNC_PINS_SHARED", wl, 512))
+            aimp_utf8(s8, sizeof s8, wl);
+        else
+            aimp_snprintf(s8, sizeof s8, "%s", k_default_shared);
+        parse_shared(s8);
+        log_printf("AIMP_SYNC_PINS_SHARED: %d pines compartidos en los dos sentidos [%s]", g_nshared, s8);
         if (!net || !net->mode)
             log_printf("AIMP_SYNC_PINS=1 sin red (AIMP_NET): no se sincroniza nada");
         else {
@@ -982,10 +1032,19 @@ void pins_remote_event(const AimpEvt *e)
 {
     if (!g_sync)
         return;
-    if (g_sync != 2 || e->size != sizeof(PinEvt)) {
-        log_printf("PINSYNC: evento de pin %u ignorado (%s, %u bytes)", e->seq, g_sync == 1 ? "el host no aplica pines" : "tamaño",
-                   e->size);
+    if (e->size != sizeof(PinEvt)) {
+        log_printf("PINSYNC: evento de pin %u ignorado (tamaño, %u bytes)", e->seq, e->size);
         return;
+    }
+    if (g_sync == 1) {
+        /* El host solo aplica los compartidos (los demás los decide él). */
+        PinEvt pe;
+        aimp_memcpy(&pe, e->data, sizeof pe);
+        if (!shared_match(pe.pid, pe.pin)) {
+            log_printf("PINSYNC: evento de pin %u ignorado (el host solo aplica los compartidos; pid %08x pin %08x)", e->seq, pe.pid,
+                       pe.pin);
+            return;
+        }
     }
     if (g_npend == PEND_MAX) {
         log_printf("PINSYNC: demasiados pines pendientes: se descarta el evento %u", g_pend[0].seq);
@@ -1003,7 +1062,7 @@ void pins_remote_event(const AimpEvt *e)
 
 static void sync_frame_pins(uint32_t level)
 {
-    if (g_sync == 1 && g_net) {
+    if (g_sync && g_net) {
         PinEvt tmp[OUT_MAX];
         uint32_t n, drop;
         EnterCriticalSection(&g_out_cs);
@@ -1019,8 +1078,8 @@ static void sync_frame_pins(uint32_t level)
             g_n_sent++;
             if (g_sync_lines < 400) {
                 g_sync_lines++;
-                log_printf("PINSYNC al cliente: tipo %08x id %08x pid %08x pin %08x mfl %08x (nivel %u)", tmp[sent].type, tmp[sent].eid,
-                           tmp[sent].pid, tmp[sent].pin, tmp[sent].mflags, level);
+                log_printf("PINSYNC al %s: tipo %08x id %08x pid %08x pin %08x mfl %08x (nivel %u)", g_sync == 1 ? "cliente" : "host",
+                           tmp[sent].type, tmp[sent].eid, tmp[sent].pid, tmp[sent].pin, tmp[sent].mflags, level);
             }
         }
         EnterCriticalSection(&g_out_cs);
@@ -1032,7 +1091,7 @@ static void sync_frame_pins(uint32_t level)
         if (drop)
             log_printf("PINSYNC: %u disparos no se mandaron (cola llena)", drop);
     }
-    if (g_sync == 2 && g_npend) {
+    if (g_npend) {
         int w = 0, r = 0;
         uint32_t now = GetTickCount();
         for (; r < g_npend; r++) {

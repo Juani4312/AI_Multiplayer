@@ -27,7 +27,11 @@ cathode-dump pak2 <UI.PAK> <carpeta>
 
 Una fila por entidad instanciada (recorre los composites desde las 3 raíces: nivel, Global, PauseMenu), con:
 `pid` (el mismo de `mod/src/pins.c`), `depth`, `id` (ShortGuid de la entidad), `type` (función o composite),
-`type_name`, `name`, `path` (ruta de nombres), `links_out` (pin → entidad.pin) y la cadena de ancestros.
+`type_name`, `name`, `path` (ruta de nombres), `links_out` (pin → entidad.pin), la cadena de ancestros e `inst` (id de instancia
+del composite que la contiene, el `EntityHandle` de CathodeLib).
+
+**Objetivos de los "usar":** el id de 8 bytes del RPC 0x26 (`objetivo XXXXXXXXYYYYYYYY` en el log) es `id` + `inst` con los bytes
+en orden de memoria (6 de 6 de la corrida 119). `work/scripts/use_names.py <log> <volcado>` les pone nombre.
 
 **Verificado contra las trazas de pines del juego** (`work/evidence/runtime/*.log`): coinciden id, tipo y
 profundidad en **11 726 de 14 055** pids de HAB_ShoppingCentre (83 %) y **10 178 de 10 582** de SCI_HospitalLower (96 %).

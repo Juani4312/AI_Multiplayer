@@ -23,7 +23,7 @@ Hecho en la sesión anterior (2026-11-18, corridas 123–133): dificultad del ju
 - **el amigo:** que su Claude Code siga `INSTALAR_CON_CLAUDE.md` sección 2 (instalar con `-Proxy xinput1_3` y `verify`); si carga, papito como host con la misma DLL de `mod/dist` (`mode.sh test safezone --cfg …`, cfg en LOG.md 2026-11-18 23:00). Si tampoco carga: el informe de ProcMon/Integridad de código;
 - **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `da80783b`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
 - sentir la dificultad del coop jugando con el save `alien` (el efecto solo se verificó en memoria); sumar los sentidos del ALIEN (bloque por plantilla) si hace falta;
-- interacciones del mundo (robot, compuertas): identificar la entidad del robot con la traza de pines de 8g y sincronizar su estado;
+- interacciones del mundo: ✅ **el robot barredor** sincronizado por pin en los dos sentidos (`AIMP_SYNC_PINS_SHARED`, corridas 152–156, en una máquina con el peer); falta con dos máquinas y sumar otros "usar" del arquetipo `Use` que no muevan al jugador (paneles de puertas…). Los objetivos de los "usar" ya tienen nombre (`work/scripts/use_names.py`);
 - remates de humanos y androides con el modo caído (la regla los cubre si pasan por `FUN_007d0c10`; falta verlo);
 - avisos que no pausen (compañero caído, copia del save): falta un mensaje no modal (el cartel de recogidas no se dibujó; quedan subtítulos, objetivo o `PopupMessage`, que la maneja Flash);
 - con el caído en la facción del Alien: ver qué hacen los humanos hostiles y los androides (prueba de a dos o un save con humanos);

@@ -198,6 +198,11 @@ int main(void)
 
     SetEnvironmentVariableW(L"AIMP_TRACE_PINS", L"1");
     SetEnvironmentVariableW(L"AIMP_SYNC_PINS", L"1"); /* cliente: reglas por defecto (zona) */
+    /* Pin compartido (en los dos sentidos): la primera entidad con un pin que no usa el resto del test. */
+    static const uint32_t shpin = 0x0c0ffee0;
+    wchar_t shw[64];
+    swprintf(shw, 64, L"%08x:%08x", pid1, shpin);
+    SetEnvironmentVariableW(L"AIMP_SYNC_PINS_SHARED", shw);
     AimpNet net;
     memset(&net, 0, sizeof net);
     net.mode = 2;
@@ -343,6 +348,60 @@ int main(void)
         expect_n(log, "PIN mensaje del primer 2f3efad3.af66ad73 (mfl 11000000)", 1);
         expect_n(log, "anidamiento máx. 2", 2); /* resumen del cambio de nivel y el final */
         expect_n(log, "PIN        7 x  ent", 1);
+        expect_n(log, "AIMP_SYNC_PINS_SHARED: 1 pines compartidos", 1);
+        free(log);
+    }
+
+    printf("[compartidos]\n");
+    /* Host: su disparo natural sale y no se bloquea; aplica el compartido del cliente y no lo devuelve; ignora otros. */
+    memset(net.out_left, 0, sizeof net.out_left);
+    c0 = g_calls;
+    g_fire(ent, NULL, ctx, &shpin, msg, 0.0, 0);
+    CHECK(g_calls == c0 + 1, "host: el pin compartido llega al original");
+    pins_frame(now.QuadPart, 16);
+    int nsh = 0, oksh = 0;
+    for (int i = 0; i < AIMP_EVT_QUEUE; i++) {
+        if (!net.out_left[i])
+            continue;
+        nsh++;
+        uint32_t d[5];
+        memcpy(d, net.out[i].data, sizeof d);
+        oksh = net.out[i].kind == AIMP_EVT_PIN && d[0] == pid1 && d[1] == shpin;
+    }
+    CHECK(nsh == 1 && oksh, "host: el pin compartido sale como AIMP_EVT_PIN");
+    memset(net.out_left, 0, sizeof net.out_left);
+    uint32_t sh[5] = { pid1, shpin, 0xdd5a65d6, 0x73da3779, 0x01000000 };
+    memcpy(ev.data, sh, sizeof sh);
+    ev.seq = 20;
+    ev.level = 16;
+    pins_remote_event(&ev);
+    uint32_t other_ev[5] = { pid2, on_entered, 0x2f3efad3, 0xfa26b87f, 0x11000000 };
+    memcpy(ev.data, other_ev, sizeof other_ev);
+    ev.seq = 21;
+    pins_remote_event(&ev);
+    c0 = g_calls;
+    pins_frame(now.QuadPart, 16);
+    CHECK(g_calls == c0 + 1 && g_last_this == (uint32_t)(uintptr_t)ent && g_last_pin == shpin,
+          "host: aplica el pin compartido del cliente (y solo ese)");
+    nsh = 0;
+    for (int i = 0; i < AIMP_EVT_QUEUE; i++)
+        nsh += net.out_left[i] != 0;
+    CHECK(nsh == 0, "host: lo reinyectado no se vuelve a mandar");
+    /* Cliente: el compartido no se bloquea y sale hacia el host. */
+    pins_test_role(2);
+    net.mode = 2;
+    c0 = g_calls;
+    g_fire(ent, NULL, ctx, &shpin, msg, 0.0, 0);
+    CHECK(g_calls == c0 + 1, "cliente: el pin compartido no se bloquea");
+    pins_frame(now.QuadPart, 16);
+    nsh = 0;
+    for (int i = 0; i < AIMP_EVT_QUEUE; i++)
+        nsh += net.out_left[i] != 0;
+    CHECK(nsh == 1, "cliente: el pin compartido sale hacia el host");
+    log = read_log();
+    if (log) {
+        expect_n(log, "el host solo aplica los compartidos; pid", 1);
+        expect_n(log, "PINSYNC al host: tipo dd5a65d6 id 73da3779", 1);
     }
     printf(g_fail ? "test_pins: %d FALLAS\n" : "test_pins: todo OK\n", g_fail);
     return g_fail ? 1 : 0;

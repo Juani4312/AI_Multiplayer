@@ -90,13 +90,14 @@ static class Program
         w.WriteLine("# cathode-dump commands " + Path.GetFullPath(pak));
         w.WriteLine("# composites: " + cmd.Entries.Count + "; raíces: " +
                     string.Join(", ", (cmd.EntryPoints ?? Array.Empty<Composite>()).Select(c => c?.name)));
-        w.WriteLine("pid\tdepth\tid\ttype\tvariant\ttype_name\tname\tpath\tlinks_out\tanc_ids\tanc_types");
+        w.WriteLine("pid\tdepth\tid\ttype\tvariant\ttype_name\tname\tpath\tlinks_out\tanc_ids\tanc_types\tinst");
 
         long rows = 0;
         var anc = new List<uint>();
         var ancT = new List<uint>();
         var names = new List<string>();
         var stack = new HashSet<ShortGuid>();
+        ShortGuid instTerm = ShortGuid.InstanceGuid;
 
         void Walk(Composite comp)
         {
@@ -123,7 +124,13 @@ static class Program
                     ShortGuidUtils.FindString(l.thisParamID) + ">" + l.linkedEntityID.ToUInt32().ToString("x8") + "." +
                     ShortGuidUtils.FindString(l.linkedParamID)));
                 string path = string.Join("/", names) + "/" + name;
-                w.WriteLine($"{PidOf(eid, anc):x8}\t{anc.Count + 1}\t{eid:x8}\t{type:x8}\t{e.variant}\t{tname}\t{name}\t{path}\t{links}\t{Hex(anc)}\t{Hex(ancT)}");
+                // inst: id de instancia del composite que contiene a la entidad (EntityHandle de CathodeLib:
+                // ruta desde la raíz sin ella + la entidad). Con el id de la entidad forma el id de 8 bytes de los
+                // objetos usables del RPC 0x26 (corrida 119: "eed179bb11699aac" = bytes de bb79d1ee y de inst).
+                var hier = anc.Skip(1).Select(x => new ShortGuid(x)).ToList();
+                hier.Add(e.shortGUID);
+                uint inst = hier.GenerateCompositeInstanceID(true, instTerm).ToUInt32();
+                w.WriteLine($"{PidOf(eid, anc):x8}\t{anc.Count + 1}\t{eid:x8}\t{type:x8}\t{e.variant}\t{tname}\t{name}\t{path}\t{links}\t{Hex(anc)}\t{Hex(ancT)}\t{inst:x8}");
                 rows++;
                 if (child != null)
                 {
@@ -148,7 +155,8 @@ static class Program
             if (root == null) continue;
             uint rid = root.shortGUID.ToUInt32();
             uint term = ri == 0 ? ShortGuid.InstanceGuid.ToUInt32() : rid;
-            w.WriteLine($"{PidOf(term, anc):x8}\t1\t{term:x8}\t{rid:x8}\tROOT\tcomposite:{root.name}\t{root.name}\t{root.name}\t\t\t");
+            instTerm = ri == 0 ? ShortGuid.InstanceGuid : ri == 1 ? ShortGuid.GlobalGuid : ShortGuid.PauseGuid;
+            w.WriteLine($"{PidOf(term, anc):x8}\t1\t{term:x8}\t{rid:x8}\tROOT\tcomposite:{root.name}\t{root.name}\t{root.name}\t\t\t\t{instTerm.ToUInt32():x8}");
             rows++;
             anc.Add(term); ancT.Add(rid); names.Add(root.name);
             Walk(root);

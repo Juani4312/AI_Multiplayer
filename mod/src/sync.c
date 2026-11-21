@@ -48,7 +48,7 @@ static volatile uint32_t g_level;
 static volatile LONG g_n_use, g_n_ha, g_n_hs;
 /* Prefijos de objetivo (primeros 4 bytes del id, en hex como en el log) cuyos usos no se mandan:
  * son acciones del jugador, no estado del mundo (hallazgo 13). Lockers y terminal de guardado. */
-static char g_skip[256] = "3e3ec35d,1e38b898,087f97b5"; /* locker, terminal de guardado, boca de conducto (prueba de a dos 2026-11-17) */
+static char g_skip[256] = "3e3ec35d,1e38b898,087f97b5"; /* locker, terminal de guardado, plano de la EMP (Blueprint_EMP_Tier2/UI_Icon_Pickup; en 2026-11-17 se creyó que era una boca de conducto: use_names.py, 2026-11-21) */
 
 static uint32_t rva(uint32_t p) { return p >= (uint32_t)g_aimp_exe ? p - (uint32_t)g_aimp_exe : p; }
 
