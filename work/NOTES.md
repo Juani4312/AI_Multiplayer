@@ -1132,3 +1132,14 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **StalkerAlien** (`Stalker_Alien_V1.2.zip`, `READ ME.txt`: "copy the DATA folder to your Alien Isolation directory"): 4 variantes (`Default`, `+Tail Dragging`, `Alternative Vent Sounds`, `… with Tail Dragging`). En todas, 28 `.WEM` idénticos y un `ALIEN.bnk` distinto; los 29 pisan originales de `DATA/SOUND`. El `.bnk` viene en minúscula: el destino es `ALIEN.BNK` (si no, en Linux quedan dos archivos). `toggle.sh` arma la lista según `VARIANTE` (activa: `Default`). No interfiere (audio).
 - **MildlyInsaneAI** (`Mildly Insane Alien AI 183 2 …zip`, Nexus 183 v2): **sin README**, trae solo `DATA/CHR_INFO/ATTRIBUTES/ALIEN.BML`; instalación deducida (`DATA/` → `DATA/`, `INSTALACION.md`). **Interfiere** (atributos del Alien): `mods-desarrollo.sh desactivar` / `mode.sh test` lo apaga.
 - Estado: activos NoHUD, StalkerAlien, MildlyInsaneAI y AIMovieFix; juego cerrado, modo juego.
+
+## 2026-11-21 — Aviso sin pausa verificado en el juego (corridas 149–151)
+- Todos los mods de terceros apagados (pedido del usuario); siguen sueltos ReShade (`dxgi.dll`) y MovieFix (`d3d11.dll`), con los que siempre se probó. `mode.sh test safezone`.
+- **Corrida 149** (`AIMP_MEMSRV_TEST=1`, `memsrv TIP 8000 …`): el texto aparece en el cartel de consejos del HUD (centro, abajo, en mayúsculas, con tildes y eñe) y se va solo a los 8 s. El juego no se pausa: el contador de frames sube +75/s todo el tiempo (`ST frames`, 129–137 s). Captura en `tmp/screenshots/`.
+- **Corrida 150** (host + `aimp_peer.py --event 20:7:01…/32:7:02…/60:7:03…`, `AIMP_COOP_DOWNED=1`):
+  - "tu compañero cayó" OK, pero el texto largo pasaba a un segundo renglón que se pisaba con los subtítulos;
+  - **bug:** el segundo aviso ("se levantó", 114 s) mostró el texto del primero: el juego guarda el texto traducido por clave y, con la misma clave (`AI_AIMP_COOP_TIP`), no lo vuelve a pedir;
+  - **bug de herramientas:** `memsrv KILL` respondía "NO (prólogo)" con `AIMP_COOP_DOWNED=1` (desde la corrida 134 `death.c` engancha `FUN_007d0c10`).
+- Arreglos (`ui.c`, `death.c`, `memsrv.c`): una clave por aviso (`AI_AIMP_COOP_TIP<n>`, el hook reconoce el prefijo; 16 buffers rotando), textos de un renglón ("Coop: caíste. Cuando tu compañero guarde, revivís.", "Coop: tu compañero cayó. Guardá para revivirlo."), `death_kill_entry()` para que `KILL` acepte la función enganchada. Tests OK.
+- **Corrida 151:** los 4 avisos con su texto, un renglón cada uno (claves `TIP0`–`TIP3`): cayó (113 s), se levantó (125 s), caíste (`KILL`, 132 s; el peer recibe `AIMP_EVT_COOP` kind 1 con la posición), te revivió (143 s, al lado del peer; el peer recibe kind 2). Logs `run149`–`run151` en `work/evidence/runtime/`.
+- Pendiente: verificar si `ui_message` (diálogo "Warning", clave fija `MSG_KEY`) tiene el mismo problema con dos avisos distintos seguidos.

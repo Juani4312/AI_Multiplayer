@@ -110,7 +110,11 @@ void ui_message(const char *utf8)
 #define AIMP_RVA_UI_FIND_SCREEN 0x00410420u
 #define AIMP_RVA_UI_TIP 0x00433A20u
 #define AIMP_RVA_UI_SCREENS 0x0134A78Cu
+/* Clave del texto: una distinta en cada aviso (TIP_KEY + número). Corrida 150: con la misma clave, el segundo aviso mostró
+ * el texto del primero (el juego guarda el texto traducido por clave y no vuelve a pedirlo). det_lookup reconoce el prefijo. */
 #define TIP_KEY "AI_AIMP_COOP_TIP"
+static char g_tip_keys[16][32];
+static unsigned g_tip_n;
 static const uint8_t UI_FIND_SCREEN_PROLOGUE[9] = { 0x83, 0xEC, 0x08, 0x53, 0x55, 0x56, 0x8B, 0xF1, 0x57 };
 static const uint8_t UI_TIP_PROLOGUE[8] = { 0x8B, 0x44, 0x24, 0x04, 0x56, 0x50, 0x8B, 0xF1 };
 typedef void *(__attribute__((fastcall)) * UiFindScreenFn)(void *mgr, void *edx, const char *name);
@@ -148,8 +152,10 @@ static void tip_frame(void)
         log_printf("UI: no está la pantalla pickupOverlay: el aviso sin pausa no se muestra");
         return;
     }
-    ((UiTipFn)(void *)ft)(scr, NULL, TIP_KEY, (float)g_tip_ms);
-    log_printf("UI: aviso sin pausa mostrado (pantalla 0x%08x, %d ms)", (unsigned)(uintptr_t)scr, (int)g_tip_ms);
+    char *key = g_tip_keys[g_tip_n % 16];
+    aimp_snprintf(key, sizeof g_tip_keys[0], "%s%u", TIP_KEY, g_tip_n++);
+    ((UiTipFn)(void *)ft)(scr, NULL, key, (float)g_tip_ms);
+    log_printf("UI: aviso sin pausa mostrado (pantalla 0x%08x, %d ms, clave %s)", (unsigned)(uintptr_t)scr, (int)g_tip_ms, key);
 }
 
 void ui_frame(int have_player)
@@ -183,6 +189,13 @@ static int streq(const char *a, const char *b)
     for (; *a && *a == *b; a++, b++)
         ;
     return *a == *b;
+}
+
+static int starts(const char *s, const char *pre)
+{
+    for (; *pre && *s == *pre; s++, pre++)
+        ;
+    return !*pre;
 }
 
 static const wchar_t *status_text(int st)
@@ -229,7 +242,7 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static const wchar_
         return orig;
     if (streq(key, MSG_KEY))
         return g_msg[0] ? g_msg : orig;
-    if (streq(key, TIP_KEY))
+    if (starts(key, TIP_KEY))
         return g_tip[0] ? g_tip : orig;
     int k = -1;
     for (int i = 0; i < K_N; i++)

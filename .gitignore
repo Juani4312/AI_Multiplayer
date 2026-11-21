@@ -43,3 +43,6 @@ instalacion-informe.md
 # Herramientas (work/tools): salida de compilación de .NET
 work/tools/cathode-dump/bin/
 work/tools/cathode-dump/obj/
+
+# Temporales del proyecto (capturas de las pruebas en tmp/screenshots/, archivos de trabajo): locales
+/tmp/

@@ -25,6 +25,9 @@ void death_install(AimpNet *net);
 /* Por red (AIMP_COOP_DOWNED=1 con AIMP_NET): AIMP_EVT_COOP avisa caído / revivido; si caen los dos, game over normal
  * (el último en caer muere de verdad); el que usa una terminal de guardado con el compañero caído lo revive a su lado. */
 int death_coop_enabled(void);
+/* Dirección de FUN_007d0c10 (matar) si su prólogo se verificó antes de engancharla; 0 si no. memsrv KILL la usa cuando
+ * el hook de death.c ya cambió el prólogo (corrida 150). */
+uintptr_t death_kill_entry(void);
 /* 1 si el otro jugador avisó que está caído. */
 int death_remote_is_downed(void);
 /* Host: 1 si está caído o lo revivió el compañero hace menos de 2 min (savesync acepta entonces el save del cliente). */

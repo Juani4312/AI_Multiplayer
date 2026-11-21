@@ -56,7 +56,8 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_ui_
 static int g_downed_mode, g_downed_cfg, g_downed, g_remote_downed, g_revive_pending;
 static volatile LONG g_checkpoint_hit;
 static AimpNet *g_net;
-/* Avisos sin pausa (cartel de consejos del HUD, ui_toast). AIMP_COOP_TOASTS=0 los apaga. */
+/* Avisos sin pausa (cartel de consejos del HUD, ui_toast). AIMP_COOP_TOASTS=0 los apaga. Textos de un renglón (hasta ~55
+ * caracteres): uno más largo pasa a un segundo renglón que se pisa con los subtítulos (corrida 150). */
 static int g_toasts = 1;
 static void toast(const char *utf8)
 {
@@ -298,6 +299,7 @@ static void release_attacker(const char *why)
 }
 
 int death_coop_enabled(void) { return g_downed_mode; }
+uintptr_t death_kill_entry(void) { return (uintptr_t)g_kill; }
 int death_remote_is_downed(void) { return g_remote_downed; }
 
 static void send(uint32_t kind, uint32_t player)
@@ -426,7 +428,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
         log_printf("DEATH: el jugador quedó caído (salud %u de %u): invencible; en coop sigue el compañero", hp, mx);
         send(COOP_DOWNED, player);
         if (!g_remote_downed)
-            toast("Coop: caíste. Tu compañero te revive usando una terminal de guardado.");
+            toast("Coop: caíste. Cuando tu compañero guarde, revivís.");
         if (g_remote_downed) {
             both_down(player);
             return;
@@ -492,7 +494,7 @@ void death_remote_event(const AimpEvt *e)
     if (ev.kind == COOP_DOWNED) {
         log_printf("DEATH: el otro jugador quedó caído%s", g_downed ? "; acá también: game over" : "");
         if (!g_downed)
-            toast("Coop: tu compañero cayó. Usá una terminal de guardado para revivirlo.");
+            toast("Coop: tu compañero cayó. Guardá para revivirlo.");
         g_remote_downed = 1;
         ghost_set_remote_downed(1);
         if (g_downed && g_last_player)
