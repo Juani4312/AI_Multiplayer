@@ -9,7 +9,7 @@ Nada de esto escribe sobre la instalación del juego.
 |---|---|---|---|---|
 | [CathodeLib](https://github.com/OpenCAGE/CathodeLib) (OpenCAGE, Matt Filer) | Librería C# que lee y escribe los formatos de CATHODE | submódulo `third_party/CathodeLib` (commit `69ef3a8`, 2026-10-24) | MIT | Base de `cathode-dump` |
 | `cathode-dump/` (nuestra) | Programa de consola sobre CathodeLib | este repo | — | Volcar scripts de niveles, UI y BML |
-| [JPEXS FFDec](https://github.com/jindrapetrik/jpexs-decompiler) 26.5.0 | Descompilador de Flash/Scaleform (`.GFX`) | `~/tools/ffdec-26.5.0` (no se commitea; `get-ffdec.sh` lo baja y verifica el SHA-256) | GPL-3 | Leer el ActionScript de la UI (popups, HUD, menús) |
+| [JPEXS FFDec](https://github.com/jindrapetrik/jpexs-decompiler) 26.5.0 | Descompilador de Flash/Scaleform (`.GFX`) | `~/tools/ffdec-26.5.0` (lo instala `get-ffdec.sh`, que verifica el SHA-256) | GPL-3 | Leer el ActionScript de la UI (popups, HUD, menús) |
 
 Requisitos: `dotnet-sdk` (10) y Java 21 (FFDec). Clonar con submódulos: `git submodule update --init --recursive`.
 

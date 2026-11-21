@@ -3,39 +3,35 @@
 Mod de investigación e interoperabilidad, de uso personal, sobre una copia comprada del juego.
 No contiene ni redistribuye binarios, assets ni código del juego.
 
-**Estado (2026-11-17):** experimental. Dos jugadores, uno en Linux (Proton) y otro en Windows 10, conectados por Tailscale, ya se ven y comparten los "usar". El avatar del otro jugador es un "títere": un NPC que cada frame se pone en la posición exacta del otro, con animación de caminar o correr (probado con dos máquinas: "responsivo y exacto"). Los objetos arrojados se ven volar del otro lado y terminan donde cayó el original. Todavía no es un coop jugable: no se sincronizan la IA, el Alien, las armas de fuego ni el progreso de la misión. **Dónde quedamos y qué sigue:** sección "Estado actual y siguiente paso", al final; el historial de sesiones está en `work/HISTORIAL.md`.
+**Estado (2026-11-21):** experimental. Dos jugadores, uno en Linux (Proton) y otro en Windows, conectados por Tailscale, juegan la misma partida: se ven, comparten los "usar", el inventario y la munición, el cliente arranca con la partida del host y, si uno cae, el otro lo revive desde una terminal de guardado. El avatar del otro jugador es un "títere": un NPC (una mujer, donde se puede) que cada frame se pone en la posición exacta del otro, con animación de caminar, correr y agacharse. Todavía no es un coop completo: la IA y el Alien corren por separado en cada máquina, las armas de fuego no se ven del otro lado y solo algunas interacciones del mundo se sincronizan. **Dónde quedamos y qué sigue:** sección "Estado actual y siguiente paso", al final.
 
-| Fase | Qué hace | Estado |
-|------|----------|--------|
-| 1 y 2 | `winmm.dll` proxy, hook en el loop principal, lectura de estado y posición del jugador | ✅ Proton y Windows 10 nativo |
-| 3 | Red UDP propia (20 paquetes/s con el estado del jugador) | ✅ por Tailscale, 0 pérdidas |
-| 4 | Avatar del otro jugador: un NPC civil del nivel, sin IA, teletransportado a su posición | ✅ en los dos sentidos |
-| 4b | Avatar títere: posición exacta del otro cada frame, con animación de caminar, caminar rápido y correr | ✅ dos máquinas (corrida 52); agachado: el civil no tiene la animación (corridas 65–67) |
-| 5 | "Usar" compartido: botones, cajas e ítems se replican y en la otra máquina los hace el avatar | ✅ botones; los ítems quedan uno por jugador |
-| 5b | Objetos arrojados y colocados (bengala, noisemaker, molotov, minas…): aparecen en la otra máquina con la misma trayectoria y quedan donde cayó el original | 🟡 vuelo ✅ con dos máquinas; corrección de dónde cae verificada en una (corridas 55–64), falta con dos |
-| 6 | Disparadores de los scripts decididos por el host (zonas que arrancan diálogos, eventos…) | 🟡 por red en una máquina (corridas 72–73: el cliente aplica los del host y bloquea los suyos); falta con dos máquinas |
+| Parte | Qué hace | Estado |
+|-------|----------|--------|
+| Proxy y hook | `winmm.dll` (o `xinput1_3.dll`) proxy, hook en el loop principal, lectura del estado y la posición del jugador | ✅ Proton, Windows 10; la variante `xinput1_3` falta en Windows 11 |
+| Red | UDP propio (20 paquetes/s con el estado del jugador, eventos repetidos) | ✅ por Tailscale, 0 pérdidas |
+| Avatar | NPC del nivel sin IA, títere de la posición exacta del otro: camina, corre, se agacha (pose), mira hacia donde mira el otro. Es una mujer si hay una en el nivel o si el mod puede hacer aparecer una | ✅ dos máquinas; avatar mujer en una (corridas 158–159) |
+| "Usar" compartido | botones, cajas e ítems: el uso del otro lo repite el avatar | ✅ botones del transit con dos máquinas |
+| Pines compartidos | lo que el avatar no puede usar (el arquetipo `Use` de los scripts, como el robot barredor) se replica reinyectando el pin del ícono, en los dos sentidos | ✅ en una máquina con el peer (corridas 152–156) |
+| Inventario compartido | lo que uno agarra lo reciben los dos; lo que uno gasta se descuenta a los dos | ✅ dos máquinas (corrida 119) |
+| Copia del save | el cliente arranca con la partida del host; guardar juntos; game over con el checkpoint del host | ✅ dos máquinas (corrida 119) |
+| Muerte en coop | el que cae queda caído (invencible, el Alien lo ignora); el compañero lo revive con una terminal de guardado; si caen los dos, game over | ✅ en una máquina con el peer |
+| Dificultad y menú Coop | menú "Coop" del juego (en Extras) con la dificultad del coop, que decide el host | ✅ en una máquina |
+| Avisos | avisos sin pausa (cartel de consejos del HUD) y con el diálogo "Warning" del juego | ✅ en una máquina (corridas 149–151) |
+| Arrojables | bengala, noisemaker, molotov, minas: aparecen en la otra máquina con la misma trayectoria y quedan donde cayó el original | 🟡 vuelo ✅ con dos máquinas; dónde cae, verificado en una |
+| Disparadores de los scripts | zonas y eventos de la misión los decide el host | ✅ objetivos con dos máquinas (corrida 119); algunos pines de composites compartidos no se encuentran |
 
-El detalle de cada paso está en `work/PROGRESS.md`. La evidencia de ingeniería inversa está en `work/findings/` (hallazgos 01–19).
+El detalle de cada paso está en `work/PROGRESS.md`. La evidencia de ingeniería inversa está en `work/findings/` (hallazgos 01–21).
 
 ## Para Claude Code
 
 - **Para instalar el mod y jugar** (por ejemplo, en la PC de un amigo): seguí [`INSTALAR_CON_CLAUDE.md`](INSTALAR_CON_CLAUDE.md).
 - **En `papulaptop`** (la laptop Windows de pruebas): tu tarea está en [`work/windows/instructions.md`](work/windows/instructions.md).
 
-## Herramientas y librerías de terceros
+## Instalación
 
-El mod (`mod/`, la DLL) no incluye código de terceros: es C propio, sin CRT. Lo de abajo se usa para desarrollar o para leer los datos del juego, y no se redistribuye nada del juego.
+Todo el detalle está en **[`INSTALACION.md`](INSTALACION.md)** (empieza con una instalación rápida de 5 pasos); para que lo instale Claude Code, [`INSTALAR_CON_CLAUDE.md`](INSTALAR_CON_CLAUDE.md). La guía cubre: requisitos, instalar en Windows y en Linux (Proton), el archivo `aimp.cfg`, la red con Tailscale, las configuraciones recomendadas para host y para el que se une, cómo arrancar una partida de a dos, la referencia de todos los parámetros y problemas comunes.
 
-| Qué | Para qué | Cómo está en el repo | Licencia |
-|-----|----------|----------------------|----------|
-| [CathodeLib](https://github.com/OpenCAGE/CathodeLib) (OpenCAGE, Matt Filer) | leer los formatos de CATHODE: scripts de los niveles (`COMMANDS.PAK`), personajes, UI, BML. Lo usa nuestro `work/tools/cathode-dump` | submódulo `work/tools/third_party/CathodeLib` | MIT; sus dependencias (AlienBML, DotRecast, NanoRT…) en su `THIRD-PARTY-NOTICES.md` |
-| [JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) 26.5.0 | leer el ActionScript de la UI del juego (`.GFX`) | no está: `work/tools/get-ffdec.sh` lo baja y verifica el SHA-256 | GPL-3 |
-| [Ghidra](https://github.com/NationalSecurityAgency/ghidra) y REA | ingeniería inversa de `AI.exe` (hallazgos en `work/findings/`) | no están (instalados aparte) | Apache 2.0 (Ghidra) |
-| mingw-w64 (GCC), CMake, Wine | compilar la DLL y correr los tests | no están | GPL / BSD / LGPL |
-| .NET SDK | compilar `cathode-dump` | no está | MIT |
-| Tailscale | red entre los dos jugadores | no está (opcional) | — |
-
-Detalle y verificaciones: `work/tools/README.md`. Los mods de terceros que haya en la instalación del juego (UI, IA, audio) no son parte del proyecto: para probar el coop se apagan los que tocan la UI o la IA.
+Resumen: `winmm.dll` (de `mod/dist/`) al lado de `AI.exe` en las dos máquinas (si Windows no la carga, la variante `xinput1_3.dll`; en Proton, `work/scripts/runtime_setup.sh install --preset host|join`), un `aimp.cfg` con `AIMP_NET=host` en uno y `AIMP_NET=join` + `AIMP_NET_PEER=<IP del host>:47811` en el otro (`mod/dist/aimp-host.cfg` y `aimp-join.cfg`), y las dos máquinas en la misma red de Tailscale. Log: `%LOCALAPPDATA%\AI_Multiplayer\aimp.log`.
 
 ## Build soportada
 
@@ -46,64 +42,73 @@ Detalle y verificaciones: `work/tools/README.md`. Los mods de terceros que haya 
 | Steam buildid | 4940658 |
 | PE timestamp | 0x54E3199D (2015-02-17) |
 
-Los dos jugadores **tienen que tener exactamente este hash**, los mismos datos del juego y **la misma versión del mod**: el protocolo de red está en la v2 desde el 2026-11-15 (eventos más grandes, para los arrojables) y no habla con DLLs anteriores. Con otra build del juego, el mod queda como proxy de `winmm` y no hace nada más.
+Los dos jugadores **tienen que tener exactamente este hash**, los mismos datos del juego y **la misma versión del mod**: el protocolo de red está en la v2 desde el 2026-11-15 y no habla con DLLs anteriores. Con otra build del juego, el mod queda como proxy y no hace nada más.
 
 ## Estructura
 
-- `INSTALACION.md`: instalación, configuración y referencia de parámetros (para jugar).
+- `INSTALACION.md`: instalación, configuración y referencia de parámetros (para jugar). `INSTALAR_CON_CLAUDE.md`: lo mismo, como procedimiento para Claude Code.
 - `mod/`: el mod. C sin CRT, CMake, cross-compilado con mingw-w64 (i686). `mod/README.md` tiene la referencia técnica: compilación, tests, variables y log.
-- `mod/dist/winmm.dll`: la DLL compilada, para usar sin toolchain (por ejemplo, en Windows), con su `SHA256SUMS`.
-- `work/CONTINGENCIAS.md`: limitaciones conocidas y lo que se probó sin éxito (Amanda sin modelo en tercera persona, el civil sin agachado, dónde cae el arrojable…), con lo que haría falta para resolverlas.
-- `work/PROGRESS.md`: estado y siguiente paso. `work/NOTES.md` y `work/LOG.md` son la bitácora.
-- `work/findings/`: un `.md` por hallazgo de RE, con direcciones, evidencia y verificación en runtime.
-- `work/windows/`: instrucciones y script de PowerShell para probar en Windows (`instructions.md`, `aimp_check.ps1`). Ahí también van los reportes de la laptop de pruebas.
-- `work/tools/`: herramientas de terceros que usamos para leer formatos del juego (solo lectura, nunca como fuente de offsets): **CathodeLib** de OpenCAGE (submódulo, MIT) con nuestro `cathode-dump` (scripts de cada nivel con el pid del mod, UI, BML) y **JPEXS FFDec** (ActionScript de la UI). Detalle en `work/tools/README.md`.
-- `work/scripts/`: `runtime_setup.sh` (instalar y revertir el mod en Proton), `aimp_peer.py` (peer de prueba del protocolo v2; con `--replay` hace de otro jugador), `memsrv.py` (lector de memoria del mod), análisis de logs, `use_names.py`/`female_spawns.py` (nombres y disparadores sacados de los scripts del juego) y scripts de Ghidra (`work/scripts/ghidra/`). Los scripts personales de la máquina de desarrollo (partidas de prueba, mods de terceros, ventana del juego, navegación del menú) no están en el repo.
-- `work/tools/`: herramientas de terceros para leer los formatos del juego (ver "Herramientas y librerías de terceros").
-- `work/evidence/runtime/`: los logs de cada corrida (`runNN-*.log`) y capturas en `shots/` (locales, ignorados por git).
-- `game/` y `work/evidence/`: locales, ignorados por git.
+- `mod/dist/`: las DLL compiladas (`winmm.dll` y la variante `xinput1_3.dll`) con su `SHA256SUMS` y las configuraciones recomendadas, para usar sin toolchain.
+- `work/PROGRESS.md`: estado y siguiente paso. `work/NOTES.md` y `work/LOG.md` son la bitácora; `work/HISTORIAL.md`, el resumen de cada sesión.
+- `work/CONTINGENCIAS.md`: limitaciones conocidas y lo que se probó sin éxito, con lo que haría falta para resolverlas.
+- `work/DESIGN_*.md`: diseño de cada parte (sesión compartida, muerte, dificultad, Alien, menú de opciones, fase 6).
+- `work/findings/`: un `.md` por hallazgo de ingeniería inversa, con direcciones, evidencia y verificación en runtime.
+- `work/windows/`: instrucciones y script de PowerShell para instalar y probar en Windows (`instructions.md`, `aimp_check.ps1`) y los reportes de la laptop de pruebas.
+- `work/scripts/`: `runtime_setup.sh` (instalar y revertir el mod en Proton), `aimp_peer.py` (peer de prueba del protocolo: hace de otro jugador), `memsrv.py` (lector de memoria y comandos de prueba del mod), análisis de logs y trazas, `use_names.py` y `female_spawns.py` (nombres y disparadores sacados de los scripts del juego) y scripts de Ghidra (`work/scripts/ghidra/`).
+- `work/tools/`: `cathode-dump` (volcados de los formatos del juego con CathodeLib) y la descarga de JPEXS FFDec. Ver "Herramientas y librerías de terceros".
 
-## Instalación
+## Herramientas y librerías de terceros
 
-Todo el detalle está en **[`INSTALACION.md`](INSTALACION.md)** (empieza con una instalación rápida de 5 pasos); para que lo instale Claude Code, [`INSTALAR_CON_CLAUDE.md`](INSTALAR_CON_CLAUDE.md). La guía cubre: requisitos, instalar en Windows y en Linux (Proton), el archivo `aimp.cfg`, la red con Tailscale, las configuraciones recomendadas para host y para el que se une, cómo arrancar una partida de a dos, la referencia de todos los parámetros y problemas comunes.
+El mod (`mod/`, la DLL) no incluye código de terceros: es C propio, sin CRT. Lo de abajo se usa para desarrollar o para leer los datos del juego, y no se redistribuye nada del juego.
 
-Resumen: `winmm.dll` (de `mod/dist/`) al lado de `AI.exe` en las dos máquinas (en Proton, además, `WINEDLLOVERRIDES="winmm=n,b" %command%`), un `aimp.cfg` con `AIMP_NET=host` en uno y `AIMP_NET=join` + `AIMP_NET_PEER=<IP del host>:47811` en el otro, y las dos máquinas en la misma red de Tailscale. Log: `%LOCALAPPDATA%\AI_Multiplayer\aimp.log`.
+| Qué | Para qué | Cómo se obtiene | Licencia |
+|-----|----------|-----------------|----------|
+| [CathodeLib](https://github.com/OpenCAGE/CathodeLib) (OpenCAGE, Matt Filer) | leer los formatos de CATHODE: scripts de los niveles (`COMMANDS.PAK`), personajes, UI, BML. La usa `work/tools/cathode-dump` | submódulo `work/tools/third_party/CathodeLib` (`git submodule update --init --recursive`) | MIT; sus dependencias (AlienBML, DotRecast, NanoRT…) en su `THIRD-PARTY-NOTICES.md` |
+| [JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) 26.5.0 | leer el ActionScript de la UI del juego (`.GFX`) | `work/tools/get-ffdec.sh` lo baja y verifica el SHA-256 | GPL-3 |
+| [Ghidra](https://github.com/NationalSecurityAgency/ghidra) y REA | ingeniería inversa de `AI.exe` (hallazgos en `work/findings/`) | se instalan aparte | Apache 2.0 (Ghidra) |
+| mingw-w64 (GCC), CMake, Wine | compilar la DLL y correr los tests | paquetes del sistema | GPL / BSD / LGPL |
+| .NET SDK | compilar `cathode-dump` | paquete del sistema | MIT |
+| Tailscale | red entre los dos jugadores | se instala aparte (opcional) | — |
+
+Las herramientas sirven para orientarse y ponerle nombre a lo que ve el mod; los offsets salen siempre de Ghidra/REA o del runtime. Detalle y verificaciones: `work/tools/README.md`. Los mods de terceros del juego (UI, IA, audio) no son parte del proyecto: para probar el coop se apagan los que tocan la UI o la IA.
 
 ## Limitaciones conocidas
 
-- El avatar es un NPC civil (no hay modelo de Amanda en tercera persona). Con `AIMP_GHOST_WALK=1` copia la posición exacta del otro cada frame y anima caminar o correr, pero **no se agacha** (el comando `IDLE` con postura no tiene efecto en el civil) y, al caminar para atrás, mira hacia donde va. En la laptop el usuario lo vio "deslizarse" en algún momento: falta revisar la animación.
-- Arrojables: la réplica vuela igual; cuando el original se asienta, la réplica se borra y aparece quieta en ese punto (un "salto" corto). Del lado del que tira, la posición del objeto se encuentra en ~3 de 4 lanzamientos; si no, no se corrige.
-- No se replican la IA ni el Alien, las armas de fuego (el disparo y el lanzallamas no se ven del otro lado), las puertas automáticas, lo que se elige en una terminal ni el progreso de la misión. Cada máquina corre su propia simulación.
-- Los ítems que se levantan quedan uno por jugador: los dos pueden agarrar el mismo.
+- No hay modelo de Amanda en tercera persona: el avatar es un NPC del nivel (una obrera donde se puede). No camina agachado (se desliza en la pose) y a veces los pies no siguen el ritmo del desplazamiento.
+- Arrojables: la réplica vuela igual; cuando el original se asienta, la réplica se borra y aparece quieta en ese punto (un "salto" corto).
+- La IA de los NPCs y el Alien corren por separado en cada máquina: el Alien persigue a cada jugador en su propia máquina.
+- Las armas de fuego no se ven del otro lado (el disparo ni el lanzallamas), ni lo que se elige en una terminal. De las interacciones del mundo, se sincronizan los botones del transit, los disparadores de zona y el robot barredor; las puertas con panel todavía no.
+- Los ítems quedan en el mundo de cada máquina: con el inventario compartido, lo que uno levanta lo reciben los dos, pero el otro todavía ve el ítem.
 - Los lockers y la terminal de guardado no se replican a propósito: son acciones de cada jugador.
 - Crear personajes nuevos (en vez de reusar un NPC) hace caer el juego. Ver el hallazgo 12.
+
+Detalle y lo que haría falta para resolverlas: `work/CONTINGENCIAS.md`.
 
 ## Lo que se sabe del engine (resumen)
 
 - El engine trae restos de un modo red: colas de RPC que en retail se ejecutan en local (hallazgos 10 y 11), replicadores de personajes con 11 tipos de mensaje cuya capa de canales quedó vacía (hallazgo 18) y un comando de control `CLIENT_PLAYERS_LOGIC_CHARACTER_RUNNING_ON_THE_HOST` sin constructor (hallazgo 19).
-- Los scripts de los niveles (CATHODE) se pueden observar y reinyectar pin por pin, con una identidad estable entre máquinas (hallazgos 15 y 16).
+- Los scripts de los niveles (CATHODE) se pueden observar y reinyectar pin por pin, con una identidad estable entre máquinas, el pid (hallazgos 15 y 16). El pid se reproduce desde los archivos con CathodeLib en el 83–96 % de los casos.
+- Los ids de 8 bytes que usa el juego para objetos y personajes (por ejemplo, en el RPC del "usar") son el `EntityHandle` de CathodeLib: el id de la entidad y el de la instancia de su composite. Con eso, cada objeto y cada personaje de un log tiene nombre.
 - Los objetos arrojados son composites de los scripts que el mod puede instanciar con la misma posición y velocidad (hallazgo 17). Las armas de fuego también son composites.
 - A los NPCs los maneja un sistema de comandos (`GOTO`, `MOVE_TOWARDS`, `FOLLOW`…) con dos controladores por personaje: uno de tareas (su IA) y uno de scripts, que su árbol de comportamiento solo ejecuta en la rama cinemática. Al jugador lo mueve un comando que lee el mando (hallazgo 19).
 
 ## Tests
 
-`mod/test/run_tests.sh` corre con wine, sin el juego: `test_core`, `test_probe`, `test_net`, `test_ghost`, `test_walk`, `test_sync`, `test_throw`, `test_ctrl`, `test_pins`, `test_autopad` y `test_host`. Los de las fases 4 a 6 usan stubs de código máquina con los prólogos y el `ret N` reales del juego, para validar las convenciones de llamada.
+`mod/test/run_tests.sh` corre con Wine, sin el juego: `test_core`, `test_probe`, `test_net`, `test_savesync`, `test_ghost`, `test_walk`, `test_sync`, `test_throw`, `test_ctrl`, `test_pins`, `test_autopad`, `test_host` y `test_host_xinput`. Los de las partes que tocan el juego usan stubs de código máquina con los prólogos y el `ret N` reales, para validar las convenciones de llamada.
 
-## Pruebas automáticas en una máquina
+## Pruebas en una máquina
 
-_Los scripts de esta sección (`autoplay_continue.sh`, `game_window.sh`, `mode.sh`) son locales de la máquina de desarrollo y no están en el repo; queda la descripción del método._
+Las corridas se pueden hacer sin nadie al teclado y sin otra máquina (Linux, Proton):
 
-Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, Proton, Hyprland):
-
-1. `work/scripts/runtime_setup.sh install --cfg "...;AIMP_AUTOPAD_FILE=C:\users\steamuser\AppData\Local\AI_Multiplayer\pad.txt"` y `setsid -f steam -applaunch 214490`.
-2. `work/scripts/autoplay_continue.sh menu`: espera el menú, lo navega con el mando virtual y saca una captura **solo de la ventana del juego** (con la geometría de `hyprctl`; nunca un monitor entero). Hay que ver "Continue Game" resaltado antes de `autoplay_continue.sh go`.
-3. El mando virtual (`mod/src/autopad.c`) lee un guion de `pad.txt`: una línea por acción, por ejemplo `P8000-10000:LY=32000` (adelante 2 s) o `P12000-13260:RX=24000` (girar unos 180°; ~143°/s con 24000). Los tiempos `P` son relativos a la aparición del jugador. `MARK` deja una marca en el log.
-4. **Otro jugador sin otra máquina:** el juego con `AIMP_NET=host` y `python3 -I work/scripts/aimp_peer.py --join 127.0.0.1:47811 --replay 3 --offset 0,0,2`. El peer repite el recorrido del jugador 3 s después, corrido 2 m, así que el "otro" siempre pisa lugares transitables.
-5. Al terminar: cerrar el juego (`pkill -TERM -x AI.exe`), guardar el log en `work/evidence/runtime/` y **dejar el mod instalado en pasivo** (`runtime_setup.sh install --cfg "AIMP_GHOST=0"`).
+1. Instalar con la config de la prueba: `work/scripts/runtime_setup.sh install --cfg "...;AIMP_AUTOPAD_FILE=C:\users\steamuser\AppData\Local\AI_Multiplayer\pad.txt"` y abrir el juego (`steam -applaunch 214490`).
+2. **Mando virtual** (`mod/src/autopad.c`): lee un guion de `pad.txt`, una línea por acción, por ejemplo `P8000-10000:LY=32000` (adelante 2 s), `P12000-13260:RX=24000` (girar unos 180°) o `0-150:A` (apretar A ya). Los tiempos con `P` son relativos a la aparición del jugador. Sirve también para recorrer el menú paso a paso, con una captura en cada uno.
+3. **Otro jugador:** el juego con `AIMP_NET=host` y `python3 -I work/scripts/aimp_peer.py --join 127.0.0.1:47811 --replay 3 --offset 0,0,2`: el peer repite el recorrido del jugador 3 s después, corrido 2 m. Con `--event T:tipo:hex` manda eventos (caído, pin, "usar"…) y con `--record-events` graba los que manda el juego. Al revés (`--host`), el juego hace de cliente.
+4. **Comandos de prueba** (`AIMP_MEMSRV_FILE` + `AIMP_MEMSRV_TEST=1`, con `work/scripts/memsrv.py`): teletransportar al jugador (`TP`), avisos (`TIP`, `MSG`), matar (`KILL`, para el modo caído), guardar (`SAVE`). Con `AIMP_PINS_FILE`, `FIRE <pid> <pin>` reinyecta un pin de los scripts.
+5. Al terminar: cerrar el juego (`pkill -x AI.exe`) y guardar el log.
 
 ## Estado actual y siguiente paso
 
-- **Último (2026-11-18, tarde):** con el modo caído, un remate de un enemigo (el agarre del Alien) ya no deja la pantalla negra: después de la animación, el caído recupera la imagen y el control, y el Alien lo ignora mientras está caído (se va a los conductos; al revivir lo vuelve a cazar). Avisos con el diálogo "Warning" del juego (la terminal bloqueada por el guardado exigente dice por qué). Verificado en una máquina con el save `alien`.
-- **2026-11-20:** en un Windows 11 25H2 el juego no carga la `winmm.dll` del mod. Nueva variante que entra por `xinput1_3.dll` (`mod/dist/xinput1_3.dll`, `-Proxy xinput1_3` en el instalador), verificada en el juego con Proton; falta probarla en ese Windows.
-- **Siguiente:** que el amigo pruebe la variante (`INSTALAR_CON_CLAUDE.md`, sección 2) y la prueba de a dos (`work/windows/instructions.md` 8g, DLL `c0ce85d7…`).
+- **Último (2026-11-21):** avisos sin pausa verificados (una clave de texto por aviso); el robot barredor de la corrida 119 se sincroniza por pin en los dos sentidos; el avatar es una mujer donde se puede (la preferencia por mujer no funcionaba; si no hay ninguna cargada, el mod hace aparecer una obrera). Herramientas nuevas: CathodeLib con `cathode-dump`, que le pone nombre a los pids, objetos y personajes de los logs.
+- **2026-11-20:** en un Windows 11 25H2 el juego no carga la `winmm.dll` del mod. Variante que entra por `xinput1_3.dll` (`mod/dist/xinput1_3.dll`, `-Proxy xinput1_3` en el instalador), verificada en el juego con Proton; falta probarla en ese Windows.
+- **Siguiente:** que el amigo pruebe la variante (`INSTALAR_CON_CLAUDE.md`, sección 2) y la prueba de a dos (`work/windows/instructions.md` 8g, DLL `c0ce85d7…`): robot, avatar mujer, avisos, modo caído.
 - Detalle y pendientes: `work/PROGRESS.md`. Historial de sesiones: `work/HISTORIAL.md`.
