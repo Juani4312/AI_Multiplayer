@@ -50,6 +50,7 @@
 #include "game.h"
 #include "hook.h"
 #include "log.h"
+#include "pins.h"
 
 #define MAX_REQS 32 /* anillo de pedidos capturados */
 #define LOG_REQS 24 /* pedidos con volcado completo por sesión */
@@ -87,6 +88,20 @@ static uint8_t g_scq[MAX_REQS][SC_REQ_SIZE];
 static int g_prefer_female = 1, g_skel_logged;
 static int g_mode, g_state = G_OFF, g_from_key = -1, g_npc_type = 6, g_obs_logged, g_warned_npc, g_chosen_once;
 static int64_t g_last_pick;
+/* AIMP_GHOST_FEMALE_SPAWN (2026-11-21, corrida 158): si al elegir el avatar no hay ninguna mujer cargada, se reinyecta un
+ * pin de los scripts del nivel que solo hace aparecer a una NPC mujer ("nivel:pid:pin,..."; tabla de
+ * work/scripts/female_spawns.py, disparadores "limpios": ese pin no va a ningún otro lado) y se vuelve a elegir 3 s
+ * después. Una vez por nivel. 0 = apagado. Necesita el hook de pines (AIMP_SYNC_PINS=1 o AIMP_TRACE_PINS=1). */
+#define FSPAWN_MAX 32
+static uint32_t g_fs_level[FSPAWN_MAX], g_fs_pid[FSPAWN_MAX], g_fs_pin[FSPAWN_MAX];
+static int g_nfs;
+static uint32_t g_fs_tried_level = 0xFFFFFFFFu, g_cur_level;
+static int64_t g_fs_until;
+/* Civiles sin arma (Archetypes\NPCs\Human\Civilian\Worker_NPC) con disparador limpio, de work/scripts/female_spawns.py:
+ * nivel 8 HAB_Airport (AIRLOCK_Worker_Unarmed, desde los AIRLOCK_Human_Encounter*.npc6_spawn), 10 HAB_ShoppingCentre
+ * ([M16]Worker_NPC_7, CHR_DeathMonitor_3.killed; corrida 158) y 12 SCI_HospitalLower (RECEPTION_Worker_Unarmed). */
+static const char k_default_fspawn[] = "8:00b4018b:22a0acfb,8:185cf272:22a0acfb,8:0e97cd76:22a0acfb,8:a52a5232:22a0acfb,10:232725ed:9653cab3,12:5543d6c1:22a0acfb,12:17f13e0f:22a0acfb,12:5b28bf24:22a0acfb,12:82000da7:22a0acfb";
+static void fs_parse(const char *s);
 static int g_front_cm; /* AIMP_GHOST_FRONT_CM */
 static int g_clone_auth;      /* AIMP_GHOST_CLONE_AUTH: clonar el pedido de autoridad (0x130) en vez del de SpawnCharacter */
 static char g_clone_name[0x40]; /* AIMP_GHOST_CLONE_NAME (p. ej. PLAYER_2) */
@@ -455,6 +470,20 @@ int ghost_install(void)
     }
     g_npc_type = aimp_env_int(L"AIMP_GHOST_NPC_TYPE", 6);
     g_prefer_female = aimp_env_int(L"AIMP_GHOST_PREFER_FEMALE", 1);
+    {
+        wchar_t wf[512];
+        char f8[512];
+        if (aimp_env_str(L"AIMP_GHOST_FEMALE_SPAWN", wf, 512)) {
+            int i = 0;
+            for (; i < 511 && wf[i]; i++)
+                f8[i] = (char)(wf[i] < 128 ? wf[i] : '?');
+            f8[i] = 0;
+        } else
+            aimp_snprintf(f8, sizeof f8, "%s", k_default_fspawn);
+        fs_parse(f8);
+        if (g_nfs)
+            log_printf("AIMP_GHOST_FEMALE_SPAWN: %d disparadores de NPC mujeres [%s]", g_nfs, f8);
+    }
     g_walk = g_mode >= 2 && aimp_env_int(L"AIMP_GHOST_WALK", 0);
     if (g_walk) {
         uint8_t a[sizeof AIMP_CMD_MOVE_START_PROLOGUE], b[sizeof AIMP_CMD_MOVE_UPDATE_PROLOGUE];
@@ -729,7 +758,7 @@ static void set_noauth(const Chars *c, uint32_t p)
 }
 
 /* Nombre del esqueleto del personaje (2026-11-17, lector de memoria): Character+0x600 -> +0x1C -> +0x60 (char[]).
- * El jugador da "FEMALEFP" y los civiles y el guardia de HAB_ShoppingCentre, "MALE". */
+ * El jugador da "FEMALEFP" y los civiles y el guardia de HAB_ShoppingCentre, "MALE"; las NPC mujeres, "FEMALENPC". */
 static int chr_skeleton(uint32_t chr, char *out, size_t cap)
 {
     uint32_t a = 0, b = 0;
@@ -737,8 +766,81 @@ static int chr_skeleton(uint32_t chr, char *out, size_t cap)
     return mem_u32(chr + CHR_SKEL_OWNER, &a) && a && mem_u32(a + SKEL_OWNER_SKEL, &b) && b && mem_cstr(b + SKEL_NAME, out, cap) && out[0];
 }
 
+static uint32_t fs_hex(const char **pp)
+{
+    uint32_t v = 0;
+    const char *p = *pp;
+    for (;; p++) {
+        char ch = *p;
+        int d = ch >= '0' && ch <= '9' ? ch - '0' : ch >= 'a' && ch <= 'f' ? ch - 'a' + 10 : ch >= 'A' && ch <= 'F' ? ch - 'A' + 10 : -1;
+        if (d < 0)
+            break;
+        v = v * 16 + (uint32_t)d;
+    }
+    *pp = p;
+    return v;
+}
+
+static void fs_parse(const char *s)
+{
+    g_nfs = 0;
+    for (const char *p = s; *p && g_nfs < FSPAWN_MAX;) {
+        while (*p == ' ' || *p == ',')
+            p++;
+        if (!*p)
+            break;
+        uint32_t lv = 0;
+        while (*p >= '0' && *p <= '9')
+            lv = lv * 10 + (uint32_t)(*p++ - '0');
+        uint32_t pid = 0, pin = 0;
+        if (*p == ':') {
+            p++;
+            pid = fs_hex(&p);
+        }
+        if (*p == ':') {
+            p++;
+            pin = fs_hex(&p);
+        }
+        if (pid && pin) {
+            g_fs_level[g_nfs] = lv;
+            g_fs_pid[g_nfs] = pid;
+            g_fs_pin[g_nfs] = pin;
+            g_nfs++;
+        }
+        while (*p && *p != ',')
+            p++;
+    }
+}
+
+/* Sin mujeres entre los candidatos: hacer aparecer una con el disparador del nivel. 1 si hay que esperar. */
+static int fs_try(int64_t now)
+{
+    if (!g_prefer_female || !g_nfs || g_fs_tried_level == g_cur_level)
+        return 0;
+    g_fs_tried_level = g_cur_level;
+    for (int i = 0; i < g_nfs; i++) {
+        if (g_fs_level[i] != g_cur_level)
+            continue;
+        if (!pins_enabled()) {
+            log_printf("GHOST: hay una NPC mujer para hacer aparecer en el nivel %u, pero el hook de pines está apagado "
+                       "(AIMP_SYNC_PINS=1 o AIMP_TRACE_PINS=1)", g_cur_level);
+            return 0;
+        }
+        int ok = pins_fire(g_fs_pid[i], g_fs_pin[i], 0);
+        log_printf("GHOST: no hay mujeres cargadas: se hace aparecer una (FIRE %08x %08x, nivel %u): %s", g_fs_pid[i], g_fs_pin[i],
+                   g_cur_level, ok ? "hecho; se elige en 3 s" : "no se pudo");
+        if (ok) {
+            g_fs_until = now + 3 * g_freq;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static void pick_npc(const Chars *c, int64_t now)
 {
+    if (g_fs_until && now < g_fs_until)
+        return;
     uint32_t best = 0, best_i = 0, fem = 0, fem_i = 0, n = 0;
     char sk[24], all[160];
     all[0] = 0;
@@ -749,7 +851,9 @@ static void pick_npc(const Chars *c, int64_t now)
                 best = c->npc[i];
                 best_i = i;
             }
-            if (chr_skeleton(c->npc[i], sk, sizeof sk) && !fem && aimp_memcmp(sk, "FEMALE", 7) == 0) {
+            /* Prefijo "FEMALE": las NPC mujeres tienen el esqueleto "FEMALENPC" (CHARACTERACCESSORYSETS.BIN de
+             * HAB_ShoppingCentre, cathode-dump chars); con 7 bytes (el terminador incluido) nunca coincidía. */
+            if (chr_skeleton(c->npc[i], sk, sizeof sk) && !fem && aimp_memcmp(sk, "FEMALE", 6) == 0) {
                 fem = c->npc[i];
                 fem_i = i;
             }
@@ -761,6 +865,8 @@ static void pick_npc(const Chars *c, int64_t now)
             }
         }
     }
+    if (!fem && best && fs_try(now))
+        return; /* se vuelve a elegir cuando aparezca */
     /* AIMP_GHOST_PREFER_FEMALE (pedido del usuario, 2026-11-17): si hay una civil con esqueleto FEMALE, ella */
     if (g_prefer_female && fem) {
         best = fem;
@@ -1774,6 +1880,7 @@ static void census_frame(int64_t now)
 
 void ghost_frame(int64_t now, const AimpNet *net, uint32_t level)
 {
+    g_cur_level = level;
     census_frame(now);
     if (!g_mode || g_state == G_OFF)
         return;

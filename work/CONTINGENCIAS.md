@@ -2,7 +2,7 @@
 
 Cosas que se probaron y no salieron, o que se aceptaron así por ahora. Cada entrada dice qué pasa, por qué, la evidencia y qué haría falta para resolverlo. El detalle está en `work/NOTES.md` y en los hallazgos.
 
-_Última actualización: 2026-11-16._
+_Última actualización: 2026-11-21 (avatar mujer)._
 
 ## Avatar del otro jugador
 
@@ -26,7 +26,9 @@ _Última actualización: 2026-11-16._
   - **El usuario lo aceptó** (2026-11-16): "no me molesta siempre y cuando sea responsivo, y lo es".
   - Para resolverlo: controlar directamente la velocidad de la animación de locomoción (bloque continuo de la acción principal, hallazgo 19) en vez de usar un comando.
 - **Ropa e identidad:** el avatar es el primer civil disponible del nivel. No se parece a Amanda y puede cambiar de un nivel a otro.
+  - **Avance (2026-11-21, corridas 158–159):** el avatar es una **mujer** donde se puede. La preferencia por mujer nunca había funcionado: las NPC mujeres tienen el esqueleto `FEMALENPC` y se comparaba contra `"FEMALE"` exacto. Además, si no hay ninguna mujer cargada, el mod hace aparecer una obrera civil con un pin de los scripts que solo hace eso (`AIMP_GHOST_FEMALE_SPAWN`; tabla de `female_spawns.py` para los niveles 8, 10 y 12). En los otros niveles las mujeres son obreras armadas (no se usan como avatar por defecto) o no hay.
 - **Otros NPCs y scripts:** el avatar es invencible (`AIMP_GHOST_INVINCIBLE`) y su IA está bloqueada. Si un script del nivel usa a ese civil, puede haber conflictos (sin observar todavía).
+  - 2026-11-21: con los volcados de CathodeLib, **todos** los personajes de HAB_ShoppingCentre tienen lógica de misión (`NPC_Logic`); el avatar de la corrida 119 era `[M16]Worker_NPC_3`. No hay NPCs "libres" para elegir. La obrera que hace aparecer el mod (`[M16]Worker_NPC_7`) es el reemplazo que el script trae cuando muere `Worker_NPC_2`: si eso pasa después, el script la vuelve a pedir (sin observar qué hace con una que ya está).
 
 ### 3. "Dos Amandas" vía `PLAYER_2` (camino 2)
 - El engine reconoce un `"PLAYER_2"` (índice de jugador 1). No se probó como avatar visible porque tiene el mismo problema del modelo (punto 1). Queda como alternativa para la lógica del jugador 2 (por ejemplo, que el Alien lo persiga), no para verlo.

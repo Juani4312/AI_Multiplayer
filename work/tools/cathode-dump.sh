@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Compila cathode-dump (si hace falta) y vuelca, solo leyendo la instalación del juego:
 #   - el árbol de scripts de cada nivel (COMMANDS.PAK) con el pid del mod -> commands/<NIVEL>.tsv.gz
+#   - los personajes de cada nivel (CHARACTERACCESSORYSETS.BIN: género, contextura...) -> commands/<NIVEL>.chars.tsv
 #   - la UI original (UI.PAK; si NoHUD está activo, la copia de su bak/orig)  -> ui/
 #   - los BML de configuración (dificultad, constantes, ítems)                -> bml/*.xml
 # Salida en work/evidence/cathode/ (ignorada por git). Uso: work/tools/cathode-dump.sh [NIVEL ...]
@@ -24,6 +25,8 @@ for L in "${levels[@]}"; do
   tmp="$OUT/commands/$L.tsv"
   "$BIN" commands "$pak" "$tmp" 2>&1 | tail -1 | sed "s/^/$L: /"
   gzip -f "$tmp"
+  ch="$GAME/DATA/ENV/PRODUCTION/$L/WORLD/CHARACTERACCESSORYSETS.BIN"
+  [ -f "$ch" ] && "$BIN" chars "$ch" "$OUT/commands/$L.chars.tsv" 2>&1 | tail -1 | sed "s/^/$L: /"
 done
 
 if [ $# -eq 0 ]; then

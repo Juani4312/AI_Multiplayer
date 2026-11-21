@@ -374,3 +374,13 @@ int main(void)
     printf("%s (%d fallas)\n", g_fail ? "TEST_GHOST CON FALLAS" : "TEST_GHOST OK", g_fail);
     return g_fail ? 1 : 0;
 }
+
+/* stubs: ghost.c usa el hook de pines para hacer aparecer una NPC mujer (AIMP_GHOST_FEMALE_SPAWN); acá sin pines */
+int pins_enabled(void) { return 0; }
+int pins_fire(uint32_t id, uint32_t pin, uint32_t mflags)
+{
+    (void)id;
+    (void)pin;
+    (void)mflags;
+    return 0;
+}

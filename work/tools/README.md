@@ -20,7 +20,12 @@ work/tools/cathode-dump.sh [NIVEL ...]     # todo (o solo esos niveles) -> work/
 cathode-dump commands <COMMANDS.PAK> [salida.tsv]
 cathode-dump bml <archivo.BML> [salida.xml]
 cathode-dump pak2 <UI.PAK> <carpeta>
+cathode-dump chars <CHARACTERACCESSORYSETS.BIN> [salida.tsv]   # personajes: id de 8 bytes como el mod, género, contextura...
 ```
+
+**Personajes:** el id de 8 bytes de un personaje en el log del mod (`personaje …`, `id …`) también es un `EntityHandle`.
+`work/scripts/female_spawns.py <NIVEL>` busca, para cada NPC mujer, un pin de los scripts cuya única salida es hacerla
+aparecer (la tabla de `AIMP_GHOST_FEMALE_SPAWN`).
 (`bin/out/cathode-dump` después del primer `cathode-dump.sh`.)
 
 ### `commands`: árbol de scripts con el pid del mod

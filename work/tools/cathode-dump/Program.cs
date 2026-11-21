@@ -4,6 +4,8 @@
 //   cathode-dump commands <COMMANDS.PAK> [salida.tsv]   árbol de instancias con el pid del mod (pins.c)
 //   cathode-dump bml <archivo.BML> [salida.xml]         BML (árboles de comportamiento, configs) a XML
 //   cathode-dump pak2 <UI.PAK|ANIMATION.PAK> <carpeta>  extrae un PAK2 (UI .GFX, animaciones)
+//   cathode-dump chars <CHARACTERACCESSORYSETS.BIN> [salida.tsv]  personajes del nivel: id de 8 bytes como lo
+//                                                       muestra el mod (personaje del RPC 0x26), género, contextura...
 //
 // Los nombres salen de CathodeLib (tabla de nombres de OpenCAGE): sirven para orientarse, no son
 // evidencia de offsets. El pid replica path_id/pid_of de mod/src/pins.c (hallazgo 15).
@@ -25,6 +27,7 @@ static class Program
                 case "commands": return DumpCommands(args[1], args.Length > 2 ? args[2] : null);
                 case "bml": return DumpBml(args[1], args.Length > 2 ? args[2] : null);
                 case "pak2": return args.Length > 2 ? DumpPak2(args[1], args[2]) : Usage();
+                case "chars": return DumpChars(args[1], args.Length > 2 ? args[2] : null);
                 default: return Usage();
             }
         }
@@ -183,6 +186,28 @@ static class Program
             using var xw = XmlWriter.Create(outPath, settings);
             bml.Content.Save(xw);
         }
+        return 0;
+    }
+
+    // Bytes de un ShortGuid en orden de memoria, como los imprime el mod ("objetivo"/"personaje" de 8 bytes).
+    static string MemHex(ShortGuid g) => string.Concat(BitConverter.GetBytes(g.ToUInt32()).Select(b => b.ToString("x2")));
+
+    static int DumpChars(string bin, string outPath)
+    {
+        var cas = new CharacterAccessorySets(bin);
+        if (!cas.Loaded) { Console.Error.WriteLine("no se pudo cargar " + bin); return 1; }
+        using TextWriter w = Open(outPath);
+        w.WriteLine("handle\tid\tinst\tgender\tethnicity\tbuild\tface_skeleton\tgender_skeleton\tasset_type\tvoice\ttorso\tlegs\thead");
+        string Comp(CharacterAccessorySets.CharacterAttributes.Components.Component c) =>
+            c == null || c.Composite.IsInvalid ? "" : (ShortGuidUtils.FindString(c.Composite) ?? c.Composite.ToUInt32().ToString("x8"));
+        foreach (var e in cas.Entries)
+        {
+            var h = e.character;
+            w.WriteLine($"{MemHex(h.entity_id)}{MemHex(h.composite_instance_id)}\t{h.entity_id.ToUInt32():x8}\t{h.composite_instance_id.ToUInt32():x8}\t" +
+                        $"{e.gender}\t{e.ethnicity}\t{e.build}\t{e.face_skeleton}\t{e.gender_skeleton}\t{e.asset_type}\t{e.voice_actor}\t" +
+                        $"{Comp(e.components.Torso)}\t{Comp(e.components.Legs)}\t{Comp(e.components.Head)}");
+        }
+        Console.Error.WriteLine($"{cas.Entries.Count} personajes");
         return 0;
     }
 
