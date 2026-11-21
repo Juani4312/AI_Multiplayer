@@ -304,7 +304,7 @@ Pasos:
 
 Reportar: los tiempos de la copia (líneas `SAVESYNC` con su hora) y si "Continue" cargó el mismo lugar que el host.
 
-### 8g. Segunda prueba de a dos: load y game over (2026-11-17; DLL actual `4020f979…`, 2026-11-21: avisos sin pausa arreglados y robot barredor por pin; mismo protocolo)
+### 8g. Segunda prueba de a dos: load y game over (2026-11-17; DLL actual `c0ce85d7…`, 2026-11-21: avisos sin pausa, robot barredor por pin y avatar mujer; mismo protocolo)
 
 Arreglos después de la primera prueba conjunta (8e/8f):
 - **Agachado:** al pararse caminando, el avatar quedaba agachado. Ahora siempre recibe la animación de parado.
