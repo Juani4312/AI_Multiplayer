@@ -206,6 +206,9 @@ int main(void)
     /* compartido por id de entidad (como las puertas): el PlayerTriggerBox (id fa26b87f) con un pin que no usa el resto */
     static const uint32_t shid_pin = 0x0dd0beef;
     SetEnvironmentVariableW(L"AIMP_SYNC_PINS_SHARED_IDS", L"fa26b87f:0dd0beef");
+    /* mapeo a una hermana (como las cajas): el pin 0badf00d de la primera entidad sale como 0dd0beef del PlayerTriggerBox */
+    static const uint32_t map_pin = 0x0badf00d;
+    SetEnvironmentVariableW(L"AIMP_SYNC_PINS_SHARED_MAP", L"73da3779:0badf00d>fa26b87f:0dd0beef");
     AimpNet net;
     memset(&net, 0, sizeof net);
     net.mode = 2;
@@ -429,11 +432,29 @@ int main(void)
     for (int i = 0; i < AIMP_EVT_QUEUE; i++)
         nsh += net.out_left[i] != 0;
     CHECK(nsh == 0, "cliente: un compartido natural dentro de los 2 s de uno aplicado no se devuelve (sin eco)");
+    printf("[mapeo a una hermana]\n");
+    Sleep(2100); /* que venza el silencio de eco del compartido aplicado arriba */
+    memset(net.out_left, 0, sizeof net.out_left);
+    c0 = g_calls;
+    g_fire(ent, NULL, ctx, &map_pin, msg, 0.0, 0);
+    CHECK(g_calls == c0 + 1, "el pin mapeado llega al original");
+    pins_frame(now.QuadPart, 16);
+    int nmap = 0, okmap = 0;
+    for (int i = 0; i < AIMP_EVT_QUEUE; i++) {
+        if (!net.out_left[i])
+            continue;
+        nmap++;
+        uint32_t d[5];
+        memcpy(d, net.out[i].data, sizeof d);
+        okmap = net.out[i].kind == AIMP_EVT_PIN && d[0] == pid2 && d[1] == shid_pin && d[3] == 0xfa26b87f;
+    }
+    CHECK(nmap == 1 && okmap, "sale como el pin de la hermana, con su pid (misma cadena de ancestros, otro id)");
     pins_report_totals("compartidos");
     log = read_log();
     if (log) {
         expect_n(log, "AIMP_SYNC_PINS_SHARED_IDS: 1 pines compartidos por id de entidad", 1);
         expect_n(log, "1 compartidos no devueltos (eco)", 1);
+        expect_n(log, "AIMP_SYNC_PINS_SHARED_MAP: 1 pines que se mandan como el de una hermana", 1);
         expect_n(log, "el host solo aplica los compartidos; pid", 1);
         expect_n(log, "PINSYNC al host: tipo dd5a65d6 id 73da3779", 1);
     }

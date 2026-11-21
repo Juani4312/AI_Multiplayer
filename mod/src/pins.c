@@ -47,6 +47,13 @@
  * en la otra máquina, la puerta queda desbloqueada y se abre al acercarse (sin animar a nadie).
  * Sin eco: al aplicar un compartido del otro, durante 2 s no se mandan los compartidos propios (la cascada local, como el
  * mecanismo del otro lado de la puerta, se dispara de forma natural).
+ * AIMP_SYNC_PINS_SHARED_MAP = "id:pin>id2:pin2,..." (hex; corrida 168): un disparo natural de (id, pin) se manda como el
+ * pin2 de la entidad hermana id2 (mismo composite; el pid se calcula con la cadena de ancestros de la que disparó), que el
+ * otro reinyecta (id2:pin2 tiene que estar en los compartidos por id). Por defecto, las cajas con botín
+ * (Archetypes\Gameplay\Container_SCRIPT): el contenido no se sortea al cargar sino al abrir la caja por primera vez,
+ * del pool de ítems del nivel (AllocateGCItemsFromPool_1, id c30b5218, on_success de4f553f / on_failure 7c9ec1c7), y
+ * cada máquina tiene su pool: el primero que la abre la sortea y en la otra máquina la caja queda saqueada
+ * (UI_Container_1, id e10e7b26, emptied 5d29c014: se cierra y se oculta el "usar").
  */
 #include "death.h"
 #include "pins.h"
@@ -137,7 +144,10 @@ static int g_nshared;
 static const char k_default_shared[] = "44be5383:830c2104";
 static uint32_t g_shi_eid[SHARED_MAX], g_shi_pin[SHARED_MAX];
 static int g_nshared_id;
-static const char k_default_shared_ids[] = "09de34ae:052a6840";
+static const char k_default_shared_ids[] = "09de34ae:052a6840,e10e7b26:5d29c014";
+static uint32_t g_map_eid[SHARED_MAX], g_map_pin[SHARED_MAX], g_map_eid2[SHARED_MAX], g_map_pin2[SHARED_MAX];
+static int g_nmap;
+static const char k_default_map[] = "c30b5218:de4f553f>e10e7b26:5d29c014,c30b5218:7c9ec1c7>e10e7b26:5d29c014";
 static volatile LONG g_sh_quiet_until; /* GetTickCount(): hasta acá no se mandan compartidos (eco de uno aplicado) */
 static uint32_t g_n_quiet;
 static CRITICAL_SECTION g_out_cs;
@@ -253,6 +263,33 @@ static uint32_t path_id(uint32_t outer, uint32_t *depth)
     return x;
 }
 
+/* pid de la entidad hermana first_eid (mismo composite que outer): como path_id, con otro id en el primer eslabón. */
+static uint32_t sibling_pid(uint32_t outer, uint32_t first_eid)
+{
+    uint32_t x = hash2(0x811C9DC5u, first_eid), h = 0, up = 0;
+    for (int d = 0; outer && d < 32; d++) {
+        if (!mem_u32(outer + 0x8, &h) || !h || !mem_u32(h + 0xC, &up) || !up || up == outer)
+            break;
+        uint32_t eid = 0;
+        if (!mem_u32(up + 0xC, &eid))
+            break;
+        x = hash2(x, eid);
+        outer = up;
+    }
+    return x;
+}
+
+static int map_match(uint32_t eid, uint32_t pin, uint32_t *eid2, uint32_t *pin2)
+{
+    for (int i = 0; i < g_nmap; i++)
+        if (g_map_eid[i] == eid && g_map_pin[i] == pin) {
+            *eid2 = g_map_eid2[i];
+            *pin2 = g_map_pin2[i];
+            return 1;
+        }
+    return 0;
+}
+
 static int shared_match(uint32_t pid, uint32_t eid, uint32_t pin)
 {
     for (int i = 0; i < g_nshared; i++)
@@ -315,6 +352,15 @@ static int note(uint32_t ent, void *ctx, const uint32_t *pinp, void *msg, double
             block = 1;
         else
             send = 1;
+    }
+    uint32_t m_eid = 0, m_pin = 0, m_pid = 0;
+    int msend = 0;
+    if (g_sync && outer && !injected && !block && map_match(eid, pin, &m_eid, &m_pin)) {
+        if ((LONG)(GetTickCount() - (DWORD)g_sh_quiet_until) >= 0) {
+            m_pid = sibling_pid(outer, m_eid);
+            msend = 1;
+        } else
+            g_n_quiet++;
     }
     if (g_sync && outer && !injected && !block && shared_match(pid, eid, pin)) {
         if ((LONG)(GetTickCount() - (DWORD)g_sh_quiet_until) >= 0)
@@ -392,17 +438,30 @@ static int note(uint32_t ent, void *ctx, const uint32_t *pinp, void *msg, double
         log_dump32(t, mobj, MSG_SIZE);
     }
 sync:
-    if (send) {
+    if (send || msend) {
         EnterCriticalSection(&g_out_cs);
-        if (g_nout < OUT_MAX) {
-            PinEvt *o = &g_out[g_nout++];
-            o->pid = pid;
-            o->pin = pin;
-            o->type = type;
-            o->eid = eid;
-            o->mflags = mflags;
-        } else
-            g_out_drop++;
+        if (send) {
+            if (g_nout < OUT_MAX) {
+                PinEvt *o = &g_out[g_nout++];
+                o->pid = pid;
+                o->pin = pin;
+                o->type = type;
+                o->eid = eid;
+                o->mflags = mflags;
+            } else
+                g_out_drop++;
+        }
+        if (msend) {
+            if (g_nout < OUT_MAX) {
+                PinEvt *o = &g_out[g_nout++];
+                o->pid = m_pid;
+                o->pin = m_pin;
+                o->type = 0; /* el de la hermana no se conoce acá; el que recibe la busca por pid */
+                o->eid = m_eid;
+                o->mflags = 0;
+            } else
+                g_out_drop++;
+        }
         LeaveCriticalSection(&g_out_cs);
     }
     if (block) {
@@ -536,6 +595,40 @@ int pins_install_at(void *target, AimpNet *net)
             aimp_snprintf(s8, sizeof s8, "%s", k_default_shared_ids);
         g_nshared_id = parse_pairs(s8, g_shi_eid, g_shi_pin);
         log_printf("AIMP_SYNC_PINS_SHARED_IDS: %d pines compartidos por id de entidad [%s]", g_nshared_id, s8);
+        if (aimp_env_str(L"AIMP_SYNC_PINS_SHARED_MAP", wl, 512))
+            aimp_utf8(s8, sizeof s8, wl);
+        else
+            aimp_snprintf(s8, sizeof s8, "%s", k_default_map);
+        g_nmap = 0;
+        for (const char *p = s8; *p && g_nmap < SHARED_MAX;) {
+            while (*p == ' ' || *p == ',')
+                p++;
+            if (!*p)
+                break;
+            uint32_t a = parse_hex(&p), b = 0, c = 0, d = 0;
+            if (*p == ':') {
+                p++;
+                b = parse_hex(&p);
+            }
+            if (*p == '>') {
+                p++;
+                c = parse_hex(&p);
+            }
+            if (*p == ':') {
+                p++;
+                d = parse_hex(&p);
+            }
+            if (a && b && c && d) {
+                g_map_eid[g_nmap] = a;
+                g_map_pin[g_nmap] = b;
+                g_map_eid2[g_nmap] = c;
+                g_map_pin2[g_nmap] = d;
+                g_nmap++;
+            }
+            while (*p && *p != ',')
+                p++;
+        }
+        log_printf("AIMP_SYNC_PINS_SHARED_MAP: %d pines que se mandan como el de una hermana [%s]", g_nmap, s8);
         if (!net || !net->mode)
             log_printf("AIMP_SYNC_PINS=1 sin red (AIMP_NET): no se sincroniza nada");
         else {
