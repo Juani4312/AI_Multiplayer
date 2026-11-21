@@ -52,8 +52,9 @@ Los modelos/colisiones de cada entidad no se resuelven (CathodeLib los pide para
 ### `bml`
 
 Las configuraciones `.BML` a XML: dificultades (`DIFFICULTYSETTINGS/*.BML`), `GLOBALCONSTANTS`, `GBL_ITEM`.
-Los árboles de comportamiento ya vienen en XML (`DATA/BEHAVIOR/`). **Ojo:** SmartAI reemplaza `DATA/BEHAVIOR`
-y otras carpetas de IA cuando está activo; los originales están en `game/data/BEHAVIOR` y en `mods/SmartAI/bak/orig/`.
+Los árboles de comportamiento ya vienen en XML (`DATA/BEHAVIOR/`), originales desde que se borró SmartAI (2026-11-21;
+copia también en `game/data/BEHAVIOR`). **Ojo:** el mod MildlyInsaneAI reemplaza `DATA/CHR_INFO/ATTRIBUTES/ALIEN.BML` mientras está activo
+(el original queda en `mods/MildlyInsaneAI/bak/orig/`).
 
 ## Lo que no usamos (y por qué)
 
