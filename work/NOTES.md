@@ -1191,3 +1191,9 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **Corrida 165** (juego cliente, peer host con el evento de la 164): "PINSYNC aplicado … id 09de34ae pid ae7b8899" → panel verde, caminé y pasé al otro lado; el juego no devolvió ningún pin (sin eco).
 - **Corrida 166** (juego host, palanca natural con el mando virtual): salen dos eventos `AIMP_EVT_PIN` con id `09de34ae` y pin `052a6840`: `ae7b8899` (atrás) y `b3ca651e` (adelante).
 - Pendiente: con dos máquinas; puertas que se vuelven a bloquear por script (el bloqueo no se comparte: solo `true_now_false`).
+
+## 2026-11-21 — Cajas con botín (corrida 167): cada máquina sortea su contenido
+- `Archetypes\Gameplay\Container_SCRIPT`: `UI_Icon_1` ("Ⓐ SEARCH"), `UI_Container_1` (id `e10e7b26` en todas las cajas de todos los niveles, y solo ahí: 64 en HAB, 78 en Tech_RnD…) con hasta 3 ítems (`Item1..3_Name/Quantity`), y un `TriggerRandom_1` que **sortea el contenido al cargar** (sus `Random_N` van a `emptied`, `opened`, `container_suspended` del composite): cada máquina puede tener otro botín en la misma caja.
+- `UI_Container_1.emptied` (`5d29c014`) → `stop`, oculta y desactiva el ícono y avisa `emptied` afuera: compartido por id, haría que una caja vaciada por uno ya no se pueda abrir en la otra máquina. Candidato: `AIMP_SYNC_PINS_SHARED_IDS=09de34ae:052a6840,e10e7b26:5d29c014`; **no queda por defecto** porque no se pudo ver un `emptied` real.
+- Corrida 167 (host, `TP` adonde el host abrió `PackagingBoxLRG_INT_2` en la 119): "Search" → `UI_Container_1` `started` → `closed` → `refreshed`, sin `emptied` y sin pantalla de botín (en esta máquina la caja salió vacía, o el buscar no la vació).
+- Pendiente: sincronizar el sorteo (`TriggerRandom` de cada caja: que el cliente use el del host) o compartir `emptied`; junto con `AIMP_SYNC_PICKUP` (ítems sueltos), para que el botín no se pueda juntar dos veces.

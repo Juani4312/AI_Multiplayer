@@ -260,3 +260,4 @@
 - 19:48 (2026-11-21) README reescrito al día. Corridas 160–161: avatar mujer en aeropuerto/hospital no aplica (encuentros ambientales inactivos, sin civiles); female_spawns.py baja a la entidad interna de un composite; por defecto solo HAB; también se intenta sin candidatos.
 - 19:52 (2026-11-21) Corrida 162: el start del panel de una puerta no la abre en la otra máquina (lógica del panel con condiciones del jugador); el jugador no se anima. Modo juego.
 - 20:27 (2026-11-21) Corridas 163–166: puertas sincronizadas por el desbloqueo del mecanismo (AIMP_SYNC_PINS_SHARED_IDS, Door_Mechanism/IsLocked.true_now_false, sin eco). Verificado con el peer en los dos sentidos. Modo juego.
+- 20:32 (2026-11-21) Corrida 167: cajas con botín; cada máquina sortea el contenido; emptied como candidato (sin verificar). Modo juego.
