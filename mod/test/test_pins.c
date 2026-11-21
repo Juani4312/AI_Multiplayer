@@ -203,6 +203,9 @@ int main(void)
     wchar_t shw[64];
     swprintf(shw, 64, L"%08x:%08x", pid1, shpin);
     SetEnvironmentVariableW(L"AIMP_SYNC_PINS_SHARED", shw);
+    /* compartido por id de entidad (como las puertas): el PlayerTriggerBox (id fa26b87f) con un pin que no usa el resto */
+    static const uint32_t shid_pin = 0x0dd0beef;
+    SetEnvironmentVariableW(L"AIMP_SYNC_PINS_SHARED_IDS", L"fa26b87f:0dd0beef");
     AimpNet net;
     memset(&net, 0, sizeof net);
     net.mode = 2;
@@ -387,7 +390,9 @@ int main(void)
     for (int i = 0; i < AIMP_EVT_QUEUE; i++)
         nsh += net.out_left[i] != 0;
     CHECK(nsh == 0, "host: lo reinyectado no se vuelve a mandar");
-    /* Cliente: el compartido no se bloquea y sale hacia el host. */
+    /* Cliente: el compartido no se bloquea y sale hacia el host. (Antes, que venza el silencio de eco de 2 s que dejó el
+     * compartido que aplicó el "host": en el juego son dos máquinas.) */
+    Sleep(2100);
     pins_test_role(2);
     net.mode = 2;
     c0 = g_calls;
@@ -398,8 +403,37 @@ int main(void)
     for (int i = 0; i < AIMP_EVT_QUEUE; i++)
         nsh += net.out_left[i] != 0;
     CHECK(nsh == 1, "cliente: el pin compartido sale hacia el host");
+    printf("[compartidos por id y eco]\n");
+    /* Cliente: un compartido por id (cualquier pid con ese id) sale; si recién se aplicó uno del otro, no se devuelve. */
+    memset(net.out_left, 0, sizeof net.out_left);
+    c0 = g_calls;
+    g_fire(ent2, NULL, ctx2, &shid_pin, msg2, 0.0, 0);
+    CHECK(g_calls == c0 + 1, "cliente: el compartido por id no se bloquea");
+    pins_frame(now.QuadPart, 16);
+    nsh = 0;
+    for (int i = 0; i < AIMP_EVT_QUEUE; i++)
+        nsh += net.out_left[i] != 0;
+    CHECK(nsh == 1, "cliente: el compartido por id sale hacia el host");
+    memset(net.out_left, 0, sizeof net.out_left);
+    uint32_t shi[5] = { pid2, shid_pin, 0x2f3efad3, 0xfa26b87f, 0x11000000 };
+    memcpy(ev.data, shi, sizeof shi);
+    ev.seq = 30;
+    ev.level = 16;
+    pins_remote_event(&ev);
+    c0 = g_calls;
+    pins_frame(now.QuadPart, 16);
+    CHECK(g_calls == c0 + 1 && g_last_this == (uint32_t)(uintptr_t)ent2 && g_last_pin == shid_pin, "cliente: aplica el compartido por id del host");
+    g_fire(ent2, NULL, ctx2, &shid_pin, msg2, 0.0, 0); /* la cascada local, natural, justo después */
+    pins_frame(now.QuadPart, 16);
+    nsh = 0;
+    for (int i = 0; i < AIMP_EVT_QUEUE; i++)
+        nsh += net.out_left[i] != 0;
+    CHECK(nsh == 0, "cliente: un compartido natural dentro de los 2 s de uno aplicado no se devuelve (sin eco)");
+    pins_report_totals("compartidos");
     log = read_log();
     if (log) {
+        expect_n(log, "AIMP_SYNC_PINS_SHARED_IDS: 1 pines compartidos por id de entidad", 1);
+        expect_n(log, "1 compartidos no devueltos (eco)", 1);
         expect_n(log, "el host solo aplica los compartidos; pid", 1);
         expect_n(log, "PINSYNC al host: tipo dd5a65d6 id 73da3779", 1);
     }

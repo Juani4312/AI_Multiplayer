@@ -40,6 +40,13 @@
  * RPC 0x26 con el NPC como actor no dispara nada, corrida 119). Por defecto, el robot barredor de HAB_ShoppingCentre
  * (Shopping_Center_1/Use_ActivateSweeper/UI_Icon_1.start; FIRE verificado en la corrida 152). Los pids salen de
  * work/tools/cathode-dump.sh (columna pid). No van acá los usos que mueven al jugador (soplete, palancas, mapas).
+ * AIMP_SYNC_PINS_SHARED_IDS = "id:pin,..." (hex; corridas 163-164): lo mismo, pero por id de entidad (el ShortGuid de la
+ * entidad dentro de su composite: igual en todas las instancias de ese composite), para cualquier pid. Por defecto, las
+ * puertas: Archetypes\Misc_Subarchetypes\Door_Mechanism/IsLocked (LogicSwitch, id 09de34ae, único en todos los niveles)
+ * .true_now_false (052a6840): toda forma de abrir una puerta (palanca, tarjeta, hackeo, soplete) termina ahí; reinyectado
+ * en la otra máquina, la puerta queda desbloqueada y se abre al acercarse (sin animar a nadie).
+ * Sin eco: al aplicar un compartido del otro, durante 2 s no se mandan los compartidos propios (la cascada local, como el
+ * mecanismo del otro lado de la puerta, se dispara de forma natural).
  */
 #include "death.h"
 #include "pins.h"
@@ -128,6 +135,11 @@ static int g_nrules;
 static uint32_t g_sh_pid[SHARED_MAX], g_sh_pin[SHARED_MAX];
 static int g_nshared;
 static const char k_default_shared[] = "44be5383:830c2104";
+static uint32_t g_shi_eid[SHARED_MAX], g_shi_pin[SHARED_MAX];
+static int g_nshared_id;
+static const char k_default_shared_ids[] = "09de34ae:052a6840";
+static volatile LONG g_sh_quiet_until; /* GetTickCount(): hasta acá no se mandan compartidos (eco de uno aplicado) */
+static uint32_t g_n_quiet;
 static CRITICAL_SECTION g_out_cs;
 static PinEvt g_out[OUT_MAX];
 static uint32_t g_nout, g_out_drop;
@@ -241,10 +253,13 @@ static uint32_t path_id(uint32_t outer, uint32_t *depth)
     return x;
 }
 
-static int shared_match(uint32_t pid, uint32_t pin)
+static int shared_match(uint32_t pid, uint32_t eid, uint32_t pin)
 {
     for (int i = 0; i < g_nshared; i++)
         if (g_sh_pid[i] == pid && g_sh_pin[i] == pin)
+            return 1;
+    for (int i = 0; i < g_nshared_id; i++)
+        if (g_shi_eid[i] == eid && g_shi_pin[i] == pin)
             return 1;
     return 0;
 }
@@ -301,8 +316,12 @@ static int note(uint32_t ent, void *ctx, const uint32_t *pinp, void *msg, double
         else
             send = 1;
     }
-    if (g_sync && outer && !injected && !block && shared_match(pid, pin))
-        send = 1; /* compartido: lo manda el que lo disparó, sea host o cliente */
+    if (g_sync && outer && !injected && !block && shared_match(pid, eid, pin)) {
+        if ((LONG)(GetTickCount() - (DWORD)g_sh_quiet_until) >= 0)
+            send = 1; /* compartido: lo manda el que lo disparó, sea host o cliente */
+        else
+            g_n_quiet++; /* cascada de uno que vino del otro: no se devuelve */
+    }
     uint32_t frame = *(volatile uint32_t *)(g_aimp_exe + AIMP_RVA_FRAME_COUNTER);
     int other = GetCurrentThreadId() != g_aimp_main_tid;
     EnterCriticalSection(&g_cs);
@@ -447,27 +466,28 @@ static void parse_rules(const char *s)
 /* Reglas por defecto: las raíces de zona de la corrida 19.
  *   PlayerTriggerBox (2f3efad3): on_entered (af66ad73), on_exited (b357f479)
  *   TriggerVolumeFilter (f86133d4): on_event_entered (98678b2b), on_event_exited (4dace76a), triggered (0ff02876) */
-static void parse_shared(const char *s)
+static int parse_pairs(const char *s, uint32_t *a, uint32_t *b)
 {
-    g_nshared = 0;
-    for (const char *p = s; *p && g_nshared < SHARED_MAX;) {
+    int n = 0;
+    for (const char *p = s; *p && n < SHARED_MAX;) {
         while (*p == ' ' || *p == ',')
             p++;
         if (!*p)
             break;
-        uint32_t pid = parse_hex(&p), pin = 0;
+        uint32_t x = parse_hex(&p), y = 0;
         if (*p == ':') {
             p++;
-            pin = parse_hex(&p);
+            y = parse_hex(&p);
         }
-        if (pid && pin) {
-            g_sh_pid[g_nshared] = pid;
-            g_sh_pin[g_nshared] = pin;
-            g_nshared++;
+        if (x && y) {
+            a[n] = x;
+            b[n] = y;
+            n++;
         }
         while (*p && *p != ',')
             p++;
     }
+    return n;
 }
 
 static const char k_default_rules[] = "2f3efad3:af66ad73,2f3efad3:b357f479,f86133d4:98678b2b,f86133d4:4dace76a,f86133d4:0ff02876";
@@ -508,8 +528,14 @@ int pins_install_at(void *target, AimpNet *net)
             aimp_utf8(s8, sizeof s8, wl);
         else
             aimp_snprintf(s8, sizeof s8, "%s", k_default_shared);
-        parse_shared(s8);
+        g_nshared = parse_pairs(s8, g_sh_pid, g_sh_pin);
         log_printf("AIMP_SYNC_PINS_SHARED: %d pines compartidos en los dos sentidos [%s]", g_nshared, s8);
+        if (aimp_env_str(L"AIMP_SYNC_PINS_SHARED_IDS", wl, 512))
+            aimp_utf8(s8, sizeof s8, wl);
+        else
+            aimp_snprintf(s8, sizeof s8, "%s", k_default_shared_ids);
+        g_nshared_id = parse_pairs(s8, g_shi_eid, g_shi_pin);
+        log_printf("AIMP_SYNC_PINS_SHARED_IDS: %d pines compartidos por id de entidad [%s]", g_nshared_id, s8);
         if (!net || !net->mode)
             log_printf("AIMP_SYNC_PINS=1 sin red (AIMP_NET): no se sincroniza nada");
         else {
@@ -583,8 +609,8 @@ void pins_report_totals(const char *why)
     aimp_snprintf(t, sizeof t, "totales (%s)", why);
     top(0, t);
     if (g_sync)
-        log_printf("PINSYNC totales (%s): %u mandados, %u bloqueados, %u aplicados, %u vencidos, %d pendientes; índice: %u armados, %u entidades",
-                   why, g_n_sent, g_n_blocked, g_n_applied, g_n_expired, g_npend, g_ix_builds, g_nix);
+        log_printf("PINSYNC totales (%s): %u mandados, %u bloqueados, %u aplicados, %u vencidos, %d pendientes; índice: %u armados, %u entidades; %u compartidos no devueltos (eco)",
+                   why, g_n_sent, g_n_blocked, g_n_applied, g_n_expired, g_npend, g_ix_builds, g_nix, g_n_quiet);
 }
 
 /* ---- Reinyección ---- */
@@ -1040,7 +1066,7 @@ void pins_remote_event(const AimpEvt *e)
         /* El host solo aplica los compartidos (los demás los decide él). */
         PinEvt pe;
         aimp_memcpy(&pe, e->data, sizeof pe);
-        if (!shared_match(pe.pid, pe.pin)) {
+        if (!shared_match(pe.pid, pe.eid, pe.pin)) {
             log_printf("PINSYNC: evento de pin %u ignorado (el host solo aplica los compartidos; pid %08x pin %08x)", e->seq, pe.pid,
                        pe.pin);
             return;
@@ -1100,6 +1126,8 @@ static void sync_frame_pins(uint32_t level)
             int done = q->level == level && fire_ex(q->p.pid, q->p.pin, q->p.mflags, &why);
             if (done) {
                 g_n_applied++;
+                if (shared_match(q->p.pid, q->p.eid, q->p.pin))
+                    InterlockedExchange(&g_sh_quiet_until, (LONG)(GetTickCount() + 2000));
                 log_printf("PINSYNC aplicado (evento %u): tipo %08x id %08x pid %08x pin %08x", q->seq, q->p.type, q->p.eid, q->p.pid,
                            q->p.pin);
                 continue;

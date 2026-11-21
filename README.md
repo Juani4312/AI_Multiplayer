@@ -11,7 +11,7 @@ No contiene ni redistribuye binarios, assets ni código del juego.
 | Red | UDP propio (20 paquetes/s con el estado del jugador, eventos repetidos) | ✅ por Tailscale, 0 pérdidas |
 | Avatar | NPC del nivel sin IA, títere de la posición exacta del otro: camina, corre, se agacha (pose), mira hacia donde mira el otro. Es una mujer si hay una en el nivel o si el mod puede hacer aparecer una | ✅ dos máquinas; avatar mujer en una (corridas 158–159) |
 | "Usar" compartido | botones, cajas e ítems: el uso del otro lo repite el avatar | ✅ botones del transit con dos máquinas |
-| Pines compartidos | lo que el avatar no puede usar (el arquetipo `Use` de los scripts, como el robot barredor) se replica reinyectando el pin del ícono, en los dos sentidos | ✅ en una máquina con el peer (corridas 152–156) |
+| Pines compartidos | lo que el avatar no puede usar se replica reinyectando un pin de los scripts, en los dos sentidos: el robot barredor (el ícono del "usar") y **las puertas** (el desbloqueo del mecanismo, cualquiera sea la forma de abrirla; del otro lado queda desbloqueada y se abre al acercarse) | ✅ en una máquina con el peer (corridas 152–156 y 163–166) |
 | Inventario compartido | lo que uno agarra lo reciben los dos; lo que uno gasta se descuenta a los dos | ✅ dos máquinas (corrida 119) |
 | Copia del save | el cliente arranca con la partida del host; guardar juntos; game over con el checkpoint del host | ✅ dos máquinas (corrida 119) |
 | Muerte en coop | el que cae queda caído (invencible, el Alien lo ignora); el compañero lo revive con una terminal de guardado; si caen los dos, game over | ✅ en una máquina con el peer |
@@ -77,7 +77,7 @@ Las herramientas sirven para orientarse y ponerle nombre a lo que ve el mod; los
 - No hay modelo de Amanda en tercera persona: el avatar es un NPC del nivel (una obrera donde se puede). No camina agachado (se desliza en la pose) y a veces los pies no siguen el ritmo del desplazamiento.
 - Arrojables: la réplica vuela igual; cuando el original se asienta, la réplica se borra y aparece quieta en ese punto (un "salto" corto).
 - La IA de los NPCs y el Alien corren por separado en cada máquina: el Alien persigue a cada jugador en su propia máquina.
-- Las armas de fuego no se ven del otro lado (el disparo ni el lanzallamas), ni lo que se elige en una terminal. De las interacciones del mundo, se sincronizan los botones del transit, los disparadores de zona y el robot barredor; las puertas con panel todavía no.
+- Las armas de fuego no se ven del otro lado (el disparo ni el lanzallamas), ni lo que se elige en una terminal. De las interacciones del mundo, se sincronizan los botones del transit, los disparadores de zona, el robot barredor y el desbloqueo de las puertas.
 - Los ítems quedan en el mundo de cada máquina: con el inventario compartido, lo que uno levanta lo reciben los dos, pero el otro todavía ve el ítem.
 - Los lockers y la terminal de guardado no se replican a propósito: son acciones de cada jugador.
 - Crear personajes nuevos (en vez de reusar un NPC) hace caer el juego. Ver el hallazgo 12.

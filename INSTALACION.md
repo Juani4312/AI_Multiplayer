@@ -287,6 +287,7 @@ Hay más ajustes finos del avatar (`AIMP_GHOST_WALK_*`, `AIMP_GHOST_CROUCH_*`) d
 | `AIMP_SYNC_PINS` | 0 | 1 = los disparadores de zona de los scripts (diálogos, eventos) los decide el host; el que se une aplica los del host y bloquea los suyos **(experimental)** |
 | `AIMP_SYNC_PINS_LIST` | zona | qué disparadores se sincronizan (reglas `tipo:pin` en hex). El defecto cubre las zonas de los scripts |
 | `AIMP_SYNC_PINS_SHARED` | robot | objetos que cualquiera de los dos activa y se ven en las dos máquinas (`pid:pin` en hex). Por defecto, el robot barredor de HAB_ShoppingCentre |
+| `AIMP_SYNC_PINS_SHARED_IDS` | puertas | las puertas que uno desbloquea (palanca, tarjeta, hackeo, soplete) quedan desbloqueadas también para el otro y se le abren al acercarse |
 | `AIMP_GHOST_FEMALE_SPAWN` | activado | en el centro comercial (HAB_ShoppingCentre), si no hay ninguna mujer cargada, el mod hace aparecer una obrera para que el avatar del otro jugador sea una mujer. En los demás niveles el avatar es mujer solo si hay una cargada. `0` lo apaga |
 | `AIMP_SYNC_WEAPONS` | 0 | "armas de a una" (cada arma tiene dueño). **Se dejó de usar** (decisión del 2026-11-17): no ponerla |
 
