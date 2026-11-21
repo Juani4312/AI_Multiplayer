@@ -110,5 +110,5 @@ Las corridas se pueden hacer sin nadie al teclado y sin otra máquina (Linux, Pr
 
 - **Último (2026-11-21):** avisos sin pausa verificados (una clave de texto por aviso); el robot barredor de la corrida 119 se sincroniza por pin en los dos sentidos; el avatar es una mujer donde se puede (la preferencia por mujer no funcionaba; si no hay ninguna cargada, el mod hace aparecer una obrera). Herramientas nuevas: CathodeLib con `cathode-dump`, que le pone nombre a los pids, objetos y personajes de los logs.
 - **2026-11-20:** en un Windows 11 25H2 el juego no carga la `winmm.dll` del mod. Variante que entra por `xinput1_3.dll` (`mod/dist/xinput1_3.dll`, `-Proxy xinput1_3` en el instalador), verificada en el juego con Proton; falta probarla en ese Windows.
-- **Siguiente:** que el amigo pruebe la variante (`INSTALAR_CON_CLAUDE.md`, sección 2) y la prueba de a dos (`work/windows/instructions.md` 8g, DLL `c8dda392…`): robot, avatar mujer, avisos, modo caído.
+- **Siguiente:** que el amigo pruebe la variante (`INSTALAR_CON_CLAUDE.md`, sección 2) y la prueba de a dos (`work/windows/instructions.md` 8g, DLL `9d134527…`): robot, puertas, avatar mujer, avisos, modo caído.
 - Detalle y pendientes: `work/PROGRESS.md`. Historial de sesiones: `work/HISTORIAL.md`.

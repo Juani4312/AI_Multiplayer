@@ -304,7 +304,7 @@ Pasos:
 
 Reportar: los tiempos de la copia (líneas `SAVESYNC` con su hora) y si "Continue" cargó el mismo lugar que el host.
 
-### 8g. Segunda prueba de a dos: load y game over (2026-11-17; DLL actual `c8dda392…`, 2026-11-21: avisos sin pausa, robot barredor por pin y avatar mujer; mismo protocolo)
+### 8g. Segunda prueba de a dos: load y game over (2026-11-17; DLL actual `9d134527…`, 2026-11-21: avisos sin pausa, robot barredor por pin y avatar mujer; mismo protocolo)
 
 Arreglos después de la primera prueba conjunta (8e/8f):
 - **Agachado:** al pararse caminando, el avatar quedaba agachado. Ahora siempre recibe la animación de parado.
@@ -325,7 +325,7 @@ powershell -ExecutionPolicy Bypass -File work\windows\aimp_check.ps1 -Action ins
 
 **Host caído: guarda la laptop** (nuevo, `AIMP_SAVE_PUSH=1` por defecto): con el host (papito) caído, la terminal de la laptop **sí** se abre. Al guardar ("Yes"), el host revive al lado de la laptop y, unos 5 s después, recibe ese save: lo escribe en sus archivos (con backup de los suyos en `save_backup`) y en su checkpoint en memoria. Probar: papito cae (que lo agarre un enemigo o le peguen), la laptop guarda en una terminal; después los dos caen → game over → "Load Current Save" carga el guardado de la laptop. En el log de la laptop: `SAVESYNC cliente: el host tiene mi save`; en el de papito: `SAVESYNC host: save del cliente copiado`.
 
-**Robot (2026-11-21):** con la DLL nueva, el robot barredor (`Use_ActivateSweeper`, HAB_ShoppingCentre) se sincroniza por pin en los dos sentidos (`AIMP_SYNC_PINS_SHARED`, viene activado con `AIMP_SYNC_PINS=1`): el que lo activa lo ve arrancar y el otro también. Verificarlo con las dos máquinas. Antes: para investigar el robot, **apretar F8 justo antes de activarlo** (deja una `MARCA` en el log) y otra vez cuando termine de moverse. Las dos máquinas tienen la traza de pines con tope alto.
+**Puertas (2026-11-21):** con la DLL nueva, una puerta que uno abre (palanca, tarjeta, hackeo) queda desbloqueada también para el otro y se le abre al acercarse. Verificarlo: uno abre una puerta de palanca; el otro va a esa puerta y tiene que pasar sin tocar nada. **Robot (2026-11-21):** con la DLL nueva, el robot barredor (`Use_ActivateSweeper`, HAB_ShoppingCentre) se sincroniza por pin en los dos sentidos (`AIMP_SYNC_PINS_SHARED`, viene activado con `AIMP_SYNC_PINS=1`): el que lo activa lo ve arrancar y el otro también. Verificarlo con las dos máquinas. Antes: para investigar el robot, **apretar F8 justo antes de activarlo** (deja una `MARCA` en el log) y otra vez cuando termine de moverse. Las dos máquinas tienen la traza de pines con tope alto.
 Qué probar: el paso 5 de la 8f (caen los dos, game over, "Load Current Save" en las dos) y volver a mirar el agachado. En el log de la laptop, buscar `SAVESYNC: checkpoint en memoria`, `DEATH: los dos jugadores están caídos` y `DEATH: carga nueva`.
 
 ## Problemas conocidos
