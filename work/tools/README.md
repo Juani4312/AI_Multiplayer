@@ -2,7 +2,7 @@
 
 Herramientas de la comunidad de modding de Alien: Isolation, usadas **solo para leer** formatos del juego
 (scripts de niveles, UI, configuraciones). Sirven para orientarse y para ponerle nombre a lo que ve el mod;
-**nunca son fuente de offsets**: todo offset sigue saliendo de Ghidra/REA o del runtime (`prompt.md`).
+**nunca son fuente de offsets**: todo offset sigue saliendo de Ghidra/REA o del runtime.
 Nada de esto escribe sobre la instalación del juego.
 
 | Herramienta | Qué es | Dónde | Licencia | Para qué la usamos |

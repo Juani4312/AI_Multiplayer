@@ -46,3 +46,18 @@ work/tools/cathode-dump/obj/
 
 # Temporales del proyecto (capturas de las pruebas en tmp/screenshots/, archivos de trabajo): locales
 /tmp/
+
+# Locales de papito (pedido del usuario, 2026-11-21): no van al repo público
+# - partidas guardadas (de prueba y las del usuario)
+/saves/
+# - scripts personales: partidas y mods de terceros del usuario, ventana del juego en su Hyprland, pruebas con sus rutas
+work/scripts/mode.sh
+work/scripts/saves.sh
+work/scripts/check_install.sh
+work/scripts/game_window.sh
+work/scripts/autoplay_continue.sh
+# - instrucciones para Claude Code de la máquina de desarrollo (quedan INSTALAR_CON_CLAUDE.md y work/windows/, que usan
+#   el amigo y la laptop por git; el README los señala)
+/CLAUDE.md
+/prompt.md
+/.claude/

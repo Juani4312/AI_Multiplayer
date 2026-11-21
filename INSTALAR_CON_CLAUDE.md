@@ -2,7 +2,7 @@
 
 Para una sesión de Claude Code a la que le piden **instalar el mod para jugar** en una máquina (Windows o Linux), no para desarrollarlo. La guía para personas es [`INSTALACION.md`](INSTALACION.md); acá está el procedimiento paso a paso con los chequeos y qué hacer si algo falla.
 
-**No sigas el flujo de desarrollo del repo** (`work/PROGRESS.md`, `prompt.md`, `work/NOTES.md`): es para la sesión que programa el mod. Tu tarea es este documento.
+**No sigas el flujo de desarrollo del repo** (`work/PROGRESS.md`, `work/NOTES.md`): es para la sesión que programa el mod. Tu tarea es este documento.
 
 ## Reglas
 

@@ -2,7 +2,7 @@
 
 Cómo instalar el mod coop en cada máquina, conectar a los dos jugadores y qué hace cada parámetro de `aimp.cfg`.
 
-> El mod es **experimental**. Probalo con una partida que no te importe perder. Si estás en una run sin morir, no la uses para probar (en Linux, `work/scripts/mode.sh` separa tu partida de las de prueba: ver más abajo).
+> El mod es **experimental**. Probalo con una partida que no te importe perder. Si estás en una run sin morir, no la uses para probar: hacé una copia de tus saves antes.
 
 ## Instalación rápida
 
@@ -145,7 +145,7 @@ work/scripts/runtime_setup.sh revert                                       # lo 
 - Se niega a correr con el juego abierto (Wine reescribe el registro al cerrar). Necesita que el juego se haya abierto una vez con Proton.
 - Encuentra el juego y el prefix con las bibliotecas de Steam (`libraryfolders.vdf`). Para forzar rutas: `AIMP_GAME_DIR`, `AIMP_PFX`, `AIMP_DLL`.
 
-**Si estás en una run que no querés arriesgar** (la de esta máquina): `work/scripts/mode.sh test [save] [--cfg "..."]` guarda tu partida en `saves/current.tar.gz`, carga un save de prueba (`saves/`) e instala el mod; `work/scripts/mode.sh play` restaura tu partida y saca el mod.
+**Si estás en una run que no querés arriesgar:** probá el mod con otra partida (hacé una copia de tus saves antes). Los saves de Steam Cloud del juego están en `~/.local/share/Steam/userdata/<id>/214490/remote/`.
 
 ### A mano
 

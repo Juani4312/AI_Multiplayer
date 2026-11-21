@@ -44,7 +44,9 @@ LIB="$(find_game || true)"
 [ -n "$LIB" ] || LIB="/mnt/1,8TB/SteamLibrary"
 GAME="${AIMP_GAME_DIR:-$LIB/steamapps/common/Alien Isolation}"
 PFX="${AIMP_PFX:-$LIB/steamapps/compatdata/214490/pfx}"
-BACKUP="$(dirname "$(dirname "$(dirname "$GAME")")")/AlienIsolation_backup_AI_Multiplayer/runtime"
+# Backups (user.reg antes del override, DLL ajena apartada) en el proyecto (game/ no se commitea), no en la SteamLibrary
+# (pedido del usuario, 2026-11-21).
+BACKUP="${AIMP_BACKUP_DIR:-$ROOT/game/backup-runtime}"
 PROXIES="winmm xinput1_3"
 pick_dll() { # proxy
   if [ -n "${AIMP_DLL:-}" ]; then DLL="$AIMP_DLL"

@@ -17,6 +17,26 @@ No contiene ni redistribuye binarios, assets ni código del juego.
 
 El detalle de cada paso está en `work/PROGRESS.md`. La evidencia de ingeniería inversa está en `work/findings/` (hallazgos 01–19).
 
+## Para Claude Code
+
+- **Para instalar el mod y jugar** (por ejemplo, en la PC de un amigo): seguí [`INSTALAR_CON_CLAUDE.md`](INSTALAR_CON_CLAUDE.md).
+- **En `papulaptop`** (la laptop Windows de pruebas): tu tarea está en [`work/windows/instructions.md`](work/windows/instructions.md).
+
+## Herramientas y librerías de terceros
+
+El mod (`mod/`, la DLL) no incluye código de terceros: es C propio, sin CRT. Lo de abajo se usa para desarrollar o para leer los datos del juego, y no se redistribuye nada del juego.
+
+| Qué | Para qué | Cómo está en el repo | Licencia |
+|-----|----------|----------------------|----------|
+| [CathodeLib](https://github.com/OpenCAGE/CathodeLib) (OpenCAGE, Matt Filer) | leer los formatos de CATHODE: scripts de los niveles (`COMMANDS.PAK`), personajes, UI, BML. Lo usa nuestro `work/tools/cathode-dump` | submódulo `work/tools/third_party/CathodeLib` | MIT; sus dependencias (AlienBML, DotRecast, NanoRT…) en su `THIRD-PARTY-NOTICES.md` |
+| [JPEXS Free Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) 26.5.0 | leer el ActionScript de la UI del juego (`.GFX`) | no está: `work/tools/get-ffdec.sh` lo baja y verifica el SHA-256 | GPL-3 |
+| [Ghidra](https://github.com/NationalSecurityAgency/ghidra) y REA | ingeniería inversa de `AI.exe` (hallazgos en `work/findings/`) | no están (instalados aparte) | Apache 2.0 (Ghidra) |
+| mingw-w64 (GCC), CMake, Wine | compilar la DLL y correr los tests | no están | GPL / BSD / LGPL |
+| .NET SDK | compilar `cathode-dump` | no está | MIT |
+| Tailscale | red entre los dos jugadores | no está (opcional) | — |
+
+Detalle y verificaciones: `work/tools/README.md`. Los mods de terceros que haya en la instalación del juego (UI, IA, audio) no son parte del proyecto: para probar el coop se apagan los que tocan la UI o la IA.
+
 ## Build soportada
 
 | Campo | Valor |
@@ -33,14 +53,13 @@ Los dos jugadores **tienen que tener exactamente este hash**, los mismos datos d
 - `INSTALACION.md`: instalación, configuración y referencia de parámetros (para jugar).
 - `mod/`: el mod. C sin CRT, CMake, cross-compilado con mingw-w64 (i686). `mod/README.md` tiene la referencia técnica: compilación, tests, variables y log.
 - `mod/dist/winmm.dll`: la DLL compilada, para usar sin toolchain (por ejemplo, en Windows), con su `SHA256SUMS`.
-- `saves/`: partidas guardadas para probar en zonas concretas (`safezone`: sala del transit de HAB_ShoppingCentre, sin enemigos). Se cargan con `work/scripts/saves.sh load <nombre>`.
 - `work/CONTINGENCIAS.md`: limitaciones conocidas y lo que se probó sin éxito (Amanda sin modelo en tercera persona, el civil sin agachado, dónde cae el arrojable…), con lo que haría falta para resolverlas.
 - `work/PROGRESS.md`: estado y siguiente paso. `work/NOTES.md` y `work/LOG.md` son la bitácora.
 - `work/findings/`: un `.md` por hallazgo de RE, con direcciones, evidencia y verificación en runtime.
 - `work/windows/`: instrucciones y script de PowerShell para probar en Windows (`instructions.md`, `aimp_check.ps1`). Ahí también van los reportes de la laptop de pruebas.
 - `work/tools/`: herramientas de terceros que usamos para leer formatos del juego (solo lectura, nunca como fuente de offsets): **CathodeLib** de OpenCAGE (submódulo, MIT) con nuestro `cathode-dump` (scripts de cada nivel con el pid del mod, UI, BML) y **JPEXS FFDec** (ActionScript de la UI). Detalle en `work/tools/README.md`.
-- `work/scripts/check_install.sh`: chequeo de la instalación antes de trabajar (modo, mod coop, mods de terceros, partida cargada, DLLs, niveles completos). Solo lee.
-- `work/scripts/`: `runtime_setup.sh` (instalar y revertir el mod en Proton), `autoplay_continue.sh` (llega a "Continue Game" con el mando virtual), `aimp_peer.py` (peer de prueba del protocolo v2; con `--replay` hace de otro jugador), análisis de logs y scripts de Ghidra (`work/scripts/ghidra/`).
+- `work/scripts/`: `runtime_setup.sh` (instalar y revertir el mod en Proton), `aimp_peer.py` (peer de prueba del protocolo v2; con `--replay` hace de otro jugador), `memsrv.py` (lector de memoria del mod), análisis de logs, `use_names.py`/`female_spawns.py` (nombres y disparadores sacados de los scripts del juego) y scripts de Ghidra (`work/scripts/ghidra/`). Los scripts personales de la máquina de desarrollo (partidas de prueba, mods de terceros, ventana del juego, navegación del menú) no están en el repo.
+- `work/tools/`: herramientas de terceros para leer los formatos del juego (ver "Herramientas y librerías de terceros").
 - `work/evidence/runtime/`: los logs de cada corrida (`runNN-*.log`) y capturas en `shots/` (locales, ignorados por git).
 - `game/` y `work/evidence/`: locales, ignorados por git.
 
@@ -71,6 +90,8 @@ Resumen: `winmm.dll` (de `mod/dist/`) al lado de `AI.exe` en las dos máquinas (
 `mod/test/run_tests.sh` corre con wine, sin el juego: `test_core`, `test_probe`, `test_net`, `test_ghost`, `test_walk`, `test_sync`, `test_throw`, `test_ctrl`, `test_pins`, `test_autopad` y `test_host`. Los de las fases 4 a 6 usan stubs de código máquina con los prólogos y el `ret N` reales del juego, para validar las convenciones de llamada.
 
 ## Pruebas automáticas en una máquina
+
+_Los scripts de esta sección (`autoplay_continue.sh`, `game_window.sh`, `mode.sh`) son locales de la máquina de desarrollo y no están en el repo; queda la descripción del método._
 
 Desde el 2026-11-15 las corridas locales se hacen sin nadie al teclado (Linux, Proton, Hyprland):
 
