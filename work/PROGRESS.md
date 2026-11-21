@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-21 (herramientas de formatos en `work/tools/`; sin corridas del juego). Antes: 2026-11-20 03:05 (corrida 148). **Papito quedó en modo juego con los mods de terceros activos (NoHUD, StalkerAlien, MildlyInsaneAI, MovieFix; QuietXeno y SmartAI se borraron el 2026-11-21) y sin partidas:** la run sin morir está en `saves/run-sin-morir-2026-11-20.tar.gz` (volver: `saves.sh load run-sin-morir-2026-11-20`). Para probar el coop, `mode.sh test …` apaga los mods solo._
+_Última actualización: 2026-11-21 18:35 (corridas 149–157: aviso sin pausa, robot barredor por pin; todos los mods de terceros apagados; quedó en modo juego). Antes: 2026-11-20 03:05 (corrida 148). **Papito quedó en modo juego con los mods de terceros activos (NoHUD, StalkerAlien, MildlyInsaneAI, MovieFix; QuietXeno y SmartAI se borraron el 2026-11-21) y sin partidas:** la run sin morir está en `saves/run-sin-morir-2026-11-20.tar.gz` (volver: `saves.sh load run-sin-morir-2026-11-20`). Para probar el coop, `mode.sh test …` apaga los mods solo._
 
 Hecho el 2026-11-20 (detalle en NOTES.md, "Variante `xinput1_3.dll`"):
 - la prueba con el amigo no llegó a hacerse: su Windows 11 25H2 carga la `winmm` del sistema y el mod no arranca (papito estuvo 72 min de host sin datos);
@@ -19,10 +19,11 @@ Hecho en la sesión anterior (2026-11-18, corridas 123–133): dificultad del ju
 
 **Siguiente:**
 - **con `cathode-dump`:** ponerle nombre a los pids de las trazas (robot, compuertas: `zgrep` en `work/evidence/cathode/commands/`); diferencias del `COMMANDS.PAK` modificado de `BSP_LV426_PT01` contra el de Steam (hace falta copiar el de la laptop); aviso sin pausa con `POPUP_TYPE_INGAME_LOG_TEXT` (1001, no es diálogo en `POPUPOVERLAY.GFX`) en vez del "Warning" (101), sin probar;
-- ~~probar el aviso sin pausa~~ ✅ corridas 149–151 (no pausa; una clave por aviso; textos de un renglón). Falta ver si `ui_message` repite el texto con dos avisos seguidos;
+- ~~probar el aviso sin pausa~~ ✅ corridas 149–151 (no pausa; una clave por aviso; textos de un renglón). `ui_message` (diálogo "Warning") no tiene ese problema (corrida 157);
 - **el amigo:** que su Claude Code siga `INSTALAR_CON_CLAUDE.md` sección 2 (instalar con `-Proxy xinput1_3` y `verify`); si carga, papito como host con la misma DLL de `mod/dist` (`mode.sh test safezone --cfg …`, cfg en LOG.md 2026-11-18 23:00). Si tampoco carga: el informe de ProcMon/Integridad de código;
 - **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `4020f979`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
 - sentir la dificultad del coop jugando con el save `alien` (el efecto solo se verificó en memoria); sumar los sentidos del ALIEN (bloque por plantilla) si hace falta;
+- **paneles de puertas y otros "usar" del arquetipo `Use`:** recorrer en el volcado el grafo desde `used` (links, variables de entrada y salida de los composites) y ver si llega a entidades que mueven al jugador (`CMD_PlayAnimation`, `CMD_HolsterWeapon`, `VariableThePlayer`, `1st_person_animated`, `FixedCamera`: el `Door_Package` tiene de todo); los que no, a `AIMP_SYNC_PINS_SHARED`;
 - interacciones del mundo: ✅ **el robot barredor** sincronizado por pin en los dos sentidos (`AIMP_SYNC_PINS_SHARED`, corridas 152–156, en una máquina con el peer); falta con dos máquinas y sumar otros "usar" del arquetipo `Use` que no muevan al jugador (paneles de puertas…). Los objetivos de los "usar" ya tienen nombre (`work/scripts/use_names.py`);
 - remates de humanos y androides con el modo caído (la regla los cubre si pasan por `FUN_007d0c10`; falta verlo);
 - avisos que no pausen (compañero caído, copia del save): falta un mensaje no modal (el cartel de recogidas no se dibujó; quedan subtítulos, objetivo o `PopupMessage`, que la maneja Flash);
