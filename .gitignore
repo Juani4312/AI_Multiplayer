@@ -59,7 +59,7 @@ work/scripts/autoplay_continue.sh
 # - instrucciones para Claude Code de la máquina de desarrollo (quedan INSTALAR_CON_CLAUDE.md y work/windows/, que usan
 #   el amigo y la laptop por git; el README los señala)
 /CLAUDE.md
-# - rutas de esta PC para Claude (del primer commit)
 /prompt.md
 /.claude/
+# - rutas de esta PC para Claude (del primer commit)
 /work_dirs.txt
