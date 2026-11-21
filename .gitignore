@@ -39,3 +39,7 @@ saves/backups/
 saves/.mode
 work/scripts/__pycache__/
 instalacion-informe.md
+
+# Herramientas (work/tools): salida de compilación de .NET
+work/tools/cathode-dump/bin/
+work/tools/cathode-dump/obj/

@@ -38,6 +38,7 @@ Los dos jugadores **tienen que tener exactamente este hash**, los mismos datos d
 - `work/PROGRESS.md`: estado y siguiente paso. `work/NOTES.md` y `work/LOG.md` son la bitácora.
 - `work/findings/`: un `.md` por hallazgo de RE, con direcciones, evidencia y verificación en runtime.
 - `work/windows/`: instrucciones y script de PowerShell para probar en Windows (`instructions.md`, `aimp_check.ps1`). Ahí también van los reportes de la laptop de pruebas.
+- `work/tools/`: herramientas de terceros que usamos para leer formatos del juego (solo lectura, nunca como fuente de offsets): **CathodeLib** de OpenCAGE (submódulo, MIT) con nuestro `cathode-dump` (scripts de cada nivel con el pid del mod, UI, BML) y **JPEXS FFDec** (ActionScript de la UI). Detalle en `work/tools/README.md`.
 - `work/scripts/check_install.sh`: chequeo de la instalación antes de trabajar (modo, mod coop, mods de terceros, partida cargada, DLLs, niveles completos). Solo lee.
 - `work/scripts/`: `runtime_setup.sh` (instalar y revertir el mod en Proton), `autoplay_continue.sh` (llega a "Continue Game" con el mando virtual), `aimp_peer.py` (peer de prueba del protocolo v2; con `--replay` hace de otro jugador), análisis de logs y scripts de Ghidra (`work/scripts/ghidra/`).
 - `work/evidence/runtime/`: los logs de cada corrida (`runNN-*.log`) y capturas en `shots/` (locales, ignorados por git).

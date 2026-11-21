@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-20 03:05 (sesión local, corrida 148). **Papito quedó en modo juego con los mods de terceros activos (NoHUD, QuietXeno, SmartAI, MovieFix) y sin partidas:** la run sin morir está en `saves/run-sin-morir-2026-11-20.tar.gz` (volver: `saves.sh load run-sin-morir-2026-11-20`). Para probar el coop, `mode.sh test …` apaga los mods solo._
+_Última actualización: 2026-11-21 (herramientas de formatos en `work/tools/`; sin corridas del juego). Antes: 2026-11-20 03:05 (corrida 148). **Papito quedó en modo juego con los mods de terceros activos (NoHUD, QuietXeno, SmartAI, MovieFix) y sin partidas:** la run sin morir está en `saves/run-sin-morir-2026-11-20.tar.gz` (volver: `saves.sh load run-sin-morir-2026-11-20`). Para probar el coop, `mode.sh test …` apaga los mods solo._
 
 Hecho el 2026-11-20 (detalle en NOTES.md, "Variante `xinput1_3.dll`"):
 - la prueba con el amigo no llegó a hacerse: su Windows 11 25H2 carga la `winmm` del sistema y el mod no arranca (papito estuvo 72 min de host sin datos);
@@ -18,6 +18,7 @@ Hecho el 2026-11-18 a la tarde (corridas 134–147): pantalla negra al caer por 
 Hecho en la sesión anterior (2026-11-18, corridas 123–133): dificultad del juego y del coop (`diff.c`, menú "Coop"), guardar desde el mod (`gamesave.c`), host caído: guarda el cliente (`savesync` inverso).
 
 **Siguiente:**
+- **con `cathode-dump`:** ponerle nombre a los pids de las trazas (robot, compuertas: `zgrep` en `work/evidence/cathode/commands/`); diferencias del `COMMANDS.PAK` modificado de `BSP_LV426_PT01` contra el de Steam (hace falta copiar el de la laptop); aviso sin pausa con `POPUP_TYPE_INGAME_LOG_TEXT` (1001, no es diálogo en `POPUPOVERLAY.GFX`) en vez del "Warning" (101), sin probar;
 - probar el aviso sin pausa en el juego (`memsrv TIP 7000 texto`; después caído con el peer);
 - **el amigo:** que su Claude Code siga `INSTALAR_CON_CLAUDE.md` sección 2 (instalar con `-Proxy xinput1_3` y `verify`); si carga, papito como host con la misma DLL de `mod/dist` (`mode.sh test safezone --cfg …`, cfg en LOG.md 2026-11-18 23:00). Si tampoco carga: el informe de ProcMon/Integridad de código;
 - **prueba de a dos** (`work/windows/instructions.md` 8g, DLL `cf1e7575`): menú Coop y dificultad elegida por el host, host caído + terminal real de la laptop, guardado exigente, robot con marcas F8, remate de un enemigo con el modo caído (ya no tiene que quedar negro), agachado, escotilla;
@@ -42,6 +43,7 @@ Partidas para pruebas: `saves/` (`work/scripts/saves.sh list|save|load`); `safez
 - La IA del usuario es vanilla (verificado). **Solo `BSP_LV426_PT01/WORLD/COMMANDS.PAK` está modificado** (comparado con la laptop, que tiene el de Steam; `TECH_COMMS` es el original). Antes de la fase 5 hay que restaurarlo o que el amigo use el mismo (NOTES, "COMMANDS.PAK: solo uno").
 
 ## Herramientas
+- **Formatos del juego (2026-11-21):** `work/tools/` (ver su README). CathodeLib (submódulo) + `cathode-dump`: `work/tools/cathode-dump.sh` vuelca a `work/evidence/cathode/` el árbol de scripts de cada nivel **con el pid del mod** (verificado: 83–96 % de los pids de las trazas), la UI original (`UI.PAK`) y los BML de dificultad. JPEXS FFDec en `~/tools/ffdec-26.5.0` (`work/tools/get-ffdec.sh`) para el ActionScript de los `.GFX`. Requiere `dotnet-sdk`.
 - Ghidra 12.1.2 en `/opt/ghidra`, mingw-w64-gcc 16.2.0, Node 24.22.1 portable en `~/tools/node-v24.22.1-linux-x64` (para REA), REA 6.8.0 compilado en `/home/juano/Documents/clones/rea`.
 - **Proyecto de Ghidra persistente ya analizado:** `game/ghidra/AI_Multiplayer.gpr` (no se commitea). Con REA en modo proyecto cada consulta tarda ~10 s.
 - Cómo correr REA por CLI con el proyecto:

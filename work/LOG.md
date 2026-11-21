@@ -248,3 +248,4 @@
 - 03:20 (2026-11-20) El juego no abre: sale solo en el primer frame del Frontend (sin excepción). Descartados mods y save (corridas de diagnóstico); sospecha: pack de texturas x2. Estado del usuario restaurado.
 - 03:25 (2026-11-20) Causa: el pack de texturas reemplazó la carpeta PRODUCTION entera (solo trae 70 archivos). Lo arregló el usuario; las texturas las maneja él.
 - 03:40 (2026-11-20) Pedido del usuario: chequear la instalación antes de trabajar. work/scripts/check_install.sh (solo lee: juego abierto, modo, mod coop, mods de terceros, partida cargada, DLLs, niveles completos); CLAUDE.md lo pone como paso 0.
+- 17:19 (2026-11-21) Pedido del usuario: herramientas de formatos. CathodeLib (submódulo) + cathode-dump (scripts de niveles con el pid del mod: 83–96 % verificado; UI; BML) y JPEXS FFDec; work/tools/README.md.
