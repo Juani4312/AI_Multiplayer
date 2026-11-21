@@ -97,10 +97,13 @@ static uint32_t g_fs_level[FSPAWN_MAX], g_fs_pid[FSPAWN_MAX], g_fs_pin[FSPAWN_MA
 static int g_nfs;
 static uint32_t g_fs_tried_level = 0xFFFFFFFFu, g_cur_level;
 static int64_t g_fs_until;
-/* Civiles sin arma (Archetypes\NPCs\Human\Civilian\Worker_NPC) con disparador limpio, de work/scripts/female_spawns.py:
- * nivel 8 HAB_Airport (AIRLOCK_Worker_Unarmed, desde los AIRLOCK_Human_Encounter*.npc6_spawn), 10 HAB_ShoppingCentre
- * ([M16]Worker_NPC_7, CHR_DeathMonitor_3.killed; corrida 158) y 12 SCI_HospitalLower (RECEPTION_Worker_Unarmed). */
-static const char k_default_fspawn[] = "8:00b4018b:22a0acfb,8:185cf272:22a0acfb,8:0e97cd76:22a0acfb,8:a52a5232:22a0acfb,10:232725ed:9653cab3,12:5543d6c1:22a0acfb,12:17f13e0f:22a0acfb,12:5b28bf24:22a0acfb,12:82000da7:22a0acfb";
+/* Por defecto, solo el verificado: nivel 10 HAB_ShoppingCentre, [M16]Worker_NPC_7 (CHR_DeathMonitor_3.killed, el reemplazo
+ * que el script trae cuando muere Worker_NPC_2; corridas 158-159). work/scripts/female_spawns.py encuentra más civiles
+ * sin arma (8 HAB_Airport: 8:96ab519a:78820881,8:19b674ef:78820881; 12 SCI_HospitalLower: 12:dd2c132f:78820881,...),
+ * pero salen de los encuentros ambientales de humanos (npc_random_spawner.Random_6): en los saves "airport" y "alien"
+ * esos encuentros están inactivos (índice 0xFFFFFF, sin enlaces; el pin no hace nada, corridas 160-161) y, activos,
+ * hacerla aparecer podría adelantar el encuentro. Se pueden sumar con AIMP_GHOST_FEMALE_SPAWN. */
+static const char k_default_fspawn[] = "10:232725ed:9653cab3";
 static void fs_parse(const char *s);
 static int g_front_cm; /* AIMP_GHOST_FRONT_CM */
 static int g_clone_auth;      /* AIMP_GHOST_CLONE_AUTH: clonar el pedido de autoridad (0x130) en vez del de SpawnCharacter */
@@ -865,8 +868,8 @@ static void pick_npc(const Chars *c, int64_t now)
             }
         }
     }
-    if (!fem && best && fs_try(now))
-        return; /* se vuelve a elegir cuando aparezca */
+    if (!fem && fs_try(now))
+        return; /* se vuelve a elegir cuando aparezca (también sin ningún candidato: corrida 160) */
     /* AIMP_GHOST_PREFER_FEMALE (pedido del usuario, 2026-11-17): si hay una civil con esqueleto FEMALE, ella */
     if (g_prefer_female && fem) {
         best = fem;

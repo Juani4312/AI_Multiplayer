@@ -85,7 +85,35 @@ def level_spawns(level):
                 same_pin = [x for x in links if x.split(">", 1)[0] == pin]
                 clean = len(same_pin) == 1
                 victim = want[parent][tid]
-                out.append((level, c[0], "%08x" % shortguid(pin), pin, clean, c[7], victim, tparam, types.get(victim, "?")))
+                out.append([level, c[0], "%08x" % shortguid(pin), pin, clean, c[7], victim, tparam, types.get(victim, "?"), c[5]])
+    # 3) un disparador que es la salida de un composite no se puede reinyectar (el mod dispara pines de entidades, no de
+    #    instancias de composite: "sin subobjeto EntityInterface", corrida 160). Se baja a la entidad de adentro que dispara
+    #    esa variable de salida, si ese pin no va a otro lado (p. ej. npc_random_spawner.Random_6 -> npc6_spawn).
+    for _ in range(3):
+        comp = {o[5]: o for o in out if o[9].startswith("composite:")}
+        if not comp:
+            break
+        var_id = {}
+        inner = []
+        for c in rows(level):
+            parent = c[7].rsplit("/", 1)[0]
+            if parent in comp:
+                if c[4] == "VARIABLE" and c[6] == comp[parent][3]:
+                    var_id[parent] = c[2]
+                inner.append(c)
+        for c in inner:
+            parent = c[7].rsplit("/", 1)[0]
+            o = comp[parent]
+            v = var_id.get(parent)
+            if not v or not c[8]:
+                continue
+            links = [l for l in c[8].split(",") if ">" in l]
+            for l in links:
+                pin, tgt = l.split(">", 1)
+                if tgt == v + "." + o[3]:
+                    same_pin = [x for x in links if x.split(">", 1)[0] == pin]
+                    out.append([level, c[0], "%08x" % shortguid(pin), pin, o[4] and len(same_pin) == 1, c[7], o[6], o[7], o[8], c[5]])
+        out = [o for o in out if not o[9].startswith("composite:") or o[5] not in comp]
     return out
 
 
@@ -94,7 +122,7 @@ def main():
     if not levels:
         sys.exit(__doc__)
     for lv in levels:
-        for level, pid, pinh, pin, clean, who, victim, tparam, vtype in level_spawns(lv):
+        for level, pid, pinh, pin, clean, who, victim, tparam, vtype, _ in level_spawns(lv):
             print(f"{level}\t{pid}\t{pinh}\t{'limpio' if clean else 'con otros efectos'}\t{vtype}\t{who}.{pin}\t-> {victim}.{tparam}")
 
 
