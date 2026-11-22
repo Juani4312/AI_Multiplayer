@@ -6,6 +6,15 @@ Lo que se hizo en cada sesión, del más nuevo al más viejo. Antes estaba al fi
 - Evidencia de cada corrida: `work/NOTES.md`.
 - Log cronológico corto: `work/LOG.md`.
 
+**2026-11-21 (sesión larga, locales con el peer, corridas 149–169):**
+- **Herramientas de formatos:** CathodeLib (OpenCAGE, submódulo) con `cathode-dump`: el árbol de scripts de cada nivel con el pid del mod (83–96 % de los pids del juego coinciden), los personajes, la UI y los BML; JPEXS FFDec para leer la interfaz en Flash. Los ids de 8 bytes de objetos y personajes del juego son el `EntityHandle` de CathodeLib: cada "usar" y cada personaje de un log tiene nombre (`use_names.py`).
+- **Avisos sin pausa** probados en el juego (no pausan, se van solos); arreglado el texto repetido y los textos largos.
+- **Sincronizado por pines de los scripts, en los dos sentidos** (verificado con el peer en una máquina): el **robot barredor** de la prueba de a dos; **las puertas** (el desbloqueo del mecanismo, cualquiera sea la forma de abrirlas: del otro lado quedan desbloqueadas y se abren al acercarse); **las cajas con botín** (el botín se sortea al abrir, de un pool por máquina: el primero que abre la caja la sortea y para el otro queda cerrada).
+- **Avatar mujer:** la preferencia por mujer nunca había funcionado (esqueleto `FEMALENPC`); si no hay ninguna cargada, el mod hace aparecer una obrera con un pin limpio de los scripts (por ahora en HAB_ShoppingCentre).
+- **Repo:** fuera del repo y del historial (reescrito) las saves, las instrucciones de Claude, `work_dirs.txt` y los scripts personales; README al día con las herramientas de terceros; capturas en `tmp/screenshots/`.
+- **Diseño:** caer y revivir (Normal = desangrado y revivir en persona; Difícil = solo terminal; el Alien mata de una) y el menú Coop con "Opciones avanzadas", que se puede armar desde el mod con Scaleform (`CreateObject` ubicado).
+- **Siguiente:** la prueba de a dos (instrucciones 8g: robot, puertas, cajas, avatar mujer, avisos, modo caído) y, cuando el usuario lo pida, el submenú de opciones avanzadas.
+
 **2026-11-20, madrugada (local, corrida 148):**
 - **El mod también entra por `xinput1_3.dll`:** en la PC del amigo (Windows 11 25H2) el juego carga la `winmm.dll` del sistema y el mod ni arranca. Ahora el mismo mod sale también como `xinput1_3.dll` (la DLL del mando, que el juego carga desde su carpeta y de la que no depende ninguna DLL del sistema). Si están las dos, arranca una sola vez; si hay otra `xinput1_3.dll` (MovieFix), se puede encadenar.
 - Verificado con un test bajo wine y en el juego (Proton): carga, hooks y mando por la variante. Falta probarla en Windows 11.

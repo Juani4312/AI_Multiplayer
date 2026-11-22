@@ -108,7 +108,7 @@ Las corridas se pueden hacer sin nadie al teclado y sin otra máquina (Linux, Pr
 
 ## Estado actual y siguiente paso
 
-- **Último (2026-11-21):** avisos sin pausa verificados (una clave de texto por aviso); el robot barredor de la corrida 119 se sincroniza por pin en los dos sentidos; el avatar es una mujer donde se puede (la preferencia por mujer no funcionaba; si no hay ninguna cargada, el mod hace aparecer una obrera). Herramientas nuevas: CathodeLib con `cathode-dump`, que le pone nombre a los pids, objetos y personajes de los logs.
+- **Último (2026-11-21):** avisos sin pausa verificados; el robot barredor, **las puertas** y **las cajas con botín** se sincronizan por pines de los scripts en los dos sentidos (verificado en una máquina con el peer); el avatar es una mujer donde se puede. Herramientas nuevas: CathodeLib con `cathode-dump`, que le pone nombre a los pids, objetos y personajes de los logs. Diseño del menú Coop con "Opciones avanzadas" (se puede armar desde el mod con Scaleform) y de caer y revivir (Normal: desangrado y revivir en persona; Difícil: solo terminal).
 - **2026-11-20:** en un Windows 11 25H2 el juego no carga la `winmm.dll` del mod. Variante que entra por `xinput1_3.dll` (`mod/dist/xinput1_3.dll`, `-Proxy xinput1_3` en el instalador), verificada en el juego con Proton; falta probarla en ese Windows.
-- **Siguiente:** que el amigo pruebe la variante (`INSTALAR_CON_CLAUDE.md`, sección 2) y la prueba de a dos (`work/windows/instructions.md` 8g, DLL `4a7bd5e1…`): robot, puertas, cajas, avatar mujer, avisos, modo caído.
+- **Siguiente:** el submenú de opciones avanzadas (cuando se decida), que el amigo pruebe la variante (`INSTALAR_CON_CLAUDE.md`, sección 2) y la prueba de a dos (`work/windows/instructions.md` 8g, DLL `4a7bd5e1…`): robot, puertas, cajas, avatar mujer, avisos, modo caído.
 - Detalle y pendientes: `work/PROGRESS.md`. Historial de sesiones: `work/HISTORIAL.md`.
