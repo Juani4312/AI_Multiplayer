@@ -124,3 +124,10 @@ Los nombres de los campos están en `AI.exe`: el cargador tiene una tabla nombre
 3. Pickups por porcentaje (host).
 4. El Alien que caza a los dos (DESIGN_ALIEN). Es la pieza grande.
 5. El selector en el menú de opciones (DESIGN_CONFIG_MENU).
+
+## Decisiones del usuario (2026-11-21): caer y revivir, y opciones avanzadas
+- **Caer y revivir**, dos niveles (sin "apagado"):
+  - **Normal:** el que cae queda tirado **desangrándose** (tiempo a definir; un solo aviso cuando faltan 30 s). El compañero lo revive **en persona**: cerca del caído aparece un aviso tipo "Mantené R para revivir" y hay que mantener la tecla. Revivir sin ir a una terminal es la ventaja de Normal. Si se desangra: queda afuera hasta que el compañero use una terminal (como Difícil).
+  - **Difícil:** sin desangrado: el que cae queda afuera al instante y solo lo revive una terminal de guardado o un checkpoint (lo que hay hoy).
+  - **El Alien mata de una:** su remate no deja al jugador tirado para revivir en persona (en los dos niveles, queda afuera hasta la terminal). Si caen los dos: game over.
+- **Menú Coop:** selector de dificultad (Normal / Difícil / Pesadilla / Personalizada) + botón "Opciones avanzadas" que abre un submenú: escala del Alien (un valor que mueve todos sus parámetros), escala de humanos/androides (ídem), caer y revivir (Normal / Difícil), guardado exigente (sí/no), inventario compartido (sí/no), cajas compartidas (sí/no). Las tres primeras las fija la dificultad salvo en Personalizada; las tres últimas se cambian siempre. Lo decide el host.

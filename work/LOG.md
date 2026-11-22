@@ -262,3 +262,4 @@
 - 20:27 (2026-11-21) Corridas 163–166: puertas sincronizadas por el desbloqueo del mecanismo (AIMP_SYNC_PINS_SHARED_IDS, Door_Mechanism/IsLocked.true_now_false, sin eco). Verificado con el peer en los dos sentidos. Modo juego.
 - 20:32 (2026-11-21) Corrida 167: cajas con botín; cada máquina sortea el contenido; emptied como candidato (sin verificar). Modo juego.
 - 20:59 (2026-11-21) Corridas 168–169: cajas, el primero que la abre la sortea y para el otro queda saqueada (AIMP_SYNC_PINS_SHARED_MAP: AllocateGCItemsFromPool → UI_Container.emptied de la hermana). Verificado con el peer en los dos sentidos. Modo juego.
+- 21:49 (2026-11-21) Investigación del menú: Extras tiene solo Créditos en PC (NewFrontendMenu.as); se puede armar el submenú desde el mod con Scaleform (pantalla+0x68 = Value del GameMenu, Invoke/GetMember del ObjectInterface, AS3 MovieRoot::CreateObject = FUN_00ee1e60). Diseño de caer/revivir actualizado (DESIGN_DIFFICULTY).
