@@ -6,6 +6,14 @@ Lo que se hizo en cada sesión, del más nuevo al más viejo. Antes estaba al fi
 - Evidencia de cada corrida: `work/NOTES.md`.
 - Log cronológico corto: `work/LOG.md`.
 
+**2026-11-23 (sesión local, corridas 170–182):**
+- **Menú "Coop" con "Opciones avanzadas"** (pedido del usuario): el mod arma el menú con los componentes del propio juego (Scaleform: crea los ítems de ActionScript y los agrega a la página de Extras). Selector "Dificultad del coop" (Normal / Difícil / Pesadilla / Personalizada) y un submenú con escala del Alien, humanos y androides, caer y revivir, guardado exigente, inventario compartido, cajas compartidas y botín. Las tres primeras las fija la dificultad salvo en Personalizada. Se guardan en `opciones.txt`; **las decide el host** y el que se une las ve en gris.
+- **Humanos y androides:** cada escalón sube sus sentidos y el daño que hacen (como de Medium a Hard y de Hard a Nightmare), sobre la dificultad del juego.
+- **Caer y revivir "Normal":** el caído se desangra 90 s (aviso a los 30 s); el compañero lo levanta manteniendo R 3 s a su lado. Si se desangra o lo remató el Alien, solo lo revive una terminal (como en Difícil). Duración y tecla, provisorias.
+- **Botín:** ubicado el sorteo del contenido de las cajas en el pool de ítems del nivel; la opción "Botín" (x0,5 a x2) escala las cantidades. Falta verlo abriendo una caja intacta.
+- Al abrir el juego, Claude lo pone en el workspace de su terminal y te devuelve el foco (`game_window.sh launch`).
+- Verificado con el peer en una máquina (menú en los dos roles, caer y revivir de los dos lados, remate del Alien con el save `alien`). `mod/dist`: `winmm.dll` `41dea23c…`.
+
 **2026-11-21 (sesión larga, locales con el peer, corridas 149–169):**
 - **Herramientas de formatos:** CathodeLib (OpenCAGE, submódulo) con `cathode-dump`: el árbol de scripts de cada nivel con el pid del mod (83–96 % de los pids del juego coinciden), los personajes, la UI y los BML; JPEXS FFDec para leer la interfaz en Flash. Los ids de 8 bytes de objetos y personajes del juego son el `EntityHandle` de CathodeLib: cada "usar" y cada personaje de un log tiene nombre (`use_names.py`).
 - **Avisos sin pausa** probados en el juego (no pausan, se van solos); arreglado el texto repetido y los textos largos.
