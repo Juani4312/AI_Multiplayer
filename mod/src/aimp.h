@@ -58,6 +58,10 @@ int mem_write(uintptr_t addr, const void *src, size_t n);
 /* Compara código leído del juego con los bytes esperados, aceptando direcciones absolutas reubicadas (ASLR). 0 = igual. */
 int aimp_code_cmp(const void *actual, const void *expected, size_t n);
 
+/* Botones (XINPUT_GAMEPAD_*) que leyó el juego la última vez; los escribe el mando virtual (autopad.c) si está
+ * instalado, 0 si no. Vive en mem.c para que lo lea cualquiera sin enlazar autopad.c. */
+extern volatile LONG g_aimp_pad_buttons;
+
 /* Estado global. */
 extern HMODULE g_aimp_self;      /* nuestra DLL */
 extern uintptr_t g_aimp_exe;     /* base del EXE en runtime */

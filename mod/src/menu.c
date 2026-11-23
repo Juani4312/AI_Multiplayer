@@ -31,7 +31,7 @@ static const OptDef OPTS[OPT_N] = {
       { L"Como el juego", L"+1", L"+2", L"+3" }, { NULL } },
     { "caer_y_revivir", 0, 2, 1, L"Caer y revivir", L"Qué pasa cuando cae uno de los dos",
       { L"Normal", L"Difícil" },
-      { L"Te desangrás y el compañero te revive en persona (próximamente)",
+      { L"Te desangrás 90 s; tu compañero te levanta manteniendo R a tu lado",
         L"Al caer, solo te revive una terminal de guardado o un checkpoint" } },
     { "guardado_exigente", 1, 2, 0, L"Guardado exigente", L"Guarda el host, y con el compañero vivo cerca de la terminal", { NULL },
       { NULL } },

@@ -76,6 +76,8 @@ int mem_cstr(uintptr_t addr, char *out, size_t cap)
  * `push 0x0134FEC8`. Ante una diferencia, se acepta un valor de 4 bytes que en lo esperado cae dentro de la imagen y en
  * lo real vale lo esperado + (base real - 0x00400000). Prueba con dos máquinas, 2026-11-17: el prólogo de FUN_007c3980
  * "no coincide" en Windows por eso. Devuelve 0 si coincide (como memcmp). */
+volatile LONG g_aimp_pad_buttons;
+
 int aimp_code_cmp(const void *actual, const void *expected, size_t n)
 {
     const uint8_t *a = actual, *e = expected;

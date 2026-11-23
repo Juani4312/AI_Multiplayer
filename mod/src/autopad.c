@@ -300,6 +300,8 @@ void autopad_state_at(int64_t ms_start, int64_t ms_player, uint16_t *buttons, in
     compute(ms_start, ms_player, buttons, thumbs, trig, &has, 0);
 }
 
+int autopad_buttons(void) { return (int)g_aimp_pad_buttons; }
+
 static DWORD WINAPI my_get_state(DWORD idx, AState *st)
 {
     DWORD r = g_get_state ? g_get_state(idx, st) : ERROR_DEVICE_NOT_CONNECTED;
@@ -320,6 +322,7 @@ static DWORD WINAPI my_get_state(DWORD idx, AState *st)
         if (has & (1 << k))
             *th[k] = (SHORT)g_cur_thumbs[k];
     st->dwPacketNumber = (DWORD)g_packet;
+    InterlockedExchange(&g_aimp_pad_buttons, st->Gamepad.wButtons); /* mando real + guion (aimp.h) */
     return ERROR_SUCCESS;
 }
 
@@ -399,7 +402,8 @@ int autopad_install(void)
             return 0;
         }
     }
-    if (n == 0 && !have_file)
+    /* AIMP_PAD_MONITOR=1: sin guion, solo para ver los botones del mando real (revivir en persona, death.c) */
+    if (n == 0 && !have_file && !aimp_env_int(L"AIMP_PAD_MONITOR", 0))
         return 0;
     int p = autopad_install_on(g_aimp_exe);
     if (p == 0) {

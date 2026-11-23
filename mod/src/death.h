@@ -42,6 +42,10 @@ void death_on_save_terminal(void);
 #define COOP_DOWNED  1
 #define COOP_REVIVED 2
 #define COOP_REVIVE  3 /* pedido de revivir: pos/yaw = dónde está el que guardó */
+/* Caer y revivir "Normal" (menú Coop, 2026-11-23): */
+#define COOP_BLEEDING    4 /* (después de COOP_DOWNED) se desangra: se lo puede levantar en persona; pos[0] = segundos que quedan */
+#define COOP_BLED_OUT    5 /* se desangró (o lo remató el Alien): solo lo revive una terminal o un checkpoint */
+#define COOP_REVIVE_HERE 6 /* el compañero lo levantó en persona: revivir donde está */
 #pragma pack(push, 1)
 typedef struct {
     uint32_t kind;

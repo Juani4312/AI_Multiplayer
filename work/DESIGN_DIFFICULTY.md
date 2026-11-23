@@ -138,3 +138,8 @@ Los nombres de los campos están en `AI.exe`: el cargador tiene una tabla nombre
 - **Corrida 176:** los valores leídos de las 5 estructuras coinciden con los BML (Medium: androide oído −5, vista −0,1, daño ×0,7 / ×1,45; Novice: −10, ×0,33 / ×2; Nightmare: daño que hace ×1,25).
 - **Un escalón** (menú Coop, "Humanos y androides", de +0 a +3; Difícil +1 y Pesadilla +2 salvo en Personalizada): el salto de Medium a Hard en los sentidos (oído +5 m, armas +0,4/+0,15, pasos +0,15/+0,15, linterna +0,3/+0,3, vista +0,15/+0,15) y el de Hard a Nightmare en el daño que hacen (×1,25 por escalón). Plantillas: ANDROID, ANDROID_HEAVY, SECURITY_GUARD, RIOT_GUARD, MELEE_HUMAN y CIVILIAN. Siempre sobre la copia base: no se acumula.
 - Verificado con `memsrv` en el androide de Nightmare: +2 → oído +10, armas +0,8/+0,3, pasos y vista +0,3, linterna +0,6, daño ×1,953; bajar a +0 desde el menú lo devuelve exacto a la base. Falta sentirlo jugando contra humanos o androides.
+
+## Caer y revivir "Normal" (2026-11-23, corridas 177–178, `death.c`)
+- Hecho como lo decidió el usuario: Normal = desangrado (`AIMP_COOP_BLEED_S`, 90 s; un aviso a los 30 s del final) y el compañero lo levanta en persona manteniendo una tecla a menos de 2 m (`AIMP_COOP_REVIVE_KEY`, 'R'; o el botón Y del mando con el mando virtual o `AIMP_PAD_MONITOR=1`; 3 s). Si se desangra, o si lo remató el Alien, queda como en Difícil (terminal o checkpoint). Si caen los dos, game over. Difícil: como antes.
+- **A confirmar con el usuario:** la duración (90 s) y la tecla ('R' recarga el arma en el teclado del juego; con el arma guardada no hace nada). Se cambian en `aimp.cfg`.
+- Verificado con el peer en una máquina (los dos lados) y el remate del Alien con el save `alien`. Falta con dos máquinas.

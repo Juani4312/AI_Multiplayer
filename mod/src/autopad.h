@@ -20,6 +20,9 @@
  * cada 250 ms si cambió; reemplaza el guion y sus pasos sin 'P' cuentan desde la lectura. Sirve para
  * manejar el juego desde afuera ("0-200:A" = apretar A ahora). */
 int autopad_install(void);
+/* Botones (XINPUT_GAMEPAD_*) que leyó el juego la última vez, mando real más guion; 0 si el mando virtual no está
+ * instalado (AIMP_AUTOPAD, AIMP_AUTOPAD_FILE o AIMP_PAD_MONITOR=1). */
+int autopad_buttons(void);
 /* Por frame, desde el thread principal. */
 void autopad_frame(int64_t now, int64_t freq, int have_player, const float *pos, float yaw);
 
