@@ -13,7 +13,7 @@ Lo que se hizo en cada sesión, del más nuevo al más viejo. Antes estaba al fi
 - **Botín:** ubicado el sorteo del contenido de las cajas en el pool de ítems del nivel; la opción "Botín" (x0,5 a x2) escala las cantidades. Falta verlo abriendo una caja intacta.
 - Al abrir el juego, Claude lo pone en el workspace de su terminal y te devuelve el foco (`game_window.sh launch`).
 - **Decisiones del usuario aplicadas (corridas 183–184):** escalas con Normal / Difícil / Pesadilla, botín con Normal / Reducido / Escaso, levantar al compañero solo mirándolo (y entonces R no recarga), y todo el mod en inglés o español (opción "Idioma del mod"; en Automático, el idioma del juego).
-- Verificado con el peer en una máquina (menú en los dos roles, caer y revivir de los dos lados, remate del Alien con el save `alien`). `mod/dist`: `winmm.dll` `41dea23c…`.
+- Verificado con el peer en una máquina (menú en los dos roles, caer y revivir de los dos lados, remate del Alien con el save `alien`). `mod/dist`: `winmm.dll` `36e5539f…`.
 
 **2026-11-21 (sesión larga, locales con el peer, corridas 149–169):**
 - **Herramientas de formatos:** CathodeLib (OpenCAGE, submódulo) con `cathode-dump`: el árbol de scripts de cada nivel con el pid del mod (83–96 % de los pids del juego coinciden), los personajes, la UI y los BML; JPEXS FFDec para leer la interfaz en Flash. Los ids de 8 bytes de objetos y personajes del juego son el `EntityHandle` de CathodeLib: cada "usar" y cada personaje de un log tiene nombre (`use_names.py`).
