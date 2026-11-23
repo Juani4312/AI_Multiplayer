@@ -6,6 +6,7 @@
 #include "inv.h"
 #include "pins.h"
 #include "sync.h"
+#include "loot.h"
 
 /* ---- opciones ---- */
 typedef struct {
@@ -14,8 +15,8 @@ typedef struct {
     int n;             /* cantidad de valores */
     int def;
     const wchar_t *name, *desc; /* la descripción entra en un renglón (corrida 170: ~75 caracteres) */
-    const wchar_t *vals[4];
-    const wchar_t *vdesc[4];    /* descripción de cada valor (selector), o NULL */
+    const wchar_t *vals[5];
+    const wchar_t *vdesc[5];    /* descripción de cada valor (selector), o NULL */
 } OptDef;
 
 static const OptDef OPTS[OPT_N] = {
@@ -39,12 +40,16 @@ static const OptDef OPTS[OPT_N] = {
       { NULL }, { NULL } },
     { "cajas_compartidas", 1, 2, 1, L"Cajas compartidas", L"El primero que abre una caja se lleva el botín; al otro le queda vacía",
       { NULL }, { NULL } },
+    { "botin", 0, 5, 2, L"Botín", L"Cuánto hay en las cajas, sobre lo que reparte el juego",
+      { L"x0,5", L"x0,75", L"Normal", L"x1,5", L"x2" },
+      { L"La mitad: algunas cajas salen vacías", L"Un cuarto menos", L"Lo que reparte el juego", L"La mitad más", L"El doble" } },
 };
+static const int LOOT_PCT[5] = { 50, 75, 100, 150, 200 };
 
 static int g_val[OPT_N];
 static AimpNet *g_net;
 static int g_host[OPT_N], g_have_host; /* cliente: lo que eligió el host */
-static int g_applied[OPT_N] = { -1, -1, -1, -1, -1, -1, -1 };
+static int g_applied[OPT_N];
 static int g_started, g_had_remote, g_sent_sig = -1;
 static wchar_t g_path[MAX_PATH];
 static int g_adv;
@@ -153,6 +158,8 @@ static void apply_effects(void)
             inv_set_shared(v);
         else if (id == OPT_BOXES)
             pins_set_boxes(v);
+        else if (id == OPT_LOOT)
+            loot_set_pct(LOOT_PCT[v]);
     }
 }
 
@@ -239,7 +246,7 @@ void menu_set(int id, int v)
  * AI_AIMP_M<id> nombre, AI_AIMP_MD<id> descripción, AI_AIMP_MV<id>_<i> valor, AI_AIMP_MADV / AI_AIMP_MADVD el submenú. */
 #define KEY_ADV "AI_AIMP_MADV"
 #define KEY_ADV_DESC "AI_AIMP_MADVD"
-static char g_kname[OPT_N][16], g_kdesc[OPT_N][16], g_kval[OPT_N][4][20], g_kvdesc[OPT_N][4][20];
+static char g_kname[OPT_N][16], g_kdesc[OPT_N][16], g_kval[OPT_N][5][20], g_kvdesc[OPT_N][5][20];
 
 static int starts(const char *s, const char *pre)
 {
@@ -351,7 +358,7 @@ static int mk_item(GfxCtx *c, int id, GfxValue *out)
             gfx_release(&items);
             return 0;
         }
-        GfxValue e[4];
+        GfxValue e[5];
         for (int j = 0; j < OPTS[id].n; j++)
             gfx_int(&e[j], j);
         gfx_invoke(&items, "push", e, (unsigned)OPTS[id].n, NULL);
@@ -374,7 +381,7 @@ static int mk_item(GfxCtx *c, int id, GfxValue *out)
         gfx_str(&v, g_kdesc[id]);
         gfx_set(out, "description", &v);
         if (!OPTS[id].check && OPTS[id].vdesc[0]) { /* una descripción por valor (MenuItemOptionSequence.descriptions) */
-            GfxValue d, e[4];
+            GfxValue d, e[5];
             if (gfx_new(c, "Array", NULL, 0, &d)) {
                 for (int j = 0; j < OPTS[id].n; j++)
                     gfx_str(&e[j], g_kvdesc[id][j]);
@@ -599,7 +606,8 @@ void menu_install(void)
         g_val[i] = OPTS[i].def;
         aimp_snprintf(g_kname[i], sizeof g_kname[i], "AI_AIMP_M%d", i);
         aimp_snprintf(g_kdesc[i], sizeof g_kdesc[i], "AI_AIMP_MD%d", i);
-        for (int j = 0; j < 4; j++)
+        g_applied[i] = -1;
+        for (int j = 0; j < 5; j++)
         {
             aimp_snprintf(g_kval[i][j], sizeof g_kval[i][j], "AI_AIMP_MV%d_%d", i, j);
             aimp_snprintf(g_kvdesc[i][j], sizeof g_kvdesc[i][j], "AI_AIMP_MW%d_%d", i, j);

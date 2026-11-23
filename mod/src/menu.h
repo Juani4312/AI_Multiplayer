@@ -16,6 +16,7 @@ enum {
     OPT_STRICT,   /* guardado exigente: 0/1 */
     OPT_INV,      /* inventario compartido: 0/1 */
     OPT_BOXES,    /* cajas compartidas: 0/1 */
+    OPT_LOOT,     /* botín de las cajas: 0 x0,5, 1 x0,75, 2 Normal, 3 x1,5, 4 x2 (loot.c) */
     OPT_N
 };
 #define OPT_DIFF_CUSTOM 3

@@ -11,6 +11,7 @@
 #include "net.h"
 #include "sync.h"
 #include "diff.h"
+#include "loot.h"
 #include "death.h"
 
 HMODULE g_aimp_self;
@@ -259,6 +260,14 @@ int main(void)
                       no[10] == 1.0f,
                   "humanos +2: oído %+.0f, armas %+.2f, vista %+.2f, daño que hace x%.4f, que recibe x%.2f", (double)no[0], (double)no[1],
                   (double)no[7], (double)no[9], (double)no[10]);
+        }
+        {
+            int ok = loot_scale(3, 100, 0) == 3 && loot_scale(4, 200, 0) == 8 && loot_scale(4, 50, 0) == 2 && loot_scale(1, 50, 0) == 1 &&
+                     loot_scale(1, 50, 0xFFFF) == 0 && loot_scale(3, 150, 0) == 5 && loot_scale(3, 150, 0xFFFF) == 4 && loot_scale(600, 200, 0) == 999;
+            int sum = 0;
+            for (unsigned r = 0; r < 65536; r += 16)
+                sum += loot_scale(1, 75, r);
+            CHECK(ok && sum > 3000 && sum < 3150, "botín: x2, x0,5 y x1,5 con redondeo al azar (1 al 75%%: %d de 4096)", sum);
         }
         diff_install(&cli); /* el hook del cargador falla en la imagen falsa; solo hace falta la red */
         diff_set_local(0);

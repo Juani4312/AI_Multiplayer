@@ -238,7 +238,7 @@ Qué da esto: el avatar del otro (un NPC que copia su posición y animación), b
 2. **El que se une, en el menú principal**, espera el cartel en "Play Game": "Coop: copiando la partida del host... no entres todavía" → "partida del host copiada. Ya podés entrar". La primera vez tarda unos segundos (solo copia los saves que cambiaron). "Continue Game" también lo dice.
 3. **Opciones del coop** (opcional): en el menú principal, "Coop" (antes "Extras"):
    - **Dificultad del coop**: Normal (la del juego), Difícil, Pesadilla o Personalizada. Se cambia con izquierda/derecha.
-   - **Opciones avanzadas**: escala del Alien, humanos y androides (sus sentidos y el daño que hacen), caer y revivir, guardado exigente, inventario compartido y cajas compartidas. Las tres primeras las fija la dificultad, salvo en Personalizada.
+   - **Opciones avanzadas**: escala del Alien, humanos y androides (sus sentidos y el daño que hacen), caer y revivir, guardado exigente, inventario compartido, cajas compartidas y botín (cuánto hay en las cajas: x0,5 a x2). Las tres primeras las fija la dificultad, salvo en Personalizada.
    - **Las decide el host:** el que se une ve las del host, en gris, mientras está conectado.
    - **Caer y revivir:** en Normal, el que cae se desangra 90 s; el compañero lo levanta acercándose y manteniendo **R** 3 s (con el mando, el botón Y si `AIMP_PAD_MONITOR=1`). Si se desangra, o si lo remató el Alien, solo lo revive una terminal de guardado o un checkpoint (como en Difícil).
 4. Los dos entran con **Continue Game**. Unos 8 s después de aparecer, cada uno ve al otro como un civil del nivel (si el nivel no tiene civiles, no hay avatar).
@@ -327,6 +327,7 @@ Hay más ajustes finos del avatar (`AIMP_GHOST_WALK_*`, `AIMP_GHOST_CROUCH_*`) d
 | `AIMP_COOP_REVIVE_KEY` | 82 | tecla para levantar al compañero (código virtual de Windows; 82 = R; provisorio) |
 | `AIMP_COOP_REVIVE_PAD` | 32768 | botón del mando para levantarlo (máscara XInput; 32768 = Y). Hace falta `AIMP_PAD_MONITOR=1` |
 | `AIMP_COOP_REVIVE_HOLD_MS` / `AIMP_COOP_REVIVE_DIST_CM` | 3000 / 200 | cuánto mantener y a qué distancia |
+| `AIMP_COOP_LOOT_PCT` / `AIMP_TRACE_LOOT` | 100 / 0 | botín de las cajas en % (sin el menú; con el menú manda la opción "Botín") y traza de cada sorteo |
 | `AIMP_PAD_MONITOR` | 0 | 1 = el mod mira los botones del mando (sin cambiar nada) para levantar al compañero con el mando |
 | `AIMP_COOP_DIFF` | 1 | aplica la dificultad del coop elegida en el menú (la del host). 0 = nunca toca la dificultad |
 | `AIMP_UI_TEXT` | 1 | textos del mod en la interfaz: carteles del coop en el menú ("esperando al host", "partida copiada"…), etiquetas del menú "Coop" y avisos dentro del juego. 0 = los apaga todos |

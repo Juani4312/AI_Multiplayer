@@ -143,3 +143,6 @@ Los nombres de los campos están en `AI.exe`: el cargador tiene una tabla nombre
 - Hecho como lo decidió el usuario: Normal = desangrado (`AIMP_COOP_BLEED_S`, 90 s; un aviso a los 30 s del final) y el compañero lo levanta en persona manteniendo una tecla a menos de 2 m (`AIMP_COOP_REVIVE_KEY`, 'R'; o el botón Y del mando con el mando virtual o `AIMP_PAD_MONITOR=1`; 3 s). Si se desangra, o si lo remató el Alien, queda como en Difícil (terminal o checkpoint). Si caen los dos, game over. Difícil: como antes.
 - **A confirmar con el usuario:** la duración (90 s) y la tecla ('R' recarga el arma en el teclado del juego; con el arma guardada no hace nada). Se cambian en `aimp.cfg`.
 - Verificado con el peer en una máquina (los dos lados) y el remate del Alien con el save `alien`. Falta con dos máquinas.
+
+## Botín (2026-11-23, `loot.c`, sin verificar en el juego)
+- Opción "Botín" en el menú Coop (x0,5 / x0,75 / Normal / x1,5 / x2): escala la cantidad de cada ítem que sortea el pool al abrir una caja por primera vez (ver NOTES, corridas 179–182). Con menos de x1, algunas ranuras salen vacías. La decide el host.
