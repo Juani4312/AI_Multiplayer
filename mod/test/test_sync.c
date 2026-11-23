@@ -248,6 +248,18 @@ int main(void)
         CHECK(out[2] == -15.0f && out[3] == -10.0f && out[13] == 3.0f && out[10] == -6.0f && out[17] == -20.0f && out[18] == -40.0f,
               "Pesadilla (2): radio %.0f/%.0f, amenazas %+.0f, menace %.0f, conductos %.0f/%.0f", (double)out[2], (double)out[3],
               (double)out[13], (double)out[10], (double)out[17], (double)out[18]);
+        {
+            float nb[16] = { 0 }, no[16];
+            nb[9] = 1.0f;  /* daño que hace (Hard) */
+            nb[10] = 1.0f; /* daño que recibe */
+            diff_apply_npc(no, nb, 0);
+            CHECK(no[0] == 0.0f && no[9] == 1.0f && no[10] == 1.0f, "humanos +0: sin cambios");
+            diff_apply_npc(no, nb, 2);
+            CHECK(no[0] == 10.0f && no[1] > 0.79f && no[1] < 0.81f && no[7] > 0.29f && no[7] < 0.31f && no[9] > 1.56f && no[9] < 1.57f &&
+                      no[10] == 1.0f,
+                  "humanos +2: oído %+.0f, armas %+.2f, vista %+.2f, daño que hace x%.4f, que recibe x%.2f", (double)no[0], (double)no[1],
+                  (double)no[7], (double)no[9], (double)no[10]);
+        }
         diff_install(&cli); /* el hook del cargador falla en la imagen falsa; solo hace falta la red */
         diff_set_local(0);
         CHECK(cli.have_remote && !diff_from_host() && diff_effective() == 0, "sin noticias del host manda la elección local");

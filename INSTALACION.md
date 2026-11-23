@@ -238,7 +238,7 @@ Qué da esto: el avatar del otro (un NPC que copia su posición y animación), b
 2. **El que se une, en el menú principal**, espera el cartel en "Play Game": "Coop: copiando la partida del host... no entres todavía" → "partida del host copiada. Ya podés entrar". La primera vez tarda unos segundos (solo copia los saves que cambiaron). "Continue Game" también lo dice.
 3. **Opciones del coop** (opcional): en el menú principal, "Coop" (antes "Extras"):
    - **Dificultad del coop**: Normal (la del juego), Difícil, Pesadilla o Personalizada. Se cambia con izquierda/derecha.
-   - **Opciones avanzadas**: escala del Alien, humanos y androides (todavía sin efecto), caer y revivir, guardado exigente, inventario compartido y cajas compartidas. Las tres primeras las fija la dificultad, salvo en Personalizada.
+   - **Opciones avanzadas**: escala del Alien, humanos y androides (sus sentidos y el daño que hacen), caer y revivir, guardado exigente, inventario compartido y cajas compartidas. Las tres primeras las fija la dificultad, salvo en Personalizada.
    - **Las decide el host:** el que se une ve las del host, en gris, mientras está conectado.
 4. Los dos entran con **Continue Game**. Unos 8 s después de aparecer, cada uno ve al otro como un civil del nivel (si el nivel no tiene civiles, no hay avatar).
 5. **Si uno cae** (`AIMP_COOP_DOWNED=1`): queda con 1 de salud, invencible, y los enemigos lo ignoran. Si lo remató un enemigo, ve la animación y a los 4 s recupera el control. Lo revive el otro guardando en una terminal o pasando un checkpoint. **Si caen los dos**, game over normal: "Load Current Save" en los dos carga el último checkpoint del host.

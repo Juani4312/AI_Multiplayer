@@ -27,7 +27,7 @@ static const OptDef OPTS[OPT_N] = {
         L"Elegís cada cosa en Opciones avanzadas" } },
     { "escala_alien", 0, 4, 0, L"Escala del Alien", L"Escalones de agresividad del Alien sobre la dificultad del juego",
       { L"Como el juego", L"+1", L"+2", L"+3" }, { NULL } },
-    { "escala_humanos", 0, 4, 0, L"Humanos y androides", L"Escalones para humanos y androides (todavía sin efecto)",
+    { "escala_humanos", 0, 4, 0, L"Humanos y androides", L"Sentidos y daño de humanos y androides sobre la dificultad del juego",
       { L"Como el juego", L"+1", L"+2", L"+3" }, { NULL } },
     { "caer_y_revivir", 0, 2, 1, L"Caer y revivir", L"Qué pasa cuando cae uno de los dos",
       { L"Normal", L"Difícil" },
@@ -140,12 +140,14 @@ static void apply_effects(void)
 {
     if (!g_adv || !g_started)
         return;
-    for (int id = OPT_STRICT; id < OPT_N; id++) {
+    for (int id = OPT_HUMANS; id < OPT_N; id++) {
         int v = menu_opt(id);
-        if (v == g_applied[id])
+        if (v == g_applied[id] || id == OPT_DOWNED)
             continue;
         g_applied[id] = v;
-        if (id == OPT_STRICT)
+        if (id == OPT_HUMANS)
+            diff_set_humans(v);
+        else if (id == OPT_STRICT)
             sync_set_save_rule(v);
         else if (id == OPT_INV)
             inv_set_shared(v);

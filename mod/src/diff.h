@@ -23,8 +23,13 @@ int diff_effective(void);
 int diff_from_host(void);
 void diff_remote_event(const AimpEvt *e);
 
-/* Para tests: aplicar a una estructura falsa (bloque del Alien de 26 floats). */
+/* Humanos y androides (menú Coop): escalones sobre los bloques por plantilla (ANDROID, ANDROID_HEAVY, SECURITY_GUARD,
+ * RIOT_GUARD, MELEE_HUMAN, CIVILIAN). menu.c le pasa el valor efectivo (el del host en el cliente conectado). */
+void diff_set_humans(int level);
+
+/* Para tests: aplicar a una estructura falsa (bloque del Alien de 26 floats; bloque de NPC de 16). */
 void diff_apply_block(float *dst, const float *base, int level);
+void diff_apply_npc(float *dst, const float *base, int level);
 
 #pragma pack(push, 1)
 typedef struct {

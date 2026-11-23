@@ -1222,3 +1222,9 @@ Hallazgo completo en `work/findings/15-pines-de-cathode.md`. Corridas sin nadie 
 - **Corrida 174** (juego host, peer join): al conectarse, `MENU: opciones del coop mandadas al cliente` (evento 11, tipo 2, 24 bytes) + la dificultad de siempre (tipo 1); al cambiar la dificultad en el menú se reenvían las dos.
 - `aimp_peer.py --event mT:…`: eventos a T segundos del arranque del peer (en el menú, sin jugador).
 - `game_window.sh launch` (pedido del usuario 2026-11-23): anota la ventana con foco, lanza, mueve el juego al workspace de la terminal y devuelve el foco. **El juego corre a 75 fps y el mando virtual anda sin foco**, siempre que el workspace esté visible.
+
+## 2026-11-23 — Humanos y androides en la dificultad del coop (corridas 175–176)
+- BML de `DIFFICULTYSETTINGS` (volcados por `cathode-dump`): de Hard a Nightmare, para ANDROID, CIVILIAN, SECURITY_GUARD, RIOT_GUARD y ANDROID_HEAVY solo cambia `damage_dealt_scalar` 1 → 1,25; de Medium a Hard bajan a 0 los modificadores de sentidos (oído −5, vista −0,1/−0,15, linterna −0,3, pasos −0,1/−0,15, armas −0,4/−0,15) y a 1 `suspicious_item_loop` y `damage_received`.
+- `FUN_006f8b00` (cargador): `param_3[0x1b]` (+0x6C) = arreglo de punteros, `param_3[0x1c]` (+0x70) = cantidad; bloque de 0x40 reservado con `vt+0xC(0x40, 4)` y defaults 1,0 en +0x24/+0x28/+0x38/+0x3C; orden de los campos verificado (`max_hearing_distance` +0x00 … `suspicious_item_loop_scalar` +0x3C).
+- **Corrida 175:** con `+0x68`/`+0x6C` como inicio/fin, el "bloque" del androide salió en `0x00010000`; el mod lo escribió y el juego se colgó a los 0,4 s (el log se cortó). Cerrado con `pkill`. Ahora se valida puntero y valores.
+- **Corrida 176:** captura correcta en las 5 estructuras (valores = BML), +2 aplicado a 30 bloques; `memsrv read` del androide de Nightmare (`03a4d7fc`): `10 0.8 0.3 0.3 0.3 0.6 0.6 0.3 0.3 1.953 1 1 3 0 1 1`; con el menú a +0: `0 … 0 1.25 1 1 3 0 1 1` (la base).
