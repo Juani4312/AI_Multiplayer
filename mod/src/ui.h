@@ -25,4 +25,8 @@ void ui_message(const char *utf8);
 void ui_toast(const char *utf8, int ms);
 void ui_frame(int have_player);
 
+/* Idioma de los textos del mod: 1 español, 0 inglés (opción "Idioma del mod" o el idioma del juego). */
+int ui_lang_es(void);
+#define TR(es, en) (ui_lang_es() ? (es) : (en))
+
 #endif

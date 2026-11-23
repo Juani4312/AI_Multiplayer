@@ -80,6 +80,65 @@ typedef SHORT(WINAPI *KeyStateFn)(int vk);
 static KeyStateFn g_key_state;
 static char g_key_name[8] = "R";
 
+/* Mirar al compañero (pedido del usuario 2026-11-23: "si estoy apuntando a mi compañero"): el ángulo horizontal entre
+ * hacia dónde mira el jugador (yaw: adelante = (sen, cos) en x/z, como el GO del mando virtual) y el compañero, hasta
+ * AIMP_COOP_REVIVE_AIM_DEG (35); parado casi encima (menos de 0,4 m) cuenta como mirándolo. */
+static int g_revive_aim_deg = 35;
+static float f_sin(float x)
+{
+    float r;
+    __asm__("fsin" : "=t"(r) : "0"(x));
+    return r;
+}
+static float f_cos(float x)
+{
+    float r;
+    __asm__("fcos" : "=t"(r) : "0"(x));
+    return r;
+}
+static float f_sqrt(float x)
+{
+    float r;
+    __asm__("fsqrt" : "=t"(r) : "0"(x));
+    return r;
+}
+static int looking_at(float yaw, float dx, float dz)
+{
+    float h = f_sqrt(dx * dx + dz * dz);
+    if (h < 0.4f)
+        return 1;
+    float c = (f_sin(yaw) * dx + f_cos(yaw) * dz) / h;
+    return c >= f_cos((float)g_revive_aim_deg * 0.0174533f);
+}
+
+/* Bloqueo de la recarga: el juego lee el teclado con Raw Input (USER32!GetRawInputData, IAT de AI.exe). Mientras el
+ * jugador mira de cerca al compañero que se desangra, la pulsación de la tecla de revivir (R = recargar) le llega al
+ * juego como F24 (sin uso); las soltadas pasan siempre (si no, el juego podría quedar con la tecla apretada). La
+ * detección propia usa GetAsyncKeyState, que no depende de esto. */
+typedef UINT(WINAPI *GetRawInputDataFn)(HRAWINPUT h, UINT cmd, LPVOID data, PUINT size, UINT hdr);
+static GetRawInputDataFn g_gri;
+static volatile LONG g_block_key, g_n_blocked;
+UINT WINAPI death_raw_input_filter(HRAWINPUT h, UINT cmd, LPVOID data, PUINT size, UINT hdr)
+{
+    UINT r = g_gri ? g_gri(h, cmd, data, size, hdr) : (UINT)-1;
+    LONG vk = g_block_key;
+    if (vk && data && cmd == RID_INPUT && r != (UINT)-1 && r >= sizeof(RAWINPUTHEADER) + sizeof(RAWKEYBOARD)) {
+        RAWINPUT *ri = (RAWINPUT *)data;
+        if (ri->header.dwType == RIM_TYPEKEYBOARD && ri->data.keyboard.VKey == (USHORT)vk && !(ri->data.keyboard.Flags & RI_KEY_BREAK)) {
+            ri->data.keyboard.VKey = VK_F24;
+            ri->data.keyboard.MakeCode = 0x76; /* scancode de F24 */
+            InterlockedIncrement(&g_n_blocked);
+        }
+    }
+    return r;
+}
+/* para tests */
+void death_test_raw_input(void *real, int block_vk)
+{
+    g_gri = (GetRawInputDataFn)real;
+    InterlockedExchange(&g_block_key, block_vk);
+}
+
 static int revive_held(void)
 {
     if (g_revive_vk && g_key_state && (g_key_state(g_revive_vk) & 0x8000))
@@ -476,11 +535,12 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
             g_bleed_warned = 0;
             send_ex(COOP_BLEEDING, player, (float)g_bleed_s);
             log_printf("DEATH: caer y revivir Normal: se desangra en %d s; el compañero lo puede levantar", g_bleed_s);
-            toast("Coop: caíste. Tu compañero te puede levantar.");
+            toast(TR("Coop: caíste. Tu compañero te puede levantar.", "Coop: you're down. Your partner can revive you."));
         } else {
             if (by_alien)
                 log_printf("DEATH: lo remató el Alien: solo lo revive una terminal");
-            toast(by_alien ? "Coop: te remató el Alien. Te revive una terminal." : "Coop: caíste. Cuando tu compañero guarde, revivís.");
+            toast(by_alien ? TR("Coop: te remató el Alien. Te revive una terminal.", "Coop: the Alien got you. A terminal revives you.")
+                           : TR("Coop: caíste. Cuando tu compañero guarde, revivís.", "Coop: you're down. You revive when your partner saves."));
         }
     }
     /* Normal: desangrado. El remate del Alien (que puede llegar justo después de caer) deja afuera al instante. */
@@ -491,15 +551,15 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
             g_bleed_until = 0;
             send(COOP_BLED_OUT, player);
             log_printf("DEATH: lo remató el Alien estando caído: ya no se lo puede levantar");
-            toast("Coop: te remató el Alien. Te revive una terminal.");
+            toast(TR("Coop: te remató el Alien. Te revive una terminal.", "Coop: the Alien got you. A terminal revives you."));
         } else if (left <= 0) {
             g_bleed_until = 0;
             send(COOP_BLED_OUT, player);
             log_printf("DEATH: se desangró: solo lo revive una terminal o un checkpoint");
-            toast("Coop: te desangraste. Te revive una terminal.");
+            toast(TR("Coop: te desangraste. Te revive una terminal.", "Coop: you bled out. A terminal revives you."));
         } else if (left <= 30000 && !g_bleed_warned && g_bleed_s > 30) {
             g_bleed_warned = 1;
-            toast("Coop: te desangrás: quedan 30 s.");
+            toast(TR("Coop: te desangrás: quedan 30 s.", "Coop: you're bleeding out: 30 s left."));
         }
     }
     /* Normal, del lado del compañero: cerca del caído, mantener la tecla lo levanta */
@@ -510,21 +570,26 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
             g_remote_bleed_until = 0; /* el caído avisa COOP_BLED_OUT; acá ya no se ofrece */
         else if (mem_read(player + CHR_POS, p, sizeof p)) {
             float dx = p[0] - g_net->remote.pos[0], dy = p[1] - g_net->remote.pos[1], dz = p[2] - g_net->remote.pos[2];
-            float r = (float)g_revive_dist_cm / 100.0f;
+            float r = (float)g_revive_dist_cm / 100.0f, yaw = 0;
+            mem_f32(player + CHR_YAW, &yaw);
+            int aimed = looking_at(yaw, -dx, -dz);
+            InterlockedExchange(&g_block_key, dx * dx + dy * dy + dz * dz <= r * r && aimed ? g_revive_vk : 0);
             if (dx * dx + dy * dy + dz * dz <= r * r) {
                 if (!g_prompt_at || t - g_prompt_at > 7000) {
-                    toastf("Coop: mantené %s para levantar a tu compañero.", g_key_name);
+                    toastf(TR("Coop: mirá a tu compañero y mantené %s.", "Coop: look at your partner and hold %s."), g_key_name);
                     g_prompt_at = t | 1;
                 }
-                if (revive_held()) {
+                if (aimed && revive_held()) {
                     DWORD d = g_hold_last ? t - g_hold_last : 0;
                     g_hold_acc += d > 300 ? 300 : d;
                     if (g_hold_acc >= (DWORD)g_revive_hold_ms) {
-                        log_printf("DEATH: levanté al compañero en persona (%d ms manteniendo)", (int)g_hold_acc);
+                        log_printf("DEATH: levanté al compañero en persona (%d ms manteniendo; %ld pulsaciones de la tecla no llegaron al juego)",
+                                   (int)g_hold_acc, (long)g_n_blocked);
+                        InterlockedExchange(&g_block_key, 0);
                         send(COOP_REVIVE_HERE, player);
                         g_remote_bleed_until = 0;
                         g_hold_acc = 0;
-                        toast("Coop: levantaste a tu compañero.");
+                        toast(TR("Coop: levantaste a tu compañero.", "Coop: you revived your partner."));
                     }
                 } else
                     g_hold_acc = 0;
@@ -537,6 +602,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
     } else {
         g_hold_acc = 0;
         g_hold_last = 0;
+        InterlockedExchange(&g_block_key, 0);
     }
     /* Remate con el modo caído (corridas 134-136): si al jugador lo mataron (FUN_007d0c10) estando en una acción que no
      * es la locomoción, a los AIMP_COOP_DEATH_ACT_MS se le devuelve la locomoción y se borra el fundido: control y
@@ -576,7 +642,7 @@ void death_frame(int64_t now, int64_t freq, uint32_t player)
             log_printf("DEATH: revivido por el compañero (salud %u), junto a él en (%.2f, %.2f, %.2f)", mx, (double)g_revive_pos[0],
                        (double)g_revive_pos[1], (double)g_revive_pos[2]);
         send(COOP_REVIVED, player);
-        toast("Coop: tu compañero te revivió.");
+        toast(TR("Coop: tu compañero te revivió.", "Coop: your partner revived you."));
     }
     WIN32_FILE_ATTRIBUTE_DATA fa;
     if (g_downed && g_revive_file[0] && GetFileAttributesExW(g_revive_file, GetFileExInfoStandard, &fa) &&
@@ -603,7 +669,7 @@ void death_remote_event(const AimpEvt *e)
     if (ev.kind == COOP_DOWNED) {
         log_printf("DEATH: el otro jugador quedó caído%s", g_downed ? "; acá también: game over" : "");
         if (!g_downed)
-            toast("Coop: tu compañero cayó. Guardá para revivirlo.");
+            toast(TR("Coop: tu compañero cayó. Guardá para revivirlo.", "Coop: your partner is down. Save to revive them."));
         g_remote_downed = 1;
         g_remote_bleed_until = 0;
         ghost_set_remote_downed(1);
@@ -615,11 +681,11 @@ void death_remote_event(const AimpEvt *e)
         float s = ev.pos[0] > 0 && ev.pos[0] < 3600 ? ev.pos[0] : 60;
         g_remote_bleed_until = (GetTickCount() + (DWORD)(s * 1000.0f)) | 1;
         log_printf("DEATH: el otro se desangra (%.0f s): se lo puede levantar en persona", (double)s);
-        toastf("Coop: tu compañero cayó. Mantené %s a su lado.", g_key_name);
+        toastf(TR("Coop: tu compañero cayó. Miralo y mantené %s.", "Coop: your partner is down. Look at them, hold %s."), g_key_name);
     } else if (ev.kind == COOP_BLED_OUT) {
         log_printf("DEATH: el otro ya no se puede levantar en persona (desangrado o rematado por el Alien)");
         if (g_remote_downed && g_remote_bleed_until)
-            toast("Coop: tu compañero se desangró. Guardá para revivirlo.");
+            toast(TR("Coop: tu compañero se desangró. Guardá para revivirlo.", "Coop: your partner bled out. Save to revive them."));
         g_remote_bleed_until = 0;
     } else if (ev.kind == COOP_REVIVE_HERE) {
         if (!g_downed || !g_bleed_until) {
@@ -631,7 +697,7 @@ void death_remote_event(const AimpEvt *e)
     } else if (ev.kind == COOP_REVIVED) {
         log_printf("DEATH: el otro jugador revivió");
         if (g_remote_downed)
-            toast("Coop: tu compañero se levantó.");
+            toast(TR("Coop: tu compañero se levantó.", "Coop: your partner got up."));
         g_remote_downed = 0;
         g_remote_bleed_until = 0;
         ghost_set_remote_downed(0);
@@ -685,6 +751,12 @@ void death_install(AimpNet *net)
     g_revive_vk = aimp_env_int(L"AIMP_COOP_REVIVE_KEY", 0x52);
     g_revive_pad = aimp_env_int(L"AIMP_COOP_REVIVE_PAD", 0x8000);
     g_revive_hold_ms = aimp_env_int(L"AIMP_COOP_REVIVE_HOLD_MS", 3000);
+    g_revive_aim_deg = aimp_env_int(L"AIMP_COOP_REVIVE_AIM_DEG", 35);
+    if (g_downed_cfg && g_revive_vk && aimp_env_int(L"AIMP_COOP_REVIVE_BLOCK_KEY", 1)) {
+        g_gri = (GetRawInputDataFn)hook_iat_name(g_aimp_exe, "USER32.dll", "GetRawInputData", (void *)death_raw_input_filter);
+        log_printf("DEATH: %s", g_gri ? "la tecla de revivir no le llega al juego mientras se mira al compañero caído (GetRawInputData)"
+                                       : "no se encontró GetRawInputData en la IAT: la tecla de revivir también recarga");
+    }
     {
         HMODULE u = GetModuleHandleW(L"user32.dll"); /* sin importarla: el mod solo importa kernel32 */
         g_key_state = u ? (KeyStateFn)(void *)GetProcAddress(u, "GetAsyncKeyState") : NULL;

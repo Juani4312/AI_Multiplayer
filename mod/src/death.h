@@ -63,5 +63,8 @@ int death_char_default_action(uint32_t chr, const char *why);
 int death_alien_withdraw(uint32_t alien, const char *why);
 /* 1 si el jugador local está caído (para mandarlo por red más adelante). */
 int death_is_downed(void);
+/* Para tests: el filtro de Raw Input (bloqueo de la tecla de revivir) con una función "real" falsa. */
+UINT WINAPI death_raw_input_filter(HRAWINPUT h, UINT cmd, LPVOID data, PUINT size, UINT hdr);
+void death_test_raw_input(void *real, int block_vk);
 
 #endif

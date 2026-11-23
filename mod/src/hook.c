@@ -95,3 +95,52 @@ int hook_remove(AimpHook *h)
     log_printf("hook %s: removido", h->name);
     return 1;
 }
+
+static int ieq_ascii(const char *a, const char *b)
+{
+    for (; *a && *b; a++, b++) {
+        char x = *a >= 'a' && *a <= 'z' ? (char)(*a - 32) : *a, y = *b >= 'a' && *b <= 'z' ? (char)(*b - 32) : *b;
+        if (x != y)
+            return 0;
+    }
+    return *a == *b;
+}
+
+static int eq_ascii(const char *a, const char *b)
+{
+    for (; *a && *a == *b; a++, b++)
+        ;
+    return *a == *b;
+}
+
+void *hook_iat_name(uintptr_t base, const char *dll, const char *fn, void *mine)
+{
+    const IMAGE_DOS_HEADER *dos = (const IMAGE_DOS_HEADER *)base;
+    const IMAGE_NT_HEADERS32 *nt = (const IMAGE_NT_HEADERS32 *)(base + (uint32_t)dos->e_lfanew);
+    const IMAGE_DATA_DIRECTORY *dd = &nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+    if (!dd->VirtualAddress)
+        return NULL;
+    for (const IMAGE_IMPORT_DESCRIPTOR *d = (const IMAGE_IMPORT_DESCRIPTOR *)(base + dd->VirtualAddress); d->Name; d++) {
+        if (!ieq_ascii((const char *)(base + d->Name), dll) || !d->OriginalFirstThunk)
+            continue;
+        const IMAGE_THUNK_DATA32 *ot = (const IMAGE_THUNK_DATA32 *)(base + d->OriginalFirstThunk);
+        IMAGE_THUNK_DATA32 *ft = (IMAGE_THUNK_DATA32 *)(base + d->FirstThunk);
+        for (; ot->u1.AddressOfData; ot++, ft++) {
+            if (IMAGE_SNAP_BY_ORDINAL32(ot->u1.Ordinal))
+                continue;
+            const IMAGE_IMPORT_BY_NAME *ibn = (const IMAGE_IMPORT_BY_NAME *)(base + ot->u1.AddressOfData);
+            if (!eq_ascii((const char *)ibn->Name, fn))
+                continue;
+            void *old_fn = (void *)(uintptr_t)ft->u1.Function;
+            if (old_fn == mine)
+                return NULL;
+            DWORD old;
+            if (!VirtualProtect(&ft->u1.Function, 4, PAGE_READWRITE, &old))
+                return NULL;
+            ft->u1.Function = (DWORD)(uintptr_t)mine;
+            VirtualProtect(&ft->u1.Function, 4, old, &old);
+            return old_fn;
+        }
+    }
+    return NULL;
+}

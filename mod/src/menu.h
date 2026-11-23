@@ -10,13 +10,14 @@
  * Se guardan en %LOCALAPPDATA%\AI_Multiplayer\opciones.txt ("clave=valor"). */
 enum {
     OPT_DIFF,     /* 0 Normal, 1 Difícil, 2 Pesadilla, 3 Personalizada */
-    OPT_ALIEN,    /* escalones sobre la dificultad del juego: 0..3 */
-    OPT_HUMANS,   /* ídem para humanos y androides (sin efecto todavía) */
+    OPT_ALIEN,    /* sobre la dificultad de la partida: 0 Normal (sin cambios), 1 Difícil (+1), 2 Pesadilla (+2) */
+    OPT_HUMANS,   /* ídem para humanos y androides (diff.c) */
     OPT_DOWNED,   /* caer y revivir: 0 Normal, 1 Difícil */
     OPT_STRICT,   /* guardado exigente: 0/1 */
     OPT_INV,      /* inventario compartido: 0/1 */
     OPT_BOXES,    /* cajas compartidas: 0/1 */
-    OPT_LOOT,     /* botín de las cajas: 0 x0,5, 1 x0,75, 2 Normal, 3 x1,5, 4 x2 (loot.c) */
+    OPT_LOOT,     /* botín de las cajas: 0 Normal, 1 Reducido (75 %), 2 Escaso (50 %) (loot.c) */
+    OPT_LANG,     /* idioma de los textos del mod: 0 Automático (el del juego), 1 Español, 2 English; de cada jugador */
     OPT_N
 };
 #define OPT_DIFF_CUSTOM 3

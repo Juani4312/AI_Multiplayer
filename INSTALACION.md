@@ -238,9 +238,10 @@ Qué da esto: el avatar del otro (un NPC que copia su posición y animación), b
 2. **El que se une, en el menú principal**, espera el cartel en "Play Game": "Coop: copiando la partida del host... no entres todavía" → "partida del host copiada. Ya podés entrar". La primera vez tarda unos segundos (solo copia los saves que cambiaron). "Continue Game" también lo dice.
 3. **Opciones del coop** (opcional): en el menú principal, "Coop" (antes "Extras"):
    - **Dificultad del coop**: Normal (la del juego), Difícil, Pesadilla o Personalizada. Se cambia con izquierda/derecha.
-   - **Opciones avanzadas**: escala del Alien, humanos y androides (sus sentidos y el daño que hacen), caer y revivir, guardado exigente, inventario compartido, cajas compartidas y botín (cuánto hay en las cajas: x0,5 a x2). Las tres primeras las fija la dificultad, salvo en Personalizada.
+   - **Opciones avanzadas**: escala del Alien y de humanos y androides (Normal / Difícil / Pesadilla; Normal no cambia la dificultad de la partida), caer y revivir, guardado exigente, inventario compartido, cajas compartidas y botín (Normal / Reducido / Escaso).
+   - **Idioma del mod**: Automático (el del juego), Español o English. Es de cada jugador. Las tres primeras las fija la dificultad, salvo en Personalizada.
    - **Las decide el host:** el que se une ve las del host, en gris, mientras está conectado.
-   - **Caer y revivir:** en Normal, el que cae se desangra 90 s; el compañero lo levanta acercándose y manteniendo **R** 3 s (con el mando, el botón Y si `AIMP_PAD_MONITOR=1`). Si se desangra, o si lo remató el Alien, solo lo revive una terminal de guardado o un checkpoint (como en Difícil).
+   - **Caer y revivir:** en Normal, el que cae se desangra 90 s; el compañero lo levanta acercándose, **mirándolo** y manteniendo **R** 3 s (mientras lo mira, R no recarga; con el mando, el botón Y si `AIMP_PAD_MONITOR=1`). Si se desangra, o si lo remató el Alien, solo lo revive una terminal de guardado o un checkpoint (como en Difícil).
 4. Los dos entran con **Continue Game**. Unos 8 s después de aparecer, cada uno ve al otro como un civil del nivel (si el nivel no tiene civiles, no hay avatar).
 5. **Si uno cae** (`AIMP_COOP_DOWNED=1`): queda con 1 de salud, invencible, y los enemigos lo ignoran. Si lo remató un enemigo, ve la animación y a los 4 s recupera el control. Lo revive el otro guardando en una terminal o pasando un checkpoint. **Si caen los dos**, game over normal: "Load Current Save" en los dos carga el último checkpoint del host.
 6. **Guardar:** con `AIMP_COOP_SAVE_RULE=1` guarda el host y solo con el compañero a menos de 6 m (o caído). Si el que se une intenta guardar, el juego le muestra un cartel con el motivo. Con el host caído, el que se une sí puede guardar y su save pasa al host.
@@ -327,6 +328,8 @@ Hay más ajustes finos del avatar (`AIMP_GHOST_WALK_*`, `AIMP_GHOST_CROUCH_*`) d
 | `AIMP_COOP_REVIVE_KEY` | 82 | tecla para levantar al compañero (código virtual de Windows; 82 = R; provisorio) |
 | `AIMP_COOP_REVIVE_PAD` | 32768 | botón del mando para levantarlo (máscara XInput; 32768 = Y). Hace falta `AIMP_PAD_MONITOR=1` |
 | `AIMP_COOP_REVIVE_HOLD_MS` / `AIMP_COOP_REVIVE_DIST_CM` | 3000 / 200 | cuánto mantener y a qué distancia |
+| `AIMP_COOP_REVIVE_AIM_DEG` | 35 | hasta qué ángulo cuenta como mirar al compañero |
+| `AIMP_COOP_REVIVE_BLOCK_KEY` | 1 | mientras se mira al compañero caído, la tecla de revivir no le llega al juego (no recarga). 0 = no tocar el teclado |
 | `AIMP_COOP_LOOT_PCT` / `AIMP_TRACE_LOOT` | 100 / 0 | botín de las cajas en % (sin el menú; con el menú manda la opción "Botín") y traza de cada sorteo |
 | `AIMP_PAD_MONITOR` | 0 | 1 = el mod mira los botones del mando (sin cambiar nada) para levantar al compañero con el mando |
 | `AIMP_COOP_DIFF` | 1 | aplica la dificultad del coop elegida en el menú (la del host). 0 = nunca toca la dificultad |

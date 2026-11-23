@@ -120,7 +120,7 @@ static const char *save_blocked(uint32_t pl)
     if (!g_save_rule || !g_net || !g_net->mode || !g_net->have_remote)
         return NULL;
     if (g_net->mode == 2)
-        return death_remote_is_downed() ? NULL : "en coop guarda el host (salvo que esté caído)";
+        return death_remote_is_downed() ? NULL : TR("en coop guarda el host (salvo que esté caído)", "in coop the host saves (unless they're down)");
     const AimpPkt *r = &g_net->remote;
     if (!(r->flags & AIMP_FLAG_PLAYER) || r->level != g_level || death_remote_is_downed())
         return NULL; /* el otro no está en el nivel, o está caído: no cuenta */
@@ -131,7 +131,8 @@ static const char *save_blocked(uint32_t pl)
     float d2 = dx * dx + dy * dy + dz * dz, lim = (float)g_save_near_cm / 100.0f;
     if (d2 <= lim * lim)
         return NULL;
-    aimp_snprintf(g_save_why, sizeof g_save_why, "el compañero está lejos (más de %.1f m; hace falta menos de %.1f)",
+    aimp_snprintf(g_save_why, sizeof g_save_why,
+                  TR("el compañero está lejos (más de %.1f m; hace falta menos de %.1f)", "your partner is too far (over %.1f m; it must be under %.1f)"),
                   (double)sqrt_f(d2), (double)lim);
     return g_save_why;
 }
@@ -163,7 +164,7 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static void det_use
             if (why) {
                 log_printf("SYNC   terminal de guardado bloqueada: %s", why);
                 char m[200];
-                aimp_snprintf(m, sizeof m, "Coop: no se puede guardar acá: %s.", why);
+                aimp_snprintf(m, sizeof m, TR("Coop: no se puede guardar acá: %s.", "Coop: you can't save here: %s."), why);
                 ui_message(m);
                 return;
             }

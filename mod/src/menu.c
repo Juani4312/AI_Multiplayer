@@ -7,44 +7,68 @@
 #include "pins.h"
 #include "sync.h"
 #include "loot.h"
+#include "ui.h"
 
-/* ---- opciones ---- */
+/* ---- opciones ----
+ * Textos en español [0] e inglés [1] (pedido del usuario 2026-11-23: "que todo pueda ser visto en inglés o español");
+ * el idioma lo da ui_lang_es() (la opción "Idioma del mod" o, en Automático, el idioma del juego). Las descripciones
+ * entran en un renglón (corrida 170: ~75 caracteres). */
+typedef const wchar_t *Txt[2];
 typedef struct {
     const char *file;  /* clave en opciones.txt */
     int check;         /* 1 = casilla (sí/no) */
     int n;             /* cantidad de valores */
     int def;
-    const wchar_t *name, *desc; /* la descripción entra en un renglón (corrida 170: ~75 caracteres) */
-    const wchar_t *vals[5];
-    const wchar_t *vdesc[5];    /* descripción de cada valor (selector), o NULL */
+    Txt name, desc;
+    Txt vals[5];
+    Txt vdesc[5];      /* descripción de cada valor (selector), o {NULL} */
 } OptDef;
 
+#define NDH { L"Normal", L"Normal" }, { L"Difícil", L"Hard" }, { L"Pesadilla", L"Nightmare" }
 static const OptDef OPTS[OPT_N] = {
-    { "dificultad_coop", 0, 4, 0, L"Dificultad del coop", L"La decide el host",
-      { L"Normal", L"Difícil", L"Pesadilla", L"Personalizada" },
-      { L"La dificultad del juego, sin cambios. La decide el host",
-        L"El Alien más encima (+1 escalón); al caer solo revive una terminal",
-        L"El Alien todavía más encima (+2); al caer solo revive una terminal",
-        L"Elegís cada cosa en Opciones avanzadas" } },
-    { "escala_alien", 0, 4, 0, L"Escala del Alien", L"Escalones de agresividad del Alien sobre la dificultad del juego",
-      { L"Como el juego", L"+1", L"+2", L"+3" }, { NULL } },
-    { "escala_humanos", 0, 4, 0, L"Humanos y androides", L"Sentidos y daño de humanos y androides sobre la dificultad del juego",
-      { L"Como el juego", L"+1", L"+2", L"+3" }, { NULL } },
-    { "caer_y_revivir", 0, 2, 1, L"Caer y revivir", L"Qué pasa cuando cae uno de los dos",
-      { L"Normal", L"Difícil" },
-      { L"Te desangrás 90 s; tu compañero te levanta manteniendo R a tu lado",
-        L"Al caer, solo te revive una terminal de guardado o un checkpoint" } },
-    { "guardado_exigente", 1, 2, 0, L"Guardado exigente", L"Guarda el host, y con el compañero vivo cerca de la terminal", { NULL },
-      { NULL } },
-    { "inventario_compartido", 1, 2, 1, L"Inventario compartido", L"Lo que uno levanta, gasta o fabrica le pasa también al otro",
-      { NULL }, { NULL } },
-    { "cajas_compartidas", 1, 2, 1, L"Cajas compartidas", L"El primero que abre una caja se lleva el botín; al otro le queda vacía",
-      { NULL }, { NULL } },
-    { "botin", 0, 5, 2, L"Botín", L"Cuánto hay en las cajas, sobre lo que reparte el juego",
-      { L"x0,5", L"x0,75", L"Normal", L"x1,5", L"x2" },
-      { L"La mitad: algunas cajas salen vacías", L"Un cuarto menos", L"Lo que reparte el juego", L"La mitad más", L"El doble" } },
+    { "dificultad_coop", 0, 4, 0, { L"Dificultad del coop", L"Coop difficulty" }, { L"La decide el host", L"The host decides" },
+      { NDH, { L"Personalizada", L"Custom" } },
+      { { L"La dificultad de la partida, sin cambios. La decide el host", L"The save's own difficulty, unchanged. The host decides" },
+        { L"Alien, humanos y androides en Difícil; al caer revive una terminal", L"Alien, humans and androids on Hard; downed: a terminal revives" },
+        { L"Todo en Pesadilla; al caer solo revive una terminal", L"Everything on Nightmare; downed: only a terminal revives" },
+        { L"Elegís cada cosa en Opciones avanzadas", L"Choose each setting in Advanced options" } } },
+    { "escala_alien", 0, 3, 0, { L"Escala del Alien", L"Alien scale" },
+      { L"Agresividad del Alien sobre la dificultad de la partida", L"Alien aggressiveness on top of the save's difficulty" },
+      { NDH },
+      { { L"Sin cambios respecto de la dificultad de la partida", L"No change from the save's difficulty" },
+        { L"Acecha más cerca, vuelve antes y suma una amenaza", L"Stalks closer, comes back sooner, one more menace" },
+        { L"Todavía más encima: dos escalones sobre la partida", L"Even more relentless: two steps above the save" } } },
+    { "escala_humanos", 0, 3, 0, { L"Humanos y androides", L"Humans and androids" },
+      { L"Sentidos y daño de humanos y androides sobre la dificultad de la partida", L"Senses and damage of humans and androids on top of the save" },
+      { NDH },
+      { { L"Sin cambios respecto de la dificultad de la partida", L"No change from the save's difficulty" },
+        { L"Ven y oyen más, y pegan un 25 % más fuerte", L"They see and hear more, and hit 25% harder" },
+        { L"Todavía más atentos, y pegan un 56 % más fuerte", L"Even more alert, and hit 56% harder" } } },
+    { "caer_y_revivir", 0, 2, 1, { L"Caer y revivir", L"Downed and revive" },
+      { L"Qué pasa cuando cae uno de los dos", L"What happens when one of you goes down" }, { { L"Normal", L"Normal" }, { L"Difícil", L"Hard" } },
+      { { L"Te desangrás 90 s; tu compañero te levanta mirándote y manteniendo R", L"You bleed out in 90 s; your partner looks at you and holds R to revive" },
+        { L"Al caer, solo te revive una terminal de guardado o un checkpoint", L"When downed, only a save terminal or a checkpoint revives you" } } },
+    { "guardado_exigente", 1, 2, 0, { L"Guardado exigente", L"Strict saving" },
+      { L"Guarda el host, y con el compañero vivo cerca de la terminal", L"Only the host saves, with the living partner near the terminal" }, { { 0 } }, { { 0 } } },
+    { "inventario_compartido", 1, 2, 1, { L"Inventario compartido", L"Shared inventory" },
+      { L"Lo que uno levanta, gasta o fabrica le pasa también al otro", L"What one picks up, uses or crafts applies to both" }, { { 0 } }, { { 0 } } },
+    { "cajas_compartidas", 1, 2, 1, { L"Cajas compartidas", L"Shared containers" },
+      { L"El primero que abre una caja se lleva el botín; al otro le queda vacía", L"The first to open a container gets the loot; it is empty for the other" },
+      { { 0 } }, { { 0 } } },
+    { "botin_nivel", 0, 3, 0, { L"Botín", L"Loot" },
+      { L"Cuánto hay en las cajas, sobre lo que reparte el juego", L"How much is in containers, compared to what the game hands out" },
+      { { L"Normal", L"Normal" }, { L"Reducido", L"Reduced" }, { L"Escaso", L"Scarce" } },
+      { { L"Lo que reparte el juego", L"What the game hands out" }, { L"Un cuarto menos", L"A quarter less" },
+        { L"La mitad: algunas cajas salen vacías", L"Half: some containers come up empty" } } },
+    { "idioma", 0, 3, 0, { L"Idioma del mod", L"Mod language" },
+      { L"Idioma de los textos del mod (no cambia el del juego)", L"Language of the mod's texts (the game's stays as is)" },
+      { { L"Automático", L"Automatic" }, { L"Español", L"Español" }, { L"English", L"English" } },
+      /* fijas por valor: la descripción se traduce un instante antes de que cambie el idioma (corrida 183) */
+      { { L"Igual que el juego / Same as the game", L"Igual que el juego / Same as the game" },
+        { L"Textos del mod en español", L"Textos del mod en español" }, { L"Mod texts in English", L"Mod texts in English" } } },
 };
-static const int LOOT_PCT[5] = { 50, 75, 100, 150, 200 };
+static const int LOOT_PCT[3] = { 100, 75, 50 };
+#define TXT(t) ((t)[ui_lang_es() ? 0 : 1])
 
 static int g_val[OPT_N];
 static AimpNet *g_net;
@@ -77,6 +101,8 @@ int menu_opt(int id)
 {
     if (id < 0 || id >= OPT_N)
         return 0;
+    if (id == OPT_LANG)
+        return g_val[id]; /* el idioma es de cada uno, no lo decide el host */
     return eff(from_host() ? g_host : g_val, id);
 }
 
@@ -147,7 +173,7 @@ static void apply_effects(void)
         return;
     for (int id = OPT_HUMANS; id < OPT_N; id++) {
         int v = menu_opt(id);
-        if (v == g_applied[id] || id == OPT_DOWNED)
+        if (v == g_applied[id] || id == OPT_DOWNED || id == OPT_LANG)
             continue;
         g_applied[id] = v;
         if (id == OPT_HUMANS)
@@ -238,8 +264,8 @@ void menu_set(int id, int v)
     save();
     apply(id);
     char a[64], b[64];
-    log_printf("MENU: %s = %s (efectivo %d; opciones.txt)", aimp_utf8(a, sizeof a, OPTS[id].name),
-               OPTS[id].check ? (g_val[id] ? "sí" : "no") : aimp_utf8(b, sizeof b, OPTS[id].vals[g_val[id]]), menu_opt(id));
+    log_printf("MENU: %s = %s (efectivo %d; opciones.txt)", aimp_utf8(a, sizeof a, OPTS[id].name[0]),
+               OPTS[id].check ? (g_val[id] ? "sí" : "no") : aimp_utf8(b, sizeof b, OPTS[id].vals[g_val[id]][0]), menu_opt(id));
 }
 
 /* ---- claves de texto ----
@@ -260,19 +286,20 @@ const wchar_t *menu_text(const char *key)
     if (!key || !starts(key, "AI_AIMP_M"))
         return NULL;
     if (streq(key, KEY_ADV))
-        return L"Opciones avanzadas";
+        return ui_lang_es() ? L"Opciones avanzadas" : L"Advanced options";
     if (streq(key, KEY_ADV_DESC))
-        return L"Alien, humanos, caer y revivir, y qué se comparte. Lo decide el host";
+        return ui_lang_es() ? L"Alien, humanos, caer y revivir, y qué se comparte. Lo decide el host"
+                            : L"Alien, humans, downed rules and what is shared. The host decides";
     for (int i = 0; i < OPT_N; i++) {
         if (streq(key, g_kname[i]))
-            return OPTS[i].name;
+            return TXT(OPTS[i].name);
         if (streq(key, g_kdesc[i]))
-            return OPTS[i].desc;
+            return TXT(OPTS[i].desc);
         for (int j = 0; j < OPTS[i].n && !OPTS[i].check; j++) {
             if (streq(key, g_kval[i][j]))
-                return OPTS[i].vals[j];
+                return TXT(OPTS[i].vals[j]);
             if (streq(key, g_kvdesc[i][j]))
-                return OPTS[i].vdesc[j];
+                return OPTS[i].vdesc[j][0] ? TXT(OPTS[i].vdesc[j]) : NULL;
         }
     }
     return NULL;
@@ -380,7 +407,7 @@ static int mk_item(GfxCtx *c, int id, GfxValue *out)
     if (ok) {
         gfx_str(&v, g_kdesc[id]);
         gfx_set(out, "description", &v);
-        if (!OPTS[id].check && OPTS[id].vdesc[0]) { /* una descripción por valor (MenuItemOptionSequence.descriptions) */
+        if (!OPTS[id].check && OPTS[id].vdesc[0][0]) { /* una descripción por valor (MenuItemOptionSequence.descriptions) */
             GfxValue d, e[5];
             if (gfx_new(c, "Array", NULL, 0, &d)) {
                 for (int j = 0; j < OPTS[id].n; j++)
@@ -421,7 +448,7 @@ static int build(GfxCtx *c, int verbose)
                 gfx_set(&exp, "description", &v);
                 int nsub = 0;
                 if (gfx_get(&exp, "page", &sub)) {
-                    for (int id = OPT_ALIEN; id < OPT_N; id++)
+                    for (int id = OPT_ALIEN; id < OPT_LANG; id++)
                         if (mk_item(c, id, &item)) {
                             nsub += gfx_invoke(&sub, "addItem", &item, 1, NULL);
                             gfx_release(&item);
@@ -430,7 +457,11 @@ static int build(GfxCtx *c, int verbose)
                 }
                 ok = gfx_invoke(&page, "addItem", &exp, 1, NULL) ? 1 : -1;
                 gfx_release(&exp);
-                log_printf("MENU: submenú Opciones avanzadas con %d de %d opciones (%s)", nsub, OPT_N - 1, ok ? "agregado" : "addItem falló");
+                log_printf("MENU: submenú Opciones avanzadas con %d de %d opciones (%s)", nsub, OPT_LANG - 1, ok ? "agregado" : "addItem falló");
+                if (ok > 0 && mk_item(c, OPT_LANG, &item)) { /* el idioma, en la página Coop: es de cada jugador */
+                    gfx_invoke(&page, "addItem", &item, 1, NULL);
+                    gfx_release(&item);
+                }
             } else
                 log_printf("MENU: no se pudo crear el submenú (MenuItemExpandable)");
             /* el botón viejo (Credits = dificultad que cambia al apretarlo) se esconde */
@@ -486,10 +517,11 @@ static void refresh_all(GfxCtx *c, int hm)
         return;
     if (gfx_get(&page, "items", &pitems)) {
         show_item(&pitems, OPT_DIFF, !hm);
+        show_item(&pitems, OPT_LANG, 1);
         if (find_item(&pitems, KEY_ADV, &exp, NULL)) {
             if (gfx_get(&exp, "page", &sub)) {
                 if (gfx_get(&sub, "items", &sitems)) {
-                    for (int id = OPT_ALIEN; id < OPT_N; id++)
+                    for (int id = OPT_ALIEN; id < OPT_LANG; id++)
                         show_item(&sitems, id, hm ? 0 : fixed_by_diff(id) ? g_val[OPT_DIFF] == OPT_DIFF_CUSTOM : 1);
                     gfx_release(&sitems);
                 }
@@ -502,10 +534,33 @@ static void refresh_all(GfxCtx *c, int hm)
     gfx_release(&page);
 }
 
+/* El idioma se cambia siempre (también en el cliente conectado). Al cambiarlo se refresca el menú (Menu.refresh(),
+ * público) para que vuelva a pedir los textos. */
+static void poll_lang(GfxCtx *c)
+{
+    GfxValue page, pitems, menu;
+    int v;
+    if (!coop_page(c, &page, 0))
+        return;
+    if (gfx_get(&page, "items", &pitems)) {
+        if (read_item(&pitems, OPT_LANG, &v) && v != g_shown[OPT_LANG]) {
+            menu_set(OPT_LANG, v);
+            g_shown[OPT_LANG] = v;
+            if (gfx_get(c->root, "menu", &menu)) {
+                gfx_invoke(&menu, "refresh", NULL, 0, NULL);
+                gfx_release(&menu);
+            }
+        }
+        gfx_release(&pitems);
+    }
+    gfx_release(&page);
+}
+
 static void poll(GfxCtx *c)
 {
     GfxValue page, pitems, exp, sub, sitems;
     int hm = from_host();
+    poll_lang(c);
     if (hm || g_ui_host) {
         int sig = hm ? sig_of(g_host) : -1;
         if (sig != g_ui_sig || hm != g_ui_host) {
@@ -527,7 +582,7 @@ static void poll(GfxCtx *c)
             if (find_item(&pitems, KEY_ADV, &exp, NULL)) {
                 if (gfx_get(&exp, "page", &sub)) {
                     if (gfx_get(&sub, "items", &sitems)) {
-                        for (int id = OPT_ALIEN; id < OPT_N; id++)
+                        for (int id = OPT_ALIEN; id < OPT_LANG; id++)
                             if (fixed_by_diff(id))
                                 show_item(&sitems, id, v == OPT_DIFF_CUSTOM);
                         gfx_release(&sitems);
@@ -540,7 +595,7 @@ static void poll(GfxCtx *c)
         if (find_item(&pitems, KEY_ADV, &exp, NULL)) {
             if (gfx_get(&exp, "page", &sub)) {
                 if (gfx_get(&sub, "items", &sitems)) {
-                    for (int id = OPT_ALIEN; id < OPT_N; id++) {
+                    for (int id = OPT_ALIEN; id < OPT_LANG; id++) {
                         if (!read_item(&sitems, id, &v) || v == g_shown[id])
                             continue;
                         if (fixed_by_diff(id) && g_val[OPT_DIFF] != OPT_DIFF_CUSTOM) {

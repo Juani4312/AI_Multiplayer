@@ -23,5 +23,8 @@ int hook_install(AimpHook *h, const char *name, void *target, const uint8_t *exp
 /* Restaura los bytes originales. El trampolín no se libera (podría haber un thread
  * adentro). */
 int hook_remove(AimpHook *h);
+/* Reemplaza en la IAT del módulo base el import por nombre dll!fn (sin distinguir mayúsculas en la DLL) por mine.
+ * Devuelve la dirección anterior (para llamarla), o NULL si no está. Si ya apunta a mine, no lo encadena de nuevo. */
+void *hook_iat_name(uintptr_t base, const char *dll, const char *fn, void *mine);
 
 #endif

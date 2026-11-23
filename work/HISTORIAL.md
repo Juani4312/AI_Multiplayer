@@ -12,6 +12,7 @@ Lo que se hizo en cada sesión, del más nuevo al más viejo. Antes estaba al fi
 - **Caer y revivir "Normal":** el caído se desangra 90 s (aviso a los 30 s); el compañero lo levanta manteniendo R 3 s a su lado. Si se desangra o lo remató el Alien, solo lo revive una terminal (como en Difícil). Duración y tecla, provisorias.
 - **Botín:** ubicado el sorteo del contenido de las cajas en el pool de ítems del nivel; la opción "Botín" (x0,5 a x2) escala las cantidades. Falta verlo abriendo una caja intacta.
 - Al abrir el juego, Claude lo pone en el workspace de su terminal y te devuelve el foco (`game_window.sh launch`).
+- **Decisiones del usuario aplicadas (corridas 183–184):** escalas con Normal / Difícil / Pesadilla, botín con Normal / Reducido / Escaso, levantar al compañero solo mirándolo (y entonces R no recarga), y todo el mod en inglés o español (opción "Idioma del mod"; en Automático, el idioma del juego).
 - Verificado con el peer en una máquina (menú en los dos roles, caer y revivir de los dos lados, remate del Alien con el save `alien`). `mod/dist`: `winmm.dll` `41dea23c…`.
 
 **2026-11-21 (sesión larga, locales con el peer, corridas 149–169):**

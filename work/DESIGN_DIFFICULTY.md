@@ -146,3 +146,9 @@ Los nombres de los campos están en `AI.exe`: el cargador tiene una tabla nombre
 
 ## Botín (2026-11-23, `loot.c`, sin verificar en el juego)
 - Opción "Botín" en el menú Coop (x0,5 / x0,75 / Normal / x1,5 / x2): escala la cantidad de cada ítem que sortea el pool al abrir una caja por primera vez (ver NOTES, corridas 179–182). Con menos de x1, algunas ranuras salen vacías. La decide el host.
+
+## Decisiones del usuario (2026-11-23)
+- Levantar en persona con **R**, solo **mirando al compañero**; en ese caso R no recarga (si no anda, se ve otra tecla). Hecho (corrida 184).
+- Escalas del Alien y de humanos/androides: **Normal / Difícil / Pesadilla** (Normal = sin cambios respecto de la dificultad base de la partida; Difícil +1 escalón, Pesadilla +2). El +3 se sacó.
+- Botín: **Normal / Reducido / Escaso** (100 / 75 / 50 %).
+- Todo el mod en **inglés o español** (opción "Idioma del mod"; en Automático, el del juego).

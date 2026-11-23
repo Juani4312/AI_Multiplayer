@@ -26,7 +26,25 @@ static const char *const g_keys[K_N] = { "AI_UI_FRONTEND_CAMPAIGN_DESC", "AI_UI_
  * "Extras" pasa a ser "Coop"; su único botón en PC ("Credits") es la dificultad del coop, que cambia al apretarlo
  * (se intercepta show_credits_screen: FUN_0082aa60, cdecl(params*) -> FUN_00823310). Valor en opciones.txt. */
 static int g_menu_on;
-static const wchar_t *const DIFF_NAMES[4] = { L"Normal", L"Difícil", L"Pesadilla", L"Personalizada" };
+static const wchar_t *const DIFF_NAMES[2][4] = { { L"Normal", L"Difícil", L"Pesadilla", L"Personalizada" },
+                                                 { L"Normal", L"Hard", L"Nightmare", L"Custom" } };
+#define DIFFN(i) DIFF_NAMES[ui_lang_es() ? 0 : 1][i]
+
+/* Idioma de los textos del mod (2026-11-23): la opción "Idioma del mod" (menu.c) o, en Automático, el del juego.
+ * El del juego se deduce de la traducción de AI_UI_FRONTEND_PLAY_GAME ("Jugar" en DATA/TEXT/SPANISH/UI.TXT); se
+ * vuelve a mirar cada vez que el juego pide esa clave. Sin datos todavía: inglés. */
+static volatile LONG g_game_es = -1;
+int ui_lang_es(void)
+{
+    int c = menu_opt(OPT_LANG);
+    if (c == 1)
+        return 1;
+    if (c == 2)
+        return 0;
+    return g_game_es == 1;
+}
+
+static int is_jugar(const wchar_t *t) { return t && t[0] == L'J' && t[1] == L'u' && t[2] == L'g' && t[3] == L'a' && t[4] == L'r' && !t[5]; }
 
 /* Las opciones viven en menu.c (opciones.txt). Sin el menú armado con Scaleform (AIMP_MOD_MENU_ADV=0), este botón
  * recorre Normal/Difícil/Pesadilla. */
@@ -169,23 +187,25 @@ static int starts(const char *s, const char *pre)
 
 static const wchar_t *status_text(int st)
 {
+    int es = ui_lang_es();
     switch (st) {
     case SSUI_HOST_WAITING:
-        return L"Coop (host): esperando al otro jugador";
+        return es ? L"Coop (host): esperando al otro jugador" : L"Coop (host): waiting for the other player";
     case SSUI_HOST_CONNECTED:
-        return L"Coop (host): el otro jugador está conectado";
+        return es ? L"Coop (host): el otro jugador está conectado" : L"Coop (host): the other player is connected";
     case SSUI_CLI_WAITING:
-        return L"Coop: esperando al host... no entres todavía";
+        return es ? L"Coop: esperando al host... no entres todavía" : L"Coop: waiting for the host... don't start yet";
     case SSUI_CLI_CONNECTED:
-        return L"Coop: conectado al host";
+        return es ? L"Coop: conectado al host" : L"Coop: connected to the host";
     case SSUI_CLI_COPYING:
-        return L"Coop: copiando la partida del host... no entres todavía";
+        return es ? L"Coop: copiando la partida del host... no entres todavía" : L"Coop: copying the host's save... don't start yet";
     case SSUI_CLI_COPIED:
-        return L"Coop: partida del host copiada. Ya podés entrar (Continue Game)";
+        return es ? L"Coop: partida del host copiada. Ya podés entrar (Continue Game)" : L"Coop: host's save copied. You can start now (Continue Game)";
     case SSUI_CLI_SAME:
-        return L"Coop: ya tenés la partida del host. Ya podés entrar (Continue Game)";
+        return es ? L"Coop: ya tenés la partida del host. Ya podés entrar (Continue Game)"
+                  : L"Coop: you already have the host's save. You can start now (Continue Game)";
     case SSUI_CLI_ERROR:
-        return L"Coop: no se pudo copiar la partida del host (ver aimp.log)";
+        return es ? L"Coop: no se pudo copiar la partida del host (ver aimp.log)" : L"Coop: couldn't copy the host's save (see aimp.log)";
     default:
         return NULL;
     }
@@ -206,9 +226,16 @@ static const wchar_t *join(wchar_t *out, size_t cap, const wchar_t *a, const wch
 
 __attribute__((fastcall, force_align_arg_pointer, noinline)) static const wchar_t *det_lookup(void *db, void *edx, const char *key)
 {
+    if (g_game_es < 0) { /* idioma del juego: antes de pedir la clave actual (el texto devuelto podría ser un búfer común) */
+        const wchar_t *pg = g_orig(db, edx, "AI_UI_FRONTEND_PLAY_GAME");
+        InterlockedExchange(&g_game_es, is_jugar(pg));
+        log_printf("UI: idioma del juego: %s", g_game_es ? "español" : "otro (los textos del mod van en inglés en Automático)");
+    }
     const wchar_t *orig = g_orig(db, edx, key);
     if (!key || key[0] != 'A' || key[1] != 'I' || key[2] != '_')
         return orig;
+    if (streq(key, "AI_UI_FRONTEND_PLAY_GAME"))
+        InterlockedExchange(&g_game_es, is_jugar(orig));
     if (streq(key, MSG_KEY))
         return g_msg[0] ? g_msg : orig;
     if (starts(key, TIP_KEY))
@@ -233,16 +260,19 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static const wchar_
         case K_EXTRAS:
             return L"Coop";
         case K_EXTRAS_DESC:
-            return L"Opciones del mod coop";
+            return ui_lang_es() ? L"Opciones del mod coop" : L"Coop mod options";
         case K_CREDITS:
             if (diff_from_host())
             {
                 static wchar_t tmp[64];
-                return join(g_buf[k], 256, L"Dificultad del coop: ", NULL, join(tmp, 64, DIFF_NAMES[diff_effective()], NULL, L" (la eligió el host)"));
+                return join(g_buf[k], 256, ui_lang_es() ? L"Dificultad del coop: " : L"Coop difficulty: ", NULL,
+                            join(tmp, 64, DIFFN(diff_effective() > 2 ? 2 : diff_effective()), NULL,
+                                 ui_lang_es() ? L" (la eligió el host)" : L" (chosen by the host)"));
             }
-            return join(g_buf[k], 256, L"Dificultad del coop: ", NULL, DIFF_NAMES[menu_opt(OPT_DIFF)]);
+            return join(g_buf[k], 256, ui_lang_es() ? L"Dificultad del coop: " : L"Coop difficulty: ", NULL, DIFFN(menu_opt(OPT_DIFF)));
         default:
-            return L"Apretá para cambiar. Normal: la del juego. Lo decide el host";
+            return ui_lang_es() ? L"Apretá para cambiar. Normal: la del juego. Lo decide el host"
+                                : L"Press to change. Normal: the game's own. The host decides";
         }
     }
     int st = savesync_ui();
@@ -254,14 +284,15 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static const wchar_
         log_printf("UI: texto \"%s\" con el estado del coop (%d): %s", key, st, aimp_utf8(m8, sizeof m8, msg));
     }
     if (k == K_CONTINUE) {
+        int es = ui_lang_es();
         if (st == SSUI_CLI_WAITING)
-            return join(g_buf[k], 256, orig, L" - ", L"esperá al host");
+            return join(g_buf[k], 256, orig, L" - ", es ? L"esperá al host" : L"wait for the host");
         if (st == SSUI_CLI_COPYING)
-            return join(g_buf[k], 256, orig, L" - ", L"esperá, copiando");
+            return join(g_buf[k], 256, orig, L" - ", es ? L"esperá, copiando" : L"wait, copying");
         if (st == SSUI_CLI_COPIED || st == SSUI_CLI_SAME)
-            return join(g_buf[k], 256, orig, L" - ", L"partida del host");
+            return join(g_buf[k], 256, orig, L" - ", es ? L"partida del host" : L"host's save");
         if (st == SSUI_CLI_ERROR)
-            return join(g_buf[k], 256, orig, L" - ", L"falló la copia del save del host");
+            return join(g_buf[k], 256, orig, L" - ", es ? L"falló la copia del save del host" : L"copying the host's save failed");
         return orig;
     }
     return join(g_buf[k], 256, msg, NULL, NULL);
@@ -337,7 +368,7 @@ void ui_install(void)
         hook_install(&g_hk_credits, "botón Credits de Extras (FUN_0082aa60)", (void *)(g_aimp_exe + AIMP_RVA_UI_CREDITS), UI_CREDITS_PROLOGUE,
                      sizeof UI_CREDITS_PROLOGUE, 6, (void *)det_credits, (void **)&g_credits_orig)) {
         char n8[32];
-        log_printf("UI: menú del mod en Extras (\"Coop\"): dificultad del coop = %s", aimp_utf8(n8, sizeof n8, DIFF_NAMES[menu_opt(OPT_DIFF)]));
+        log_printf("UI: menú del mod en Extras (\"Coop\"): dificultad del coop = %s", aimp_utf8(n8, sizeof n8, DIFF_NAMES[0][menu_opt(OPT_DIFF)]));
     } else {
         g_menu_on = 0;
     }

@@ -126,6 +126,24 @@ static void expect(const char *log, const char *needle, int should)
         g_fail++;
 }
 
+
+/* GetRawInputData falsa: una pulsación de teclado con la tecla y los flags pedidos */
+static USHORT g_fake_vk, g_fake_flags;
+static UINT WINAPI fake_gri(HRAWINPUT h, UINT cmd, LPVOID data, PUINT size, UINT hdr)
+{
+    (void)h;
+    (void)cmd;
+    (void)hdr;
+    RAWINPUT *ri = (RAWINPUT *)data;
+    memset(ri, 0, sizeof *ri);
+    ri->header.dwType = RIM_TYPEKEYBOARD;
+    ri->data.keyboard.VKey = g_fake_vk;
+    ri->data.keyboard.MakeCode = 0x13;
+    ri->data.keyboard.Flags = g_fake_flags;
+    *size = sizeof *ri;
+    return sizeof *ri;
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -282,6 +300,29 @@ int main(void)
         CHECK(diff_from_host() && diff_effective() == 2, "el cliente conectado usa la del host (%d)", diff_effective());
         diff_set_local(1);
         CHECK(diff_effective() == 2, "cambiar la local no pisa la del host mientras está conectado");
+    }
+
+    printf("[revivir en persona: la tecla no le llega al juego mientras se mira al compañero]\n");
+    {
+        RAWINPUT ri;
+        UINT sz = sizeof ri;
+        death_test_raw_input((void *)fake_gri, 'R');
+        g_fake_vk = 'R';
+        g_fake_flags = RI_KEY_MAKE;
+        death_raw_input_filter(NULL, RID_INPUT, &ri, &sz, sizeof(RAWINPUTHEADER));
+        int a = ri.data.keyboard.VKey == VK_F24 && ri.data.keyboard.MakeCode == 0x76;
+        g_fake_flags = RI_KEY_BREAK;
+        death_raw_input_filter(NULL, RID_INPUT, &ri, &sz, sizeof(RAWINPUTHEADER));
+        int b = ri.data.keyboard.VKey == 'R';
+        g_fake_vk = 'E';
+        g_fake_flags = RI_KEY_MAKE;
+        death_raw_input_filter(NULL, RID_INPUT, &ri, &sz, sizeof(RAWINPUTHEADER));
+        int c = ri.data.keyboard.VKey == 'E';
+        death_test_raw_input((void *)fake_gri, 0);
+        g_fake_vk = 'R';
+        death_raw_input_filter(NULL, RID_INPUT, &ri, &sz, sizeof(RAWINPUTHEADER));
+        int d = ri.data.keyboard.VKey == 'R';
+        CHECK(a && b && c && d, "R apretada -> F24; soltada, otra tecla y sin bloqueo pasan igual (%d %d %d %d)", a, b, c, d);
     }
 
     printf("[uso remoto: se aplica encolando un A 0x26 con el jugador local]\n");
