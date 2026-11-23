@@ -236,7 +236,10 @@ Qué da esto: el avatar del otro (un NPC que copia su posición y animación), b
 
 1. Los dos abren el juego (el que tenga Steam sin conexión, también).
 2. **El que se une, en el menú principal**, espera el cartel en "Play Game": "Coop: copiando la partida del host... no entres todavía" → "partida del host copiada. Ya podés entrar". La primera vez tarda unos segundos (solo copia los saves que cambiaron). "Continue Game" también lo dice.
-3. **Dificultad del coop** (opcional): en el menú principal, "Coop" (antes "Extras") → "Dificultad del coop: Normal / Difícil / Pesadilla". Apretar cambia el valor. La que vale es la del host.
+3. **Opciones del coop** (opcional): en el menú principal, "Coop" (antes "Extras"):
+   - **Dificultad del coop**: Normal (la del juego), Difícil, Pesadilla o Personalizada. Se cambia con izquierda/derecha.
+   - **Opciones avanzadas**: escala del Alien, humanos y androides (todavía sin efecto), caer y revivir, guardado exigente, inventario compartido y cajas compartidas. Las tres primeras las fija la dificultad, salvo en Personalizada.
+   - **Las decide el host:** el que se une ve las del host, en gris, mientras está conectado.
 4. Los dos entran con **Continue Game**. Unos 8 s después de aparecer, cada uno ve al otro como un civil del nivel (si el nivel no tiene civiles, no hay avatar).
 5. **Si uno cae** (`AIMP_COOP_DOWNED=1`): queda con 1 de salud, invencible, y los enemigos lo ignoran. Si lo remató un enemigo, ve la animación y a los 4 s recupera el control. Lo revive el otro guardando en una terminal o pasando un checkpoint. **Si caen los dos**, game over normal: "Load Current Save" en los dos carga el último checkpoint del host.
 6. **Guardar:** con `AIMP_COOP_SAVE_RULE=1` guarda el host y solo con el compañero a menos de 6 m (o caído). Si el que se une intenta guardar, el juego le muestra un cartel con el motivo. Con el host caído, el que se une sí puede guardar y su save pasa al host.
@@ -317,6 +320,8 @@ Hay más ajustes finos del avatar (`AIMP_GHOST_WALK_*`, `AIMP_GHOST_CROUCH_*`) d
 | Clave | Defecto | Qué hace |
 |-------|---------|----------|
 | `AIMP_MOD_MENU` | 1 | "Extras" pasa a ser "Coop" con la dificultad del coop. 0 = devuelve "Extras" y los créditos |
+| `AIMP_MOD_MENU_ADV` | 1 | el menú "Coop" con el selector de dificultad y "Opciones avanzadas" (armado por el mod). Con el menú, las opciones de `opciones.txt` (o las del host) mandan sobre `AIMP_SYNC_INV` y `AIMP_COOP_SAVE_RULE` (que solo dan el valor inicial). 0 = el botón de antes, que recorre Normal/Difícil/Pesadilla, y mandan las variables |
+| `AIMP_TRACE_MENU` | 0 | 1 = loguea cada vez que se arma el menú |
 | `AIMP_COOP_DIFF` | 1 | aplica la dificultad del coop elegida en el menú (la del host). 0 = nunca toca la dificultad |
 | `AIMP_UI_TEXT` | 1 | textos del mod en la interfaz: carteles del coop en el menú ("esperando al host", "partida copiada"…), etiquetas del menú "Coop" y avisos dentro del juego. 0 = los apaga todos |
 

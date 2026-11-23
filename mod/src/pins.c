@@ -279,8 +279,19 @@ static uint32_t sibling_pid(uint32_t outer, uint32_t first_eid)
     return x;
 }
 
+/* Cajas compartidas (menú Coop, menu.c): el mapa por defecto son solo las cajas (AllocateGC -> emptied). */
+static int g_boxes = 1;
+void pins_set_boxes(int on)
+{
+    if ((on != 0) != g_boxes)
+        log_printf("PINS: cajas compartidas %s (menú Coop)", on ? "prendidas" : "apagadas");
+    g_boxes = on != 0;
+}
+
 static int map_match(uint32_t eid, uint32_t pin, uint32_t *eid2, uint32_t *pin2)
 {
+    if (!g_boxes)
+        return 0;
     for (int i = 0; i < g_nmap; i++)
         if (g_map_eid[i] == eid && g_map_pin[i] == pin) {
             *eid2 = g_map_eid2[i];

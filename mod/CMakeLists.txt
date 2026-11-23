@@ -59,6 +59,8 @@ add_library(aimp_core OBJECT
   src/session.c
   src/savesync.c
   src/ui.c
+  src/menu.c
+  src/gfx.c
   src/diff.c
   src/gamesave.c
   src/log.c
@@ -111,7 +113,7 @@ target_compile_options(test_core PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter
 set_target_properties(test_core PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 # test_probe: la sonda (probe.c + log.c) contra una imagen de AI.exe simulada.
-add_executable(test_probe test/test_probe.c src/probe.c src/ui.c src/memsrv.c src/death.c src/inv.c src/weapons.c src/session.c src/savesync.c src/gamesave.c src/diff.c src/anim.c src/trace.c src/pins.c src/autopad.c src/net.c src/ghost.c src/sync.c src/throw.c src/ctrl.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_probe test/test_probe.c src/probe.c src/ui.c src/menu.c src/gfx.c src/memsrv.c src/death.c src/inv.c src/weapons.c src/session.c src/savesync.c src/gamesave.c src/diff.c src/anim.c src/trace.c src/pins.c src/autopad.c src/net.c src/ghost.c src/sync.c src/throw.c src/ctrl.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_probe PRIVATE src)
 target_compile_options(test_probe PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_probe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
@@ -153,14 +155,14 @@ set_target_properties(test_autopad PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_B
 
 # test_sync: fase 5 (sync.c) contra stubs con los prólogos reales del productor del "usar",
 # sus dos handlers y el wrapper de encolado A; la red es real (127.0.0.1).
-add_executable(test_sync test/test_sync.c src/sync.c src/ui.c src/inv.c src/death.c src/weapons.c src/session.c src/diff.c src/savesync.c src/throw.c src/ghost.c src/anim.c src/ctrl.c src/pins.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_sync test/test_sync.c src/sync.c src/ui.c src/menu.c src/gfx.c src/inv.c src/death.c src/weapons.c src/session.c src/diff.c src/savesync.c src/throw.c src/ghost.c src/anim.c src/ctrl.c src/pins.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_sync PRIVATE src)
 target_compile_options(test_sync PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_sync PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)
 
 # test_throw: objetos arrojados (throw.c, hallazgo 17) contra stubs con el prólogo SEH y los
 # `ret 0x14` / `ret 0xC` reales de FUN_007b5050 (tirar) y FUN_007b5190 (colocar); red real.
-add_executable(test_throw test/test_throw.c src/throw.c src/sync.c src/ui.c src/inv.c src/death.c src/weapons.c src/session.c src/diff.c src/savesync.c src/ghost.c src/anim.c src/ctrl.c src/pins.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
+add_executable(test_throw test/test_throw.c src/throw.c src/sync.c src/ui.c src/menu.c src/gfx.c src/inv.c src/death.c src/weapons.c src/session.c src/diff.c src/savesync.c src/ghost.c src/anim.c src/ctrl.c src/pins.c src/net.c src/hook.c src/log.c src/mem.c src/fmt.c src/rt.c)
 target_include_directories(test_throw PRIVATE src)
 target_compile_options(test_throw PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter -mincoming-stack-boundary=2)
 set_target_properties(test_throw PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test)

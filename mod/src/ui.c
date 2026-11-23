@@ -5,6 +5,7 @@
 #include "game.h"
 #include "savesync.h"
 #include "diff.h"
+#include "menu.h"
 
 #define AIMP_RVA_TEXT_LOOKUP 0x00590B60u /* FUN_00990b60 */
 static const uint8_t TEXT_LOOKUP_PROLOGUE[11] = { 0x51, 0x8B, 0x54, 0x24, 0x08, 0x8D, 0x44, 0x24, 0x03, 0x50, 0x52 };
@@ -25,40 +26,11 @@ static const char *const g_keys[K_N] = { "AI_UI_FRONTEND_CAMPAIGN_DESC", "AI_UI_
  * "Extras" pasa a ser "Coop"; su único botón en PC ("Credits") es la dificultad del coop, que cambia al apretarlo
  * (se intercepta show_credits_screen: FUN_0082aa60, cdecl(params*) -> FUN_00823310). Valor en opciones.txt. */
 static int g_menu_on;
-static int g_coop_diff; /* 0 Normal, 1 Difícil, 2 Pesadilla */
-static const wchar_t *const DIFF_NAMES[3] = { L"Normal", L"Difícil", L"Pesadilla" };
-static wchar_t g_opt_path[MAX_PATH];
+static const wchar_t *const DIFF_NAMES[4] = { L"Normal", L"Difícil", L"Pesadilla", L"Personalizada" };
 
-int ui_coop_difficulty(void) { return g_coop_diff; }
-
-static void opt_load(void)
-{
-    HANDLE h = CreateFileW(g_opt_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-    if (h == INVALID_HANDLE_VALUE)
-        return;
-    char b[128];
-    DWORD n = 0;
-    ReadFile(h, b, sizeof b - 1, &n, NULL);
-    CloseHandle(h);
-    b[n] = 0;
-    for (char *p = b; *p; p++)
-        if (p[0] == '=' && p[1] >= '0' && p[1] <= '2') {
-            g_coop_diff = p[1] - '0';
-            break;
-        }
-}
-
-static void opt_save(void)
-{
-    HANDLE h = CreateFileW(g_opt_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
-    if (h == INVALID_HANDLE_VALUE)
-        return;
-    char b[64];
-    int n = aimp_snprintf(b, sizeof b, "dificultad_coop=%d\r\n", g_coop_diff);
-    DWORD w = 0;
-    WriteFile(h, b, (DWORD)n, &w, NULL);
-    CloseHandle(h);
-}
+/* Las opciones viven en menu.c (opciones.txt). Sin el menú armado con Scaleform (AIMP_MOD_MENU_ADV=0), este botón
+ * recorre Normal/Difícil/Pesadilla. */
+int ui_coop_difficulty(void) { return menu_opt(OPT_DIFF); }
 
 #define AIMP_RVA_UI_CREDITS 0x0042AA60u /* show_credits_screen */
 static const uint8_t UI_CREDITS_PROLOGUE[6] = { 0x8B, 0x44, 0x24, 0x04, 0x8B, 0x08 };
@@ -72,11 +44,7 @@ __attribute__((cdecl, force_align_arg_pointer, noinline)) static void det_credit
         g_credits_orig(params);
         return;
     }
-    g_coop_diff = (g_coop_diff + 1) % 3;
-    opt_save();
-    diff_set_local(g_coop_diff);
-    char n8[32];
-    log_printf("UI: menú del mod: dificultad del coop = %s (opciones.txt)", aimp_utf8(n8, sizeof n8, DIFF_NAMES[g_coop_diff]));
+    menu_set(OPT_DIFF, (menu_opt(OPT_DIFF) + 1) % 3);
 }
 static wchar_t g_buf[K_N][256]; /* la UI copia el texto; uno por clave para que dos pedidos seguidos no se pisen */
 
@@ -160,6 +128,7 @@ static void tip_frame(void)
 
 void ui_frame(int have_player)
 {
+    menu_frame(have_player); /* menú Coop armado con Scaleform (menu.c) */
     if (g_tip_pending && have_player)
         tip_frame();
     if (!g_msg_pending || !have_player)
@@ -244,6 +213,11 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static const wchar_
         return g_msg[0] ? g_msg : orig;
     if (starts(key, TIP_KEY))
         return g_tip[0] ? g_tip : orig;
+    {
+        const wchar_t *mt = menu_text(key); /* claves del menú armado por el mod (menu.c) */
+        if (mt)
+            return mt;
+    }
     int k = -1;
     for (int i = 0; i < K_N; i++)
         if (streq(key, g_keys[i])) {
@@ -266,7 +240,7 @@ __attribute__((fastcall, force_align_arg_pointer, noinline)) static const wchar_
                 static wchar_t tmp[64];
                 return join(g_buf[k], 256, L"Dificultad del coop: ", NULL, join(tmp, 64, DIFF_NAMES[diff_effective()], NULL, L" (la eligió el host)"));
             }
-            return join(g_buf[k], 256, L"Dificultad del coop: ", NULL, DIFF_NAMES[g_coop_diff]);
+            return join(g_buf[k], 256, L"Dificultad del coop: ", NULL, DIFF_NAMES[menu_opt(OPT_DIFF)]);
         default:
             return L"Apretá para cambiar. Normal: la del juego. Lo decide el host";
         }
@@ -358,20 +332,12 @@ void ui_install(void)
         log_printf("UI: traza de GenericCallback/GenericCallbackInt/ActivateLayer activa");
     }
     g_menu_on = aimp_env_int(L"AIMP_MOD_MENU", 1);
-    {
-        wchar_t base[MAX_PATH];
-        if (aimp_env_str(L"LOCALAPPDATA", base, MAX_PATH)) {
-            aimp_wcscpy(g_opt_path, MAX_PATH, base);
-            aimp_wcscat(g_opt_path, MAX_PATH, L"\\AI_Multiplayer\\opciones.txt");
-            opt_load();
-        }
-    }
-    diff_set_local(g_coop_diff);
+    menu_install();
     if (g_menu_on &&
         hook_install(&g_hk_credits, "botón Credits de Extras (FUN_0082aa60)", (void *)(g_aimp_exe + AIMP_RVA_UI_CREDITS), UI_CREDITS_PROLOGUE,
                      sizeof UI_CREDITS_PROLOGUE, 6, (void *)det_credits, (void **)&g_credits_orig)) {
         char n8[32];
-        log_printf("UI: menú del mod en Extras (\"Coop\"): dificultad del coop = %s", aimp_utf8(n8, sizeof n8, DIFF_NAMES[g_coop_diff]));
+        log_printf("UI: menú del mod en Extras (\"Coop\"): dificultad del coop = %s", aimp_utf8(n8, sizeof n8, DIFF_NAMES[menu_opt(OPT_DIFF)]));
     } else {
         g_menu_on = 0;
     }

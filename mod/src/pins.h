@@ -14,6 +14,8 @@
 int pins_install(AimpNet *net);
 int pins_enabled(void);
 int pins_sync_enabled(void);
+/* menú Coop (menu.c): cajas compartidas (AIMP_SYNC_PINS_SHARED_MAP) */
+void pins_set_boxes(int on);
 /* Desde el thread principal, cada AIMP_TRACE_MS: los (entidad, pin) más frecuentes del período. */
 void pins_report_period(void);
 void pins_report_totals(const char *why);

@@ -3,7 +3,7 @@
 > Punto de entrada para cada sesión nueva de Claude Code. Leelo junto con `prompt.md` (instrucciones), `work/NOTES.md` (bitácora con evidencia) y `work/LOG.md` (log cronológico corto).
 > Mantenelo corto: estado actual, decisiones vigentes y siguiente paso. El detalle va en NOTES.md y findings/.
 
-_Última actualización: 2026-11-21 21:15 (corridas 149–169, locales con el peer). Papito en modo juego (`mode.sh play`), sin el mod coop y con todos los mods de terceros apagados (pedido del usuario; ReShade y MovieFix sueltos siguen). La run sin morir está en `saves/run-sin-morir-2026-11-20.tar.gz`. Resumen de la sesión: `work/HISTORIAL.md`._
+_Última actualización: 2026-11-23 17:00 (corridas 170–174, locales con el peer). Menú Coop con "Opciones avanzadas" hecho. La run sin morir está en `saves/run-sin-morir-2026-11-20.tar.gz`. Resumen de las sesiones: `work/HISTORIAL.md`._
 
 Hecho el 2026-11-20 (detalle en NOTES.md, "Variante `xinput1_3.dll`"):
 - la prueba con el amigo no llegó a hacerse: su Windows 11 25H2 carga la `winmm` del sistema y el mod no arranca (papito estuvo 72 min de host sin datos);
@@ -18,7 +18,7 @@ Hecho el 2026-11-18 a la tarde (corridas 134–147): pantalla negra al caer por 
 Hecho en la sesión anterior (2026-11-18, corridas 123–133): dificultad del juego y del coop (`diff.c`, menú "Coop"), guardar desde el mod (`gamesave.c`), host caído: guarda el cliente (`savesync` inverso).
 
 **Siguiente:**
-- **Menú Coop con "Opciones avanzadas"** (pedido del usuario, 2026-11-21): selector de dificultad + submenú con: escala del Alien (un solo valor que mueve todos sus parámetros), escala de humanos/androides (ídem), caer y revivir (Normal / Difícil / Apagado: diferencias propuestas, a confirmar), guardado exigente on/off, inventario compartido on/off, cajas compartidas on/off. Falta: confirmar el diseño con el usuario y ubicar con FFDec cómo agregar botones al menú de Extras.
+- ✅ **Menú Coop con "Opciones avanzadas"** (corridas 170–174, `menu.c` + `gfx.c`, armado con Scaleform desde el mod): selector de dificultad (Normal/Difícil/Pesadilla/Personalizada) y submenú con escala del Alien (+0..+3), humanos y androides, caer y revivir, guardado exigente, inventario y cajas compartidos; `opciones.txt`; el host las manda (`AIMP_EVT_OPTIONS` tipo 2) y el cliente las ve bloqueadas. Verificado con el peer en los dos roles. **Falta:** el efecto de "humanos y androides" (bloques por plantilla de NPC de la dificultad, `diff.c`) y caer "Normal" (desangrado + revivir en persona: el usuario tiene que elegir la duración y la tecla); con dos máquinas.
 - **A futuro (pedido del usuario):** investigar el pool de botín del nivel (`AllocateGCItemsFromPool`) para un multiplicador de botín y para que las dos máquinas vean el mismo contenido en las cajas (looteo compartido).
 - **con `cathode-dump`:** ponerle nombre a los pids de las trazas (robot, compuertas: `zgrep` en `work/evidence/cathode/commands/`); diferencias del `COMMANDS.PAK` modificado de `BSP_LV426_PT01` contra el de Steam (hace falta copiar el de la laptop); aviso sin pausa con `POPUP_TYPE_INGAME_LOG_TEXT` (1001, no es diálogo en `POPUPOVERLAY.GFX`) en vez del "Warning" (101), sin probar;
 - ~~probar el aviso sin pausa~~ ✅ corridas 149–151 (no pausa; una clave por aviso; textos de un renglón). `ui_message` (diálogo "Warning") no tiene ese problema (corrida 157);

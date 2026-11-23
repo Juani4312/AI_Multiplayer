@@ -325,6 +325,32 @@ void inv_remote_event(const AimpEvt *e)
         apply_one(ev.d[i].guid, ev.d[i].delta);
 }
 
+static void resolve(void)
+{
+    uint8_t a[sizeof ADD_PROLOGUE], c[sizeof CLEAR_PROLOGUE];
+    if (!g_add && mem_read(g_aimp_exe + AIMP_RVA_INV_ADD, a, sizeof a) && aimp_code_cmp(a, ADD_PROLOGUE, sizeof a) == 0)
+        g_add = (AddFn)(void *)(g_aimp_exe + AIMP_RVA_INV_ADD);
+    if (!g_clear && mem_read(g_aimp_exe + AIMP_RVA_INV_CLEAR, c, sizeof c) && aimp_code_cmp(c, CLEAR_PROLOGUE, sizeof c) == 0)
+        g_clear = (ClearFn)(void *)(g_aimp_exe + AIMP_RVA_INV_CLEAR);
+}
+
+/* Menú Coop (menu.c): prender o apagar el inventario compartido en cualquier momento. Al prenderlo, la lectura actual
+ * pasa a ser la base (como en una carga), así no se manda lo que cambió mientras estaba apagado. */
+void inv_set_shared(int on)
+{
+    if (on)
+        resolve();
+    if (on && (!g_add || !g_clear)) {
+        log_printf("INV: los prólogos de FUN_0079bb20/FUN_0078ddf0 no coinciden: el inventario compartido queda apagado");
+        on = 0;
+    }
+    if (on && !g_sync)
+        g_player = 0;
+    if (on != g_sync)
+        log_printf("INV: inventario compartido %s (menú Coop)", on ? "prendido" : "apagado");
+    g_sync = on;
+}
+
 void inv_install(AimpNet *net)
 {
     g_net = net;
@@ -332,11 +358,7 @@ void inv_install(AimpNet *net)
     g_sync = aimp_env_int(L"AIMP_SYNC_INV", 0);
     if (!g_trace && !g_sync)
         return;
-    uint8_t a[sizeof ADD_PROLOGUE], c[sizeof CLEAR_PROLOGUE];
-    if (mem_read(g_aimp_exe + AIMP_RVA_INV_ADD, a, sizeof a) && aimp_code_cmp(a, ADD_PROLOGUE, sizeof a) == 0)
-        g_add = (AddFn)(void *)(g_aimp_exe + AIMP_RVA_INV_ADD);
-    if (mem_read(g_aimp_exe + AIMP_RVA_INV_CLEAR, c, sizeof c) && aimp_code_cmp(c, CLEAR_PROLOGUE, sizeof c) == 0)
-        g_clear = (ClearFn)(void *)(g_aimp_exe + AIMP_RVA_INV_CLEAR);
+    resolve();
     if (g_sync && (!g_add || !g_clear)) {
         log_printf("INV: los prólogos de FUN_0079bb20/FUN_0078ddf0 no coinciden: AIMP_SYNC_INV queda apagado");
         g_sync = 0;

@@ -12,6 +12,8 @@ void inv_install(AimpNet *net);
 /* Por frame (thread principal): detecta cambios locales. player = Character del jugador 0 o 0. */
 void inv_frame(int64_t now, int64_t freq, uint32_t player, uint32_t level);
 int inv_sync_enabled(void);
+/* menú Coop (menu.c): prende o apaga el inventario compartido */
+void inv_set_shared(int on);
 /* AIMP_EVT_INV recibido (lo despacha sync_frame). */
 void inv_remote_event(const AimpEvt *e);
 

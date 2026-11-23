@@ -10,7 +10,7 @@
  *                 conductos, barrido de backstage). Hard = 0; Nightmare = un escalón más duro.
  *   +0x68..+0x70  vector de bloques de 0x40 por plantilla de NPC (sentidos +0x00..+0x20, daño +0x24/+0x28, …).
  * La dificultad del coop (menú "Coop", ui.c) suma N escalones más sobre las 5 estructuras (N = 0 Normal, 1 Difícil,
- * 2 Pesadilla), partiendo siempre de una copia de los valores base: no se acumula y la dificultad del juego sigue
+ * 2 Pesadilla; 3 con la escala del Alien +3 de Personalizada, menu.c), partiendo siempre de una copia de los valores base: no se acumula y la dificultad del juego sigue
  * mandando como base. El host manda la suya al cliente (AIMP_EVT_OPTIONS).
  * AIMP_TRACE_DIFF=1: loguea cada carga y cada aplicación. */
 void diff_install(AimpNet *net);

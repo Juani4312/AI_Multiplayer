@@ -23,6 +23,7 @@
 #include "death.h"
 #include "ui.h"
 #include "diff.h"
+#include "menu.h"
 #include "savesync.h"
 #include "inv.h"
 #include "sync.h"
@@ -96,6 +97,14 @@ static uint32_t local_player(void)
 }
 
 static int g_save_rule, g_save_near_cm = 600;
+
+/* menú Coop (menu.c): guardado exigente */
+void sync_set_save_rule(int on)
+{
+    if ((on != 0) != (g_save_rule != 0))
+        log_printf("SYNC: guardado exigente %s (menú Coop)", on ? "prendido" : "apagado");
+    g_save_rule = on != 0;
+}
 static float sqrt_f(float x)
 {
     float r = x > 1.0f ? x : 1.0f;
@@ -345,6 +354,7 @@ void sync_frame(AimpNet *net, uint32_t level)
         }
         if (e.kind == AIMP_EVT_OPTIONS) { /* opciones del coop del host (diff.c) */
             diff_remote_event(&e);
+            menu_remote_event(&e); /* tipo 2: las opciones avanzadas (menu.c) */
             continue;
         }
         if (e.kind == AIMP_EVT_SESSION) { /* huella de la partida (session.c) */

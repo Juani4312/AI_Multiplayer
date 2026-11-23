@@ -13,6 +13,7 @@
 #include "session.h"
 #include "savesync.h"
 #include "ui.h"
+#include "menu.h"
 #include "diff.h"
 #include "gamesave.h"
 #include "hook.h"
@@ -116,5 +117,6 @@ int game_init(void)
     death_install(probe_net()); /* opcional: AIMP_COOP_DOWNED=1 (muerte en coop) / AIMP_TRACE_UI=1 */
     memsrv_install(); /* opcional: AIMP_MEMSRV_FILE (lector de memoria para investigar) */
     autopad_install(); /* opcional: AIMP_AUTOPAD=guion (pruebas sin nadie al teclado) */
+    menu_start(probe_net()); /* menú Coop: aplica las opciones (opciones.txt o las del host) a los módulos */
     return 1;
 }

@@ -9,5 +9,7 @@
 int sync_install(AimpNet *net);
 /* Por frame, en el thread principal, después de net_poll. */
 void sync_frame(AimpNet *net, uint32_t level);
+/* menú Coop (menu.c): guardado exigente (AIMP_COOP_SAVE_RULE) */
+void sync_set_save_rule(int on);
 
 #endif

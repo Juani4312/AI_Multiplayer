@@ -66,3 +66,12 @@ Más adelante, si hace falta: abrir la pantalla de opciones con sliders.
   - Navegación pública: `GameMenu.menu` (public) → `rootPage` → `items` → el ítem de Extras → `page.addItem(nuevo)`; o agregar antes de entrar al menú.
   - Callbacks: en vez de `CreateFunction`, el mod puede leer cada tanto el valor de cada ítem (`selectedIndex`, `selected`) con `GetMember`.
 - **Siguiente:** en runtime, ubicar la pantalla del frontend (nombre para `FUN_00810420`), el MovieRoot y probar `CreateObject("frontend.menu.MenuItemOptionCheckBox", …)` + `addItem` en la página de Extras.
+
+## Hecho (2026-11-23, corridas 170–174): el submenú armado desde el mod
+- `mod/src/gfx.c` (capa mínima sobre Scaleform 4: `gfx_begin`/`gfx_end` con el lock y el hilo como `FUN_0082b450`, `GetMember`/`SetMember`/`Invoke`/`CreateObject`/release; direcciones y evidencia en `gfx.h`) y `mod/src/menu.c` (opciones, `opciones.txt`, armado y lectura cada 250 ms, red).
+- Página "Coop": **Dificultad del coop** (`MenuItemOptionOptionStepper`: Normal / Difícil / Pesadilla / Personalizada, con una descripción por valor) y **Opciones avanzadas** (`MenuItemExpandable`) con: escala del Alien y de humanos y androides (+0 a +3), caer y revivir (Normal / Difícil), guardado exigente, inventario compartido y cajas compartidas (`MenuItemOptionCheckBox`, se ven "On/Off"). El botón viejo queda oculto (`visible = false`).
+- Las tres primeras las fija la dificultad (Normal 0, Difícil +1, Pesadilla +2; caer: Normal en Normal, Difícil en las otras) y se ven en gris, salvo en Personalizada.
+- Callbacks: no hacen falta; el mod lee `selectedIndex`/`selected` de sus ítems cada 250 ms y aplica los cambios.
+- Efectos: escala del Alien → `diff.c` (hasta +3); guardado exigente → `sync_set_save_rule`; inventario → `inv_set_shared` (al prenderlo, la lectura actual pasa a ser la base); cajas → `pins_set_boxes` (el mapa por defecto son solo las cajas). Sin efecto todavía: humanos y androides; caer "Normal" (desangrado y revivir en persona) funciona como Difícil.
+- Red: el host manda `AIMP_EVT_OPTIONS` tipo 2 (`MenuOptsEvt`: los 7 valores elegidos) al conectarse el cliente y en cada cambio; el cliente las aplica y el menú las muestra bloqueadas; si el host se va, vuelven las propias.
+- Siguiente: humanos y androides (bloques por plantilla de NPC de la dificultad); caer "Normal" (falta que el usuario elija la duración del desangrado y la tecla).

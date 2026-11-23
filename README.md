@@ -15,7 +15,7 @@ No contiene ni redistribuye binarios, assets ni código del juego.
 | Inventario compartido | lo que uno agarra lo reciben los dos; lo que uno gasta se descuenta a los dos | ✅ dos máquinas (corrida 119) |
 | Copia del save | el cliente arranca con la partida del host; guardar juntos; game over con el checkpoint del host | ✅ dos máquinas (corrida 119) |
 | Muerte en coop | el que cae queda caído (invencible, el Alien lo ignora); el compañero lo revive con una terminal de guardado; si caen los dos, game over | ✅ en una máquina con el peer |
-| Dificultad y menú Coop | menú "Coop" del juego (en Extras) con la dificultad del coop, que decide el host | ✅ en una máquina |
+| Dificultad y menú Coop | menú "Coop" del juego (en Extras): dificultad del coop y "Opciones avanzadas" (Alien, caer y revivir, guardado exigente, inventario y cajas compartidos), que decide el host | ✅ en una máquina |
 | Avisos | avisos sin pausa (cartel de consejos del HUD) y con el diálogo "Warning" del juego | ✅ en una máquina (corridas 149–151) |
 | Arrojables | bengala, noisemaker, molotov, minas: aparecen en la otra máquina con la misma trayectoria y quedan donde cayó el original | 🟡 vuelo ✅ con dos máquinas; dónde cae, verificado en una |
 | Disparadores de los scripts | zonas y eventos de la misión los decide el host | ✅ objetivos con dos máquinas (corrida 119); algunos pines de composites compartidos no se encuentran |

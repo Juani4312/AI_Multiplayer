@@ -55,7 +55,7 @@ static void apply_all(const char *why)
 
 void diff_set_local(int level)
 {
-    g_local = level < 0 ? 0 : level > 2 ? 2 : level;
+    g_local = level < 0 ? 0 : level > 3 ? 3 : level; /* 3: Personalizada, escala del Alien +3 (menu.c) */
     apply_all(diff_from_host() ? "elección local, pero manda el host" : "menú");
 }
 
@@ -67,7 +67,7 @@ void diff_remote_event(const AimpEvt *e)
     aimp_memcpy(&o, e->data, sizeof o);
     if (o.kind != 1 || !g_net || g_net->mode != 2)
         return;
-    int lvl = (int)(o.level > 2 ? 2 : o.level);
+    int lvl = (int)(o.level > 3 ? 3 : o.level);
     if (lvl != g_host_level)
         log_printf("DIFF: el host eligió la dificultad del coop %d", lvl);
     g_host_level = lvl;

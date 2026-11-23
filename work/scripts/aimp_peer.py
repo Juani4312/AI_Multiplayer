@@ -339,7 +339,8 @@ def main():
     ap.add_argument("--offset", default="0,0,0", help="corrimiento dx,dy,dz de las posiciones repetidas")
     ap.add_argument("--throw", action="append", default=[], help="T:plantilla:dx,dy,dz:vx,vy,vz[:time_left]")
     ap.add_argument("--event", action="append", default=[],
-                    help="T:tipo:hex -> evento crudo (AIMP_EVT_<tipo>, datos en hex) T segundos después del jugador")
+                    help="T:tipo:hex -> evento crudo (AIMP_EVT_<tipo>, datos en hex) T segundos después del jugador; "
+                         "mT: T segundos desde que arranca el peer (en el menú, sin jugador)")
     ap.add_argument("--record-events", help="archivo donde grabar los eventos del juego (t desde el jugador, paquete en hex)")
     ap.add_argument("--play-events", help="archivo grabado con --record-events: reproduce esos eventos al juego")
     ap.add_argument("--play-offset", type=float, default=0.0, help="segundos que se suman a los tiempos de --play-events")
@@ -400,7 +401,8 @@ def main():
     raws = []
     for spec in a.event:
         t, k, h = spec.split(":")
-        raws.append([float(t), int(k), bytes.fromhex(h), False])
+        # "m5" = 5 s desde que arranca el peer, sin esperar al jugador (para probar el menú del juego)
+        raws.append([float(t.lstrip("m")), int(k), bytes.fromhex(h), False, t.startswith("m")])
     rec_f = open(a.record_events, "w") if a.record_events else None
     plays = []
     if a.play_events:
@@ -497,7 +499,9 @@ def main():
                 print(f"[{now - t0:6.1f}s] THROW {eseq}: {th[1]} desde ({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f}) "
                       f"vel {th[3]} nivel {last[6]}")
             for rw in raws:
-                if rw[3] or t_player is None or not peer or now - t_player < rw[0]:
+                if rw[3] or not peer or last is None:
+                    continue
+                if (now - t0 < rw[0]) if rw[4] else (t_player is None or now - t_player < rw[0]):
                     continue
                 rw[3] = True
                 eseq += 1
