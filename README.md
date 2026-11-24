@@ -25,7 +25,6 @@ El detalle de cada paso está en `work/PROGRESS.md`. La evidencia de ingeniería
 ## Para Claude Code
 
 - **Para instalar el mod y jugar** (por ejemplo, en la PC de un amigo): seguí [`INSTALAR_CON_CLAUDE.md`](INSTALAR_CON_CLAUDE.md).
-- **En `papulaptop`** (la laptop Windows de pruebas): tu tarea está en [`work/windows/instructions.md`](work/windows/instructions.md).
 
 ## Instalación
 
